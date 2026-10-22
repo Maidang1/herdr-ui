@@ -6,6 +6,11 @@
 /docs.pen/*.autosave.pen
 /docs.pen/*.bak.*
 
+# The builds of the mygo toolchain. The manifest, mygo.json, is tracked;
+# the app bundles it makes are not.
+/.mygo/dev/
+/.mygo/build/
+
 # OS and editor noise.
 .DS_Store
 *.swp

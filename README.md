@@ -10,10 +10,20 @@
 
 ## 1. 仓库内容
 
-本仓库现在**只保留文档**（Go 实现已于 2026-10-22 移除，见 `docs/01-implementation-plan.md` 的说明）。
+本仓库是**设计稿 + 实现**。旧的 Go 实现已于 2026-10-22 移除，
+现在的实现是**按设计稿从零写的**（Go + [mygo](https://github.com/egoist/mygo) v0.6.2）。
 
 | 路径 | 内容 |
 |---|---|
+| `cmd/herdr-ui/` | 客户端窗口的可执行程序 |
+| `cmd/herdr-preview/` | 把窗口离屏渲染成 PNG，用来和设计稿逐屏对照 |
+| `cmd/herdr-probe/` | 连上真守护进程，打印握手、会话快照与终端表面 |
+| `internal/protocol/` | **线上协议**：bincode 2 varint 子集、帧、报文、终端表面、会话快照 JSON |
+| `internal/client/` | **守护进程连接**：socket 发现、握手、事件循环、40 个 RPC、按键编码 |
+| `internal/design/` | **设计令牌**：颜色、度量、8 级表面与材质、mygo 主题桥接、交互状态、终端调色板 |
+| `internal/ui/` | 窗口的外壳：标题栏、活动栏、侧边栏、主卡片（终端 + 标签条 + 仪表行） |
+| `internal/ui/widgets/` | 通用控件：Card / Row / Chip / Badge / Meter / Section / Table / Icon |
+| `internal/ui/icons/` | 设计稿用的图标（Lucide + GitHub 标记），见其中的 `NOTICE.md` |
 | `docs.pen/01.pen` | **设计稿源文件**（Pen 格式，71 张根画板：35 亮 + 35 暗 + 1 张令牌板） |
 | `docs/01-implementation-plan.md` | **实现方案**：数据来源分类、令牌系统、35 张画板 × 能力矩阵、分阶段排期、风险与验证 |
 | `docs/02-ui-design-spec.md` | **主窗口精确规格**：令牌表、度量标尺、画板 1 的完整结构树与终端语义分色 |
@@ -27,6 +37,39 @@
 1. `docs/02-ui-design-spec.md` —— 先知道"要做成什么样"（精确到像素与十六进制）
 2. `docs/01-implementation-plan.md` —— 再知道"数据从哪来、要建哪些地基、排什么期"
 3. `reference/herdr-gpui-features.md` —— 需要对齐 Rust 行为语义时查
+
+### 跑起来
+
+```bash
+go run ./cmd/herdr-ui                 # 打开窗口（自动连本机守护进程）
+go run ./cmd/herdr-preview -out /tmp  # 不开窗，渲染成 PNG 供对照
+go run ./cmd/herdr-probe              # 打印守护进程给的状态与终端表面
+go test ./...                         # 协议、令牌与窗口的测试
+```
+
+窗口默认跟随系统的明暗；`Cmd-Shift-D` 在「亮 / 暗 / 跟随系统」之间切换。
+
+### 线上协议
+
+窗口是守护进程的客户端，两者说的是 herdr 的 endpoint 协议：
+
+- **帧**：四字节长度（小端）+ 消息体。
+- **消息体**：bincode 2 的 standard profile（小端 + **varint**：≤250 单字节，
+  `0xFB`+u16、`0xFC`+u32、`0xFD`+u64）。`char` 直接写 UTF-8 字节、不带长度；
+  `Option` 是一个字节的标记；枚举的序号是 u32 varint。
+- **握手**：客户端发 `EndpointControl{kind:"endpoint.hello.v1", data:JSON}`，
+  守护进程回 `endpoint.welcome.v1`（方法清单与编解码器协商），
+  然后推 `shell.snapshot.v1`（会话快照，JSON）。
+- **终端表面**：`PaneSurface` 是 bincode 的单元格网格（字符、前景色、背景色、
+  修饰位、链接、光标），以及每个窗格在表面上的位置。
+- **请求**：`ClientShellEndpointRequest` 里装 `{"id","method","params"}` 的 JSON，
+  守护进程按块回 `ClientShellEndpointResponseChunk`。
+- **输入**：`ClientShellPaneInput` 带按键 / 文本 / 粘贴事件，发给聚焦窗格。
+
+`internal/protocol/testdata/golden.txt` 是 Rust 客户端写出的字节，
+Go 端逐字节对齐（见该目录的 `NOTICE.md`）。
+
+
 
 ---
 
@@ -150,4 +193,19 @@ find
 | 实现方案 | ✅ 数据来源分类、令牌系统、能力矩阵、P0–P4 排期、5 个待确认决策点 |
 | 主窗口精确规格 | ✅ 令牌表、度量标尺、结构树、终端语义分色 |
 | Rust 功能规格 | ✅ `reference/herdr-gpui-features.md`（948 行） |
-| 客户端实现 | ⬜ **已移除**（原 Go + mygo 实现，约 16,782 行）；按方案从零搭建 |
+| P0 · 设计地基 | ✅ 令牌、度量、8 级表面、材质规则、mygo 桥接、交互状态、终端调色板、通用控件 |
+| P1 · 线上协议 | ✅ bincode 2 varint 子集、帧、40 方法 RPC、快照 JSON、终端表面；**与 Rust 客户端逐字节对齐**，已连上真守护进程 |
+| P1 · 主窗口骨架 | 🟡 画板 1 的外壳可渲染，**接的是真会话**：真工作区树、真标签、真终端网格；按键与点击会回到守护进程。面板路由、弹层栈、终端滚动/选择/查找未做 |
+| P2–P4 | ⬜ 未开始（编排器、用量、设备、审阅、编辑器组等） |
+
+已知的待办：
+
+- **五个面板只有一个有内容**。概览 / PR / Issue / 安全 / 用量的内容规则见
+  `docs/01-implementation-plan.md` §4.2–§4.6，尚未实现。
+- **终端只有渲染与输入**。滚动、选择、复制模式、查找、链接跳转还没做
+  （协议侧的方法都在，`pane.scroll` / `pane.copy_search` / `pane.link.activate`）。
+- **窗口尺寸与主题跟随系统**的判断在 `internal/ui/mode.go`，
+  还没有落到配置文件里（P1 的 `internal/config`）。
+- **重连**还没有：守护进程断开后，窗口退回样例会话，而不是自己接回去。
+
+
