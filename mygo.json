@@ -1,6 +1,0 @@
-{
-  "name": "Herdr",
-  "identifier": "com.herdr.ui",
-  "version": "0.1.0",
-  "main": "./cmd/herdr-ui"
-}
