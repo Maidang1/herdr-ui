@@ -1,10 +1,3 @@
-# Build artifacts.
-/herdr-ui
-*.exe
-*.dll
-*.so
-*.dylib
-
 # Design exports. These are regenerable renders of docs.pen/01.pen and are
 # far too large for the repository; the .pen source is tracked instead.
 /design/

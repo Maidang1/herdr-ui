@@ -1,22 +1,30 @@
 # Herdr UI · 实现方案（基于 `docs.pen/01.pen`）
 
-> 本文把 `docs.pen/01.pen` 的设计稿翻译成一份可执行的 Go 实现方案。
+> 本文把 `docs.pen/01.pen` 的设计稿翻译成一份可执行的实现方案。
 > 功能语义一律以 Rust 客户端 `herdr-gpui`（`/Users/bytedance/codes/open-source/herdr-gpui`）为准，
 > 通过 XERJ 索引 `herdr-gpui-docs`（28,623 条，覆盖 `crates/herdr-gpui/src/**`）检索得到。
+>
+> **仓库现状（2026-10-22 更新）**：本仓库原有的 Go 实现（`cmd/`、`internal/`，约 16,782 行）
+> 已整体移除，只保留本文档与 UI 设计文档。因此本文从「一份改造方案」变成
+> **一份从零实现的规格书**：
+> - §4.1 / §4.7 保留了旧 Go 基线的结构快照，**仅作功能清单与反例参考**，不再是可复用资产；
+> - 其余章节（数据来源分类、令牌系统、面板规则、排期、风险）**全部仍然有效**。
+> - 主窗口画板的精确规格已单独抽出到 `docs/02-ui-design-spec.md`，实现时以那份为准。
 
 ---
 
 ## 0. 一句话结论
 
 设计稿不是新应用，而是 **Rust 客户端 `herdr-gpui` 的视觉与交互重设计**。
-`herdr-ui` 是该客户端的 Go 重写（现状 **16,782 行 Go**，`internal/ui` 9,255 行 / 40 个文件，其中 12 个是测试）。
+旧 `herdr-ui` 曾是该客户端的 Go 重写（16,782 行 Go，`internal/ui` 9,255 行 / 40 个文件，其中 12 个是测试），
+**现已移除**。
 
-因此本方案的本质是：**在 Go 侧把 35 个功能面按新设计语言重做**，而不是从零发明功能。
-其中约 **1/3 的功能面已经存在于 Go 侧**（终端、查找、复制模式、标注、标签页、侧边栏树、设置、命令面板、Toast），
+因此本方案的本质是：**把 35 个功能面按新设计语言重做**，而不是从零发明功能。
+旧 Go 侧约 **1/3 的功能面曾经存在**（终端、查找、复制模式、标注、标签页、侧边栏树、设置、命令面板、Toast），
 **2/3 是全新的**（活动栏面板体系、编排器、设备、用量、派发、传送、编辑器组、审阅、日志等）。
 
 工作量的大头不在"画界面"，而在 **两件地基**：
-① 设计令牌系统（Go 侧目前完全没有）；② 活动栏 + 面板路由 + 对话框系统（Go 侧目前是单视图切换）。
+① 设计令牌系统；② 活动栏 + 面板路由 + 对话框系统（旧 Go 侧是单视图切换）。
 
 ---
 
@@ -27,7 +35,7 @@
 | 设计稿 | `docs.pen/01.pen` | **71 张根画板**、**10,372 个节点**、**70 个变量** |
 | 功能来源 | `herdr-gpui` (Rust) | `crates/herdr-gpui/src/**` + `crates/herdr-client/src/**` |
 | 检索工具 | XERJ `herdr-gpui-docs` | 28,623 条，含 `body` / `code` / `defs` / `headings` / `impl` 字段 |
-| 现有基线 | `herdr-ui` (Go) | 16,782 行；`internal/{ui,herdr,config,theme,control,palette,bincode}` |
+| 现有基线 | ~~`herdr-ui` (Go)~~ | **已移除**（2026-10-22）；历史快照见 §4.1 / §4.7 |
 | 已有文档 | `reference/herdr-gpui-features.md` | 948 行功能规格 + `reference/herdr-api-schema.json` |
 | 已有审阅 | `reference/interface-review-2026-10-22.md` | 设计稿缺陷清单，5 项已在 01.pen 修复 |
 
@@ -103,7 +111,7 @@ worktree.create / list / open / remove
 ```
 
 **没有** PR、Issue、安全、用量、设备、端口、云、派发、传送、日志、更新的任何方法。
-Go 侧数据模型同样印证 —— `internal/herdr/snapshot.go` 只有 6 个实体：
+守护进程的数据模型同样印证 —— 快照只有 6 个实体：
 `Workspace / Tab / Pane / Agent / Command / Worktree`。
 
 > **结论**：设计稿中 **超过一半的面必然是客户端本地的**。这是排期与架构的分水岭，
@@ -144,11 +152,13 @@ Notifications / Integrations / Plugins / CloudDevices / Configuration`（13 类�
 
 ---
 
-## 3. 第二根支柱：设计令牌系统（Go 侧目前为零）
+## 3. 第二根支柱：设计令牌系统
 
-### 3.1 现状问题
+> 精确令牌表见 `docs/02-ui-design-spec.md` §1。本节讲**为什么要做**与**怎么落到 mygo**。
 
-`internal/ui/chrome.go:92-156` 的 `chrome` 结构**只有 13 个颜色槽**（background / panel /
+### 3.1 旧基线的问题（已随代码移除，留作反例）
+
+旧 `internal/ui/chrome.go` 的 `chrome` 结构**只有 13 个颜色槽**（background / panel /
 sidebar / text / muted / dim / accent / green / yellow / red / mauve），
 且全部从 **Catppuccin 风格守护进程调色板**派生：
 
@@ -163,6 +173,8 @@ if name, err := theme.HerdrThemeName(!dark); err == nil && name != "" {
 1. 守护进程调色板只有一份（暗色系），**无法表达设计稿的亮色模式** —— 亮色下 `found.Text` 是浅色，文字会看不见；
 2. 设计稿的 28 组令牌远多于 13 个槽位；
 3. 材质规则（透明、模糊、描边）完全缺失。
+
+> 教训：**守护进程的调色板只能影响终端单元格**，窗口 chrome 全部走令牌。
 
 ### 3.2 设计稿令牌板（第 71 张）规定的内容
 
@@ -235,7 +247,10 @@ type Surface struct {
 
 图例：**✅ 已有** / **🟡 部分** / **❌ 全新**
 
-| # | 画板 | Rust 能力来源（XERJ 检索所得） | 数据源 | Go 现状 | 阶段 |
+> 「旧 Go 基线」列记录的是**已移除**的 Go 实现曾经做到哪一步，仅供判断哪些功能
+> 需要从零写、哪些只是要改样式。**该列不表示仓库里存在可复用代码。**
+
+| # | 画板 | Rust 能力来源（XERJ 检索所得） | 数据源 | 旧 Go 基线 | 阶段 |
 |---|---|---|---|---|---|
 | 1 | Herdr · macOS 主窗口 | `app.rs`、`sidebar.rs`、`bottombar`、`terminal.rs` | A+C | 🟡 骨架在，缺令牌/活动栏 | P0/P1 |
 | 2 | Command Palette | `palette/`、`controls.rs`（`Command`/`CommandInfo` 分类表） | A+C | 🟡 仅命令+本地项 | P1 |
@@ -275,9 +290,10 @@ type Surface struct {
 
 **统计**：✅ 2 · 🟡 13 · ❌ 20 —— **新增工作量约占 60%**。
 
-### 4.1 Go 侧现有渲染骨架（决定了 P1 的改造面）
+### 4.1 旧 Go 基线的渲染骨架（已移除，仅作结构参考）
 
-`internal/ui/app.go:304-360` 的 `App.view` 是**单一巨型绘制函数**，结构为：
+> 以下是移除前 `internal/ui/app.go` 中 `App.view` 的结构快照。
+> 保留它是因为它清楚暴露了**外壳设计的三个坑**，新的实现必须避开：
 
 ```go
 root := ui.Column(c).Fill().Background(colors.background)   // 背景取自守护进程调色板
@@ -306,16 +322,15 @@ a.drawSettings(c)                                  // 覆盖层
 
 **三点关键结论**：
 
-1. **底部栏已经是三段式** —— `bottombar.go` 里 `drawTabStrip` + `drawMeterRow` 已分开，
-   与设计稿画板 1 的「meter row / tab strip / status row」结构一致，
-   **这是少数几乎不用改结构的画板**。需要补的是 status row 与样式。
-2. **完全没有弹层（modal）系统** —— 现有覆盖层只有 3 个各自为政的绘制函数
+1. **底部栏是三段式** —— `drawTabStrip` + `drawMeterRow` 分开，
+   与设计稿画板 1 的「meter row / tab strip / status row」结构一致。
+2. **完全没有弹层（modal）系统** —— 覆盖层只有 3 个各自为政的绘制函数
    （palette / update panel / settings），彼此不互斥、无栈、无焦点管理。
-   Rust 侧 `Page` 枚举约 50 页 → Go 侧必须**先建通用弹层框架**，否则 P2/P3/P4 无处安放。
+   Rust 侧 `Page` 枚举约 50 页 → 必须**先建通用弹层框架**，否则 P2/P3/P4 无处安放。
 3. **活动栏是空的** —— `drawRail(c, colors, "")` 的第二参数恒为空串，
-   说明 Go 侧的 rail 只是图标占位，**没有面板选中态、没有面板路由、没有徽标**。
+   说明 rail 只是图标占位，**没有面板选中态、没有面板路由、没有徽标**。
 
-> **P1 的本质**：把 `App.view` 从「一棵固定树 + 3 个覆盖层」改成
+> **P1 的本质**：把视图从「一棵固定树 + 3 个覆盖层」改成
 > 「**活动栏驱动的状态机 + 可压栈的弹层栈**」。这是本方案里唯一一处需要重构既有代码的地方。
 
 ### 4.2 Overview 面板的精确规则（`crates/herdr-gpui/src/overview/`）
@@ -441,10 +456,10 @@ pub(crate) enum State { Blocked, Failed, Working, Done, ... }   // 派生 Ord，
 - **已知代理先显示代理标记，再显示种类图标**；
 - 未知代理回落为 `icons/bell.svg`。
 
-> **Go 侧对照**：`internal/herdr/wire.go:241` 已定义
-> `notificationKinds = ["needs attention", "finished", "update installed", "custom"]`，
-> 与 Rust 的 `SemanticNotificationKind` 对齐。但 `internal/ui/toast.go`（167 行）
-> 尚未实现上述 4 条入队规则，**这是 P1 中最容易被漏掉的行为差异**。
+> **协议侧对齐点**：`notificationKinds = ["needs attention", "finished", "update installed", "custom"]`
+> 与 Rust 的 `SemanticNotificationKind` 对齐，协议层需保留这四个取值。
+> 但 Toast 的上述 4 条入队规则**在旧实现里也从未实现**，
+> **这是 P1 中最容易被漏掉的行为差异**，新实现必须从一开始就按规则写。
 
 ### 4.4 安全面板的精确规则（`crates/herdr-gpui/src/security/`）
 
@@ -660,30 +675,35 @@ pub(crate) enum Host {
 > 每个 provider 实现 `Meta()` + `Fetch()`，凭据从配置或环境变量读，
 > 保持"一个 provider 一个凭据槽"的形状。
 
-### 4.7 Go 侧现有可用资产（不要重写）
+### 4.7 旧 Go 基线覆盖过的功能面（代码已移除 → 现为功能清单）
 
-| 资产 | 位置 | 行数 | 复用建议 |
+> 下表记录**哪些功能面旧实现曾经做到过**。代码已删除，所以它不再是"可复用资产"，
+> 而是一份**功能范围清单**：这些行现在都是 ❌，但**行为语义已经想清楚了**，
+> 实现时按同一套语义重写即可，不必重新调研。
+
+| 功能面 | 旧实现位置（已删除） | 旧行数 | 重写时的注意点 |
 |---|---|---|---|
-| 终端渲染 + 输入 | `internal/ui/terminal.go` | 486 | 直接用 |
-| 选区 / 复制模式 | `selection.go` / `copymode.go` | 398 / 900 | 直接用 |
-| 查找 | `find.go` | 455 | 直接用 |
-| 标注 | `annotate.go` | 536 | 直接用 |
-| 链接 | `links.go` | 344 | 直接用 |
-| 浏览器页 | `page.go` | 421 | 直接用 |
-| 面板 / 分屏 | `panes.go` | 173 | 直接用 |
-| 设置读写（保留注释） | `internal/config/config.go` | — | 直接用；Rust 侧同样是 managed 文件 + local override 双层 |
-| Toast | `toast.go` | 167 | 扩展规则 |
-| 仪表（CPU/MEM/端口） | `meters.go` | 253 | 抽成 P3 面板的数据源 |
-| 侧边栏树 | `sidebar_panel.go` | 390 | 重排为活动栏第 1 面板 |
-| 命令面板 | `palette.go` | 166 | 扩源 |
-| 守护进程协议 | `internal/herdr/` | 3,316 | 增补方法即可 |
+| 终端渲染 + 输入 | `internal/ui/terminal.go` | 486 | 旧版用段落排版画终端，宽字符会整行错位；新版必须**逐格定位**（见 §5 与 `02-ui-design-spec.md` §5） |
+| 选区 / 复制模式 | `selection.go` / `copymode.go` | 398 / 900 | vi 键位与滚动语义照搬 Rust |
+| 查找 | `find.go` | 455 | 需按画板 13 的查找栏样式重做 |
+| 标注 | `annotate.go` | 536 | 需按画板 14 的样式重做 |
+| 链接 | `links.go` | 344 | 链接区域解析与插件优先规则照搬 Rust |
+| 浏览器页 | `page.go` | 421 | 需纳入画板 19 的页签体系 |
+| 面板 / 分屏 | `panes.go` | 173 | 需按画板 9 的分屏样式重做 |
+| 设置读写（保留注释） | `internal/config/config.go` | — | managed 文件 + local override 双层，与 Rust 同构；逐键写入以保留注释 |
+| Toast | `toast.go` | 167 | 入队规则见 §4.3，需补全 |
+| 仪表（CPU/MEM/端口） | `meters.go` | 253 | 抽成 P3 面板的数据源，样式按画板 1 的 meter row |
+| 侧边栏树 | `sidebar_panel.go` | 390 | 重排为活动栏第 1 面板，度量按 `02-ui-design-spec.md` §3.1 |
+| 命令面板 | `palette.go` | 166 | 扩源（6 类） |
+| 守护进程协议 | `internal/herdr/` | 3,316 | bincode 2 子集 + 命名帧；新增方法沿用同一模式 |
 
 ---
 
-## 5. 建议的 Go 包结构
+## 5. 建议的包结构
 
-现有 `internal/ui` 是**平铺**结构（34 个文件同属 `package ui`）。
-新增 20 个功能面后必须分包，否则单文件会失控。
+> 旧 Go 实现是**平铺**结构（34 个文件同属 `package ui`），且已整体移除。
+> 下表是**新实现的目标结构**，供从头搭建时参考；语言栈沿用 Go + mygo
+> （mygo 的能力约束见 `docs/02-ui-design-spec.md` §5）。
 
 ```
 internal/
@@ -818,7 +838,7 @@ Overview 的分区顺序与空分区规则与 Rust 逐条对齐。
 ## 7. 需要在实现前确认的五个决策点
 
 1. **亮色模式与守护进程调色板的关系。**
-   现状 `newChrome` 从 Catppuccin 调色板取色，无法表达亮色。
+   旧实现从 Catppuccin 调色板取色，无法表达亮色（已在移除的代码里犯过这个错）。
    建议：**令牌自洽，守护进程调色板只影响终端单元格配色**；窗口 chrome 全部走 `internal/design`。
    需确认是否接受"窗口不再跟随终端主题变色"。
 
@@ -862,11 +882,12 @@ Overview 的分区顺序与空分区规则与 Rust 逐条对齐。
 **验证手段**：
 - 令牌单测：`design.Tokens` 与画板 71 的 28 组映射做表驱动断言；
 - 面板单测：面板纯函数（排序、过滤、空态）不依赖守护进程；
-- 协议单测：Go 侧 `internal/herdr` 已有 `wire_test.go` / `endpoint_test.go`，新增方法沿用同一模式；
-- 行为对齐单测：把 Rust 侧已固定的规则逐条翻译成 Go 测试 ——
+- 协议单测：守护进程协议层沿用旧实现的表驱动写法（`wire_test.go` / `endpoint_test.go` 模式），新增方法照此扩展；
+- 行为对齐单测：把 Rust 侧已固定的规则逐条翻译成测试 ——
   Overview 分区顺序与空分区、marks 的搁置解除条件、Toast 的 4 条入队规则、
   报告的"评级优先 + 新次之 + 排除 draft"、审阅的基线回退与 `NARROW=1000` 行为；
-- 视觉回归：按 35 张亮色画板 + 35 张暗色画板逐屏对照。
+- 视觉回归：按 35 张亮色画板 + 35 张暗色画板逐屏对照；
+- 度量回归：主窗口部件尺寸与 `docs/02-ui-design-spec.md` §2.5 逐项断言。
 
 ---
 

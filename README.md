@@ -1,241 +1,153 @@
-# herdr-ui
+# Herdr UI · 设计与实现文档
 
-A native window for the [Herdr](https://herdr.dev/) daemon, written in Go
-with [mygo](https://github.com/egoist/mygo).
+> Herdr 是一个终端多路复用守护进程：它拥有终端、工作区、标签页、面板，以及在它们里面干活的编码代理。
+> **Herdr UI** 是这个守护进程的客户端窗口——把守护进程画出来的终端单元格呈现在屏幕上，
+> 并回应"打开页面 / 聚焦标签 / 发送备注"这类命令。
+>
+> 设计稿不是新应用，而是 **Rust 客户端 `herdr-gpui` 的视觉与交互重设计**。
 
-The daemon owns the terminals and the session: workspaces, tabs, panes and
-the coding agents that work in them. This program is a client of that
-daemon. It paints the terminals the daemon sends, and it answers the
-commands that ask it to open a page, to focus a tab or to send notes.
+---
 
-It is a rewrite of the Rust GUI in `herdr-gpui`, in Go and mygo.
+## 1. 仓库内容
 
-## Requirements
+本仓库现在**只保留文档**（Go 实现已于 2026-10-22 移除，见 `docs/01-implementation-plan.md` 的说明）。
 
-- Go 1.27.1 or later (mygo asks for it; Go fetches the toolchain itself).
-- A running Herdr daemon. The window talks to the daemon's client socket.
+| 路径 | 内容 |
+|---|---|
+| `docs.pen/01.pen` | **设计稿源文件**（Pen 格式，71 张根画板：35 亮 + 35 暗 + 1 张令牌板） |
+| `docs/01-implementation-plan.md` | **实现方案**：数据来源分类、令牌系统、35 张画板 × 能力矩阵、分阶段排期、风险与验证 |
+| `docs/02-ui-design-spec.md` | **主窗口精确规格**：令牌表、度量标尺、画板 1 的完整结构树与终端语义分色 |
+| `reference/herdr-gpui-features.md` | Rust 客户端 `herdr-gpui` 的完整功能点梳理（948 行） |
+| `reference/herdr-api-schema.json` | 守护进程 API 字段 schema |
+| `reference/interface-review-2026-10-22.md` | 设计稿缺陷清单与修复记录（含暗色模式补充审查） |
+| `design/*.png` | 设计稿的渲染导出（亮/暗各 35 张 + 令牌板）。**不入版本库**，由 `.pen` 重新导出 |
 
-## Build and run
+阅读顺序建议：
 
-```sh
-go build -o herdr-ui ./cmd/herdr-ui
-./herdr-ui
-```
+1. `docs/02-ui-design-spec.md` —— 先知道"要做成什么样"（精确到像素与十六进制）
+2. `docs/01-implementation-plan.md` —— 再知道"数据从哪来、要建哪些地基、排什么期"
+3. `reference/herdr-gpui-features.md` —— 需要对齐 Rust 行为语义时查
 
-The window opens on the session the daemon is running. It listens on a
-control socket, so a second copy of the program can drive it:
+---
 
-```sh
-herdr-ui status
-herdr-ui browser open https://example.com
-herdr-ui browser list
-herdr-ui browser text page-1
-herdr-ui browser zoom page-1 150
-herdr-ui notes send "the tests pass"
-herdr-ui tab list
-herdr-ui command list
-herdr-ui agent list
-herdr-ui find search "error"
-herdr-ui find next
-```
+## 2. 窗口应该做什么
 
-The socket is `$XDG_STATE_HOME/herdr/herdr-ui/control.sock`, or
-`~/.local/state/herdr/herdr-ui/control.sock`. `HERDR_UI_CONTROL_SOCKET` and
-the `--socket` flag move it.
+以下是对**功能行为**的约定，与具体实现语言无关。
 
-A daemon on another machine is reached over SSH: the ssh binary does the
-encryption, the remote herdr bridges its client socket to the connection,
-and the window speaks the same protocol over it.
+### 2.1 主窗口
 
-```sh
-./herdr-ui --ssh user@host
-./herdr-ui --ssh user@host --session work
-```
+- **左侧活动栏**：工作区 / 概览 / PR / Issue / 安全 / 用量 六个视图入口，可带计数徽标；底部是设置。
+- **侧边栏**：当前面板的内容。主窗口第一屏是**工作区树**——每个工作区一行，下面是它的分支、端口和在它里面干活的代理。
+- **主卡片**：终端在中间，带 16px 圆角；下面是标签页条，再下面是仪表行（用量 / 端口 / CPU / 内存 / 时间）。
 
-The window of a remote host keeps its own control socket, so that it does
-not answer for the window of this machine.
+### 2.2 终端
 
-## What the window shows
+- 守护进程把终端**画好**再发过来：一格一格的单元格，带颜色、修饰位、光标、宽字符。
+  客户端负责把它们**原样画出来**。
+- 键盘归焦点面板所有：用户敲的字逐个送进那个面板；命名键、和弦、功能键按 Rust 客户端的编码送。
+- 选区：指针划过单元格选择，松开即复制；Cmd-C 再复制一次，Cmd-V 粘贴进面板。
+- **复制模式**（Cmd-Shift-C）：光标在输出与回滚里走，vi 键位移动，`v` 选、`y` 复制，`/` 搜回滚。
+- 链接：守护进程读出链接覆盖的单元格，悬停时加下划线；按住 Cmd 点击打开地址，
+  除非会话里的插件先认领。本机路径在自己的页面里打开。
+- **标注**：选中一段文字后松开会给一个胶囊，写下的备注送到该面板的代理手里——
+  措辞要让被引用的文字读起来是**数据**而不是**指令**。代理不在场时，备注留在剪贴板。
+- 面板右键菜单：右分、下分、放大、滚动、进入复制模式、聚焦、关闭。
+- 状态栏：面板标题、目录、代理；在那里打字会送到该面板。
 
-- A sidebar with the workspaces of the session, the agents that work in
-  them, the worktrees of the repository and the coding agents the machine
-  has installed. Clicking a workspace focuses it in the daemon.
-- A tab bar with the tabs of the focused workspace, with the browser pages
-  beside them, with the status the daemon puts on the right, and with a
-  button that asks for another tab.
-- A connection that keeps its ground: when the daemon drops it, the window
-  keeps the picture of the session under a card that says why it is waiting
-  and offers to try at once, and the endpoint opens the connection again on
-  its own, with the keyboard and the session as they were.
-- The terminals, painted from the cells the daemon sends: the colors the
-  programs asked for, the cursor, the wide characters and the backgrounds.
-  Each pane carries a title above its content, and aiming at a pane focuses
-  it, the way the multiplexer does.
-- The keyboard belongs to the pane that has the focus: what the user types
-  goes to it, letter by letter, and the named keys, the chords and the
-  function keys travel the way the Rust client sends them.
-- A selection, drawn with the pointer over the cells it chooses and copied
-  when the pointer comes up. Cmd-C copies it again, and Cmd-V pastes the
-  clipboard into the pane.
-- A copy mode, on Cmd-Shift-C: a cursor that walks the output of the pane
-  and the scrollback above it, the vi keys move it, `v` marks what it
-  chooses, `y` copies it, and `/` searches the scrollback.
-- The links of the output: the daemon reads the cells a link covers and
-  underlines them while the pointer is over them, and a click with the
-  command held opens the address, unless a plugin of the session claims it
-  first. An address the daemon does not read is read by the window itself,
-  and a path on this machine opens in a page of its own.
-- A note on the text the user chose: a released selection offers a pill, and
-  the note that is written goes to the agent of the pane, in the words the
-  Rust client uses, so that the quoted text reads as data and not as
-  instructions. An agent that is not there to read it leaves the note on
-  the clipboard.
-- A menu on the right-click of a pane: split it right or down, zoom it,
-  scroll its output, begin the copy mode, focus it or close it.
-- A status bar with the title, the folder and the agent of the pane. Typing
-  there sends the text to that pane.
-- Browser pages, each a web view. A local file is served from the folder it
-  sits in, so that the files it refers to load beside it.
-- A command palette, on Cmd-K, listing the commands the daemon offers with
-  their key bindings.
-- A find bar, on Cmd-F, that searches the output of the pane and marks the
-  match it is on. The window searches the cells it has painted, which are
-  the cells the user looks at: the daemon answers a search of its own with
-  the revision of the content it searched, and the content of a live pane
-  moves on before the answer arrives.
-- A banner for what the daemon has to say: a new version, a release note
-  or an announcement, which the user can dismiss. The banner opens a panel
-  with the notes of the release and the command that installs the update,
-  when the daemon offers one.
-- The settings of the window, read from the files the Rust client uses:
-  `config-gpui.toml` holds the managed defaults and `config-gpui.local.toml`
-  the overrides the user writes. The window reads the size of the
-  characters of the terminal and of the window, the height of a row, whether
-  a selection stays highlighted after it was copied, the theme, the layout of
-  the sidebar, the notices and the shortcuts, and writes its changes into the
-  overrides one key at a time, so that the comments in that file stay as they
-  are. Cmd-, opens them, and the command palette holds them among the
-  commands of the daemon.
-- A theme for the terminal, the way the Rust client has it: a Ghostty theme
-  file out of `~/.config/herdr/themes`, `~/.config/ghostty/themes` or the
-  themes of an installed Ghostty, or one of the palettes the Rust client
-  writes by hand. The theme paints the terminal only; the rest of the window
-  follows the system. A theme may name one for the light side of the system
-  and another for the dark side, as in `light:Nord,dark:Dracula`. The name
-  `Follow Herdr` takes the theme the daemon names in its own configuration,
-  and finds the theme file of that name among the ones of the system.
-- A layout for the sidebar, the way the Rust client has it: `normal`,
-  `compact`, `comfortable`, and any of them with `-rounded` at the end. The
-  rounded layouts draw the rows as cards with rounded, bordered highlights
-  instead of the rows of the system.
-- The notices of the daemon, as cards in the corner of the terminal, with a
-  sound of the system for a task that is done and for an agent that asks for
-  attention. The bell of a pane reaches the window as well: the settings say
-  whether the icon of the window bounces and whether the alert sound plays.
-- The shortcuts of the window, which the user may change: the settings hold
-  them under `[keybindings]`, in the words the Rust client uses
-  (`cmd-shift-n`), and the window writes them into the overrides the same
-  way it writes the other settings.
+### 2.3 其它
 
-## How it is put together
+- **浏览器页**：每个页面一个 web view。本地文件从它所在的目录提供，所引用的文件才加载得到。
+- **命令面板**（Cmd-K）：列出守护进程提供的命令及其键位。
+- **查找栏**（Cmd-F）：搜索当前面板的输出并标出命中项。窗口只搜自己画过的格子——
+  守护进程若按自己的修订号作答，而内容已变，窗口会按自己画着的修订号重试。
+- **横幅**：守护进程要说的新版本、发布说明或公告，用户可关掉。
+- **主题**：只影响终端。Ghostty 主题文件，或内置调色板；可写 `light:Nord,dark:Dracula`。
+- **侧边栏布局**：`normal` / `compact` / `comfortable`，可加 `-rounded` 后缀。
+- **通知**：卡片浮在终端角落，任务完成与代理求助有系统提示音。
+- **快捷键**：可改，存于配置文件的 `[keybindings]`。
+
+---
+
+## 3. 守护进程协议
+
+守护进程的客户端 socket 讲 **bincode**，外面包一个 little-endian `u32` 长度。
+第一帧是具名 hello；守护进程回一个 welcome，列出它服务的方法，然后推送会话快照与已绘制的表面。
+
+快照以 JSON 形式放在具名控制消息里，**请求的应答也是 JSON**。
+绘制的表面则是 bincode：终端网格的单元格，一面板一个矩形。
+
+### 3.1 bincode 2 子集
+
+bincode 的数字是**带标签**而非紧凑打包的：
+
+- 装得下 250 的数字占 1 字节；
+- 否则一个标记字节说明后面跟几个字节（251 → u16，252 → u32，253 → u64）；
+- 有符号数按 zig-zag 写。
+
+> 实现这条子集时，测试里要带上 **Rust 客户端真实发出的字节**——
+> 否则破坏线格式的表现是"守护进程挂起"，而不是"测试失败"。
+
+### 3.2 守护进程提供的方法
+
+守护进程**只有 40 个方法**，全部围绕终端多路复用：
 
 ```
-cmd/herdr-ui          the program and its commands
-internal/bincode      the bincode 2 subset the wire model uses
-internal/herdr        the daemon protocol: hello, snapshots, requests, surfaces
-internal/ui           the window: sidebar, tabs, terminals, browser pages
-internal/config       the settings of the window, read and written in place
-internal/theme        the themes of the terminal, Ghostty files among them
-internal/control      the control socket and the client that talks to it
+client_shell.surface.set    command.invoke          integration.install
+integration.list            layout.set_split_ratio  pane.clear / close
+pane.copy_motion / copy_search   pane.edit_scrollback   pane.focus
+pane.focus_direction        pane.input.set          pane.link.activate
+pane.link.resolve           pane.rename             pane.resize
+pane.scroll                 pane.selection.read     pane.split
+pane.swap                   pane.zoom               product_announcement.dismiss
+release_notes.dismiss       server.reload_config    tab.close / create / focus
+tab.move / rename           workspace.close/create/focus/move/move_block/rename
+worktree.create / list / open / remove
 ```
 
-### The daemon protocol
+**没有** PR、Issue、安全、用量、设备、端口、云、派发、传送、日志、更新的任何方法。
+→ 设计稿中超过一半的功能面必然是**客户端本地**的，必须各自实现数据源。
 
-The daemon's client socket speaks bincode behind a little endian u32 length.
-The first frame is a named hello; the daemon answers with a welcome that
-lists the methods it serves, and then pushes a snapshot of the session and
-the painted surfaces.
+---
 
-The numbers bincode uses are tagged rather than packed: a number that fits
-in 250 is one byte, and otherwise a marker byte says how many bytes follow
-(251 for u16, 252 for u32, 253 for u64). A signed number is written the way
-zigzag writes it. `internal/bincode` implements that, and its tests carry
-the bytes the Rust client sends, so a change that breaks the wire shows up
-as a failing test rather than as a daemon that hangs up.
+## 4. 控制协议
 
-A snapshot arrives as JSON inside a named control message, and so does the
-answer to a request. The painted surfaces arrive as bincode: the cells of
-the terminal grid, one pane per rectangle of it.
-
-### The control protocol
-
-The window answers one JSON request per connection, on its own socket. The
-request names a method and says what to act on; the answer says whether the
-request was carried out.
+窗口在自己的 socket 上**每个连接回答一个 JSON 请求**。
+请求说方法与对象，应答说是否办成：
 
 ```json
 {"method": "browser.open", "page": {"url": "https://example.com"}}
 {"status": "opened", "page": {"id": "page-1", "url": "https://example.com"}}
 ```
 
-The methods are `status`, `app`, `window`, `tab`, `command`, `agent`,
-`notes.send`, `browser.open`, `browser.list`, `browser.close`,
-`browser.reload`, `browser.navigate`, `browser.back`, `browser.forward`,
-`browser.text`, `browser.zoom`, `browser.feedback` and `find`.
+方法清单：
 
-## Tests
-
-```sh
-go test ./...
+```
+status  app  window  tab  command  agent  notes.send
+browser.open / list / close / reload / navigate / back / forward / text / zoom / feedback
+find
 ```
 
-The tests cover the bincode encoding against the bytes the Rust client
-sends, the wire model, the control socket, the colours of the cells, the
-themes, the shortcuts and the settings of the window, and the window itself,
-which is laid out in memory by mygo's tester. The pointer
-and the keyboard are driven there too: the tester presses, moves and
-releases over the terminal, and types into it.
+---
 
-The live test talks to the daemon the machine runs, and is skipped unless
-it is asked for:
+## 5. 设计稿的画板
 
-```sh
-HERDR_UI_LIVE=1 go test ./internal/herdr/ -run TestLive -v
-```
+`docs.pen/01.pen` 共 71 张根画板：
 
-Two of the live tests need a pane of their own to type into, and say so
-when the variable is missing:
+- **35 张亮色 + 35 张暗色**（一一对应）+ 1 张暗色令牌板 + 主窗口暗色版
+- 主窗口总稿 `Herdr · macOS`（1440 × 900）是所有画板的母版，
+  它的精确结构见 `docs/02-ui-design-spec.md` §3
+- 完整画板清单与阶段映射见 `docs/01-implementation-plan.md` §1.1
 
-```sh
-HERDR_UI_LIVE=1 HERDR_UI_PANE=w1:p1 go test ./internal/herdr/ -run TestLive -v
-```
+导出 PNG 在 `design/`，`.gitignore` 已排除；需要时从 `.pen` 重新渲染。
 
-## What this rewrite does not cover
+---
 
-The Rust GUI in `herdr-gpui` is a large program: it also drives the
-plugins, the worktrees, the teleport between machines, the security
-scanner, the updater and the agent views. This rewrite covers the part that
-makes a window a window — the session, the terminals, the panes and their
-menus, the browser pages, the command palette, the worktrees, the agents
-and the control socket — and leaves the rest to the daemon, which already
-owns most of it.
+## 6. 当前状态
 
-What is still missing: the sessions of the Rust client, which open and drive
-the windows of other machines, and the parts of its settings that belong to
-the cloud features it has (Azure, Boat, Coder, Daytona). The window honours
-the settings that shape it, and leaves the rest to the Rust client.
-
-The updater panel shows what the daemon says about the version and the
-command it gives for installing it; the download itself is the daemon's,
-and the Rust GUI does it with its own updater, which signs a manifest and
-unpacks it.
-
-The daemon does not serve its `plugin.*` methods to endpoint clients, the
-way the Rust GUI notes, so there is no plugin panel here either: `herdr
-plugin` on the host is the way to reach them.
-
-The copy mode is the part of the Rust GUI that leans most on the daemon's
-own text: the motions that depend on the words of the output, and the
-searches of the scrollback, are the daemon's, and the daemon refuses a
-search whose revision has moved on, which the window answers by trying
-again with the revision it has painted.
+| 项 | 状态 |
+|---|---|
+| 设计稿 | ✅ 71 张画板，亮/暗齐全，5 项审阅缺陷已修复 |
+| 实现方案 | ✅ 数据来源分类、令牌系统、能力矩阵、P0–P4 排期、5 个待确认决策点 |
+| 主窗口精确规格 | ✅ 令牌表、度量标尺、结构树、终端语义分色 |
+| Rust 功能规格 | ✅ `reference/herdr-gpui-features.md`（948 行） |
+| 客户端实现 | ⬜ **已移除**（原 Go + mygo 实现，约 16,782 行）；按方案从零搭建 |
