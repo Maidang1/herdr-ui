@@ -1,0 +1,24 @@
+# Build artifacts.
+/herdr-ui
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Design exports. These are regenerable renders of docs.pen/01.pen and are
+# far too large for the repository; the .pen source is tracked instead.
+/design/
+
+# Autosave and backup copies of the .pen source.
+/docs.pen/*.autosave.pen
+/docs.pen/*.bak.*
+
+# OS and editor noise.
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local secrets.
+.env
+.env.*
