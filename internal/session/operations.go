@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -22,6 +23,7 @@ const (
 	ExportLayout
 	SetRatio
 	ClosePane
+	Shortcut
 )
 
 type ResultStatus string
@@ -38,6 +40,7 @@ const (
 )
 
 type Operation struct {
+	SelectedText                               *string
 	Kind                                       OperationKind
 	TargetID, Epoch                            uint64
 	PaneID, TerminalID                         string
@@ -45,6 +48,8 @@ type Operation struct {
 	WorkspaceID, TabID, Direction, Fingerprint string
 	Path                                       []bool
 	Ratio                                      float64
+	Action, Text, CommandID                    string
+	Index                                      int
 }
 type OperationResult struct {
 	Status      ResultStatus
@@ -55,6 +60,7 @@ type OperationResult struct {
 	PaneID      string
 	Root        *layout.Node
 	Fingerprint string
+	Data        json.RawMessage
 }
 type queuedOperation struct {
 	operation   Operation
@@ -75,6 +81,10 @@ type operationKey struct {
 // pending request per identity; the coordinator owns the one in-flight request.
 func (s *Session) Execute(ctx context.Context, op Operation) <-chan OperationResult {
 	op.Path = append([]bool{}, op.Path...)
+	if op.SelectedText != nil {
+		text := *op.SelectedText
+		op.SelectedText = &text
+	}
 	q := &queuedOperation{operation: op, ctx: ctx, result: make(chan OperationResult, 1)}
 	s.operationMu.Lock()
 	defer s.operationMu.Unlock()
@@ -92,7 +102,7 @@ func (s *Session) Execute(ctx context.Context, op Operation) <-chan OperationRes
 		q.complete(NotSent, ctx.Err().Error(), ScrollInfo{})
 		return q.result
 	}
-	if op.Kind < Scroll || op.Kind > ClosePane {
+	if op.Kind < Scroll || op.Kind > Shortcut {
 		q.complete(Rejected, "unsupported operation", ScrollInfo{})
 		return q.result
 	}
@@ -111,7 +121,7 @@ func (s *Session) Execute(ctx context.Context, op Operation) <-chan OperationRes
 	} else if op.Kind != Scroll {
 		key.nonce = q.id
 	}
-	if op.Kind == Split || op.Kind == Zoom || op.Kind == ClosePane {
+	if op.Kind == Split || op.Kind == Zoom || op.Kind == ClosePane || op.Kind == Shortcut {
 		if s.reservedOperations == nil {
 			s.reservedOperations = make(map[string]bool)
 		}
@@ -141,6 +151,9 @@ func (s *Session) Execute(ctx context.Context, op Operation) <-chan OperationRes
 func validOperation(p PublishedSnapshot, op Operation) bool {
 	if p.State != Ready || p.Stale || p.Snapshot == nil || p.TargetID != op.TargetID || p.Epoch != op.Epoch {
 		return false
+	}
+	if op.Kind == Shortcut && (op.Action == "new_workspace" || op.Action == "reload_config") && op.PaneID == "" {
+		return true
 	}
 	pane, ok := p.Snapshot.Pane(op.PaneID)
 	if !ok || pane.TerminalID != op.TerminalID {
@@ -200,6 +213,9 @@ func (s *Session) execute(ctx context.Context, client *herdr.Client, q *queuedOp
 	defer cancel()
 	stop := context.AfterFunc(q.ctx, cancel)
 	defer stop()
+	if q.operation.Kind == Shortcut {
+		return s.executeShortcut(call, client, q)
+	}
 	if q.operation.Kind != Scroll {
 		return s.executeLayout(call, client, q)
 	}

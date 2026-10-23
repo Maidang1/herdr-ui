@@ -86,8 +86,17 @@ func TestLoadBindingsConfigPrecedenceAndErrors(t *testing.T) {
 	}
 }
 
-func TestLiteralTransportBindingCannotBeAdvertisedAsAction(t *testing.T) {
-	if _, err := Resolve([]byte("[keys]\nprefix='ctrl+a'\nsplit_vertical='ctrl+b'\n"), "test"); err == nil {
-		t.Fatal("reserved literal ctrl+b accepted as business action")
+func TestConfiguredCtrlBActionPrecedesTransportEscape(t *testing.T) {
+	b, err := Resolve([]byte("[keys]\nprefix='ctrl+a'\nsplit_vertical='ctrl+b'\n"), "test")
+	if err != nil || len(b.Diagnostics) != 0 {
+		t.Fatal(b, err)
+	}
+	m := Machine{Bindings: b}
+	if r := m.Key("ctrl+b"); r.Action != "split_vertical" || len(r.Send) != 0 {
+		t.Fatal(r)
+	}
+	delete(b.Actions, "ctrl+b")
+	if r := m.Key("ctrl+b"); string(r.Send) != "\x02\x02" {
+		t.Fatal(r)
 	}
 }

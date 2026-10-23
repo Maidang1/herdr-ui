@@ -23,9 +23,14 @@ func TestBindings(t *testing.T) {
 		"[keys]\nsplit_vertical='v'",
 		"[keys]\ncommand=[{key='prefix+g',command=''}]",
 	} {
-		if _, err := Resolve([]byte(config), "fixture"); err == nil {
-			t.Fatalf("unsupported/conflicting config accepted: %s", config)
+		resolved, err := Resolve([]byte(config), "fixture")
+		if err != nil || len(resolved.Diagnostics) == 0 {
+			t.Fatalf("missing binding diagnostic for %s: %v %v", config, resolved.Diagnostics, err)
 		}
+		if resolved.Actions["prefix+c"] != "new_tab" {
+			t.Fatal("invalid entry disabled unrelated shortcut", resolved)
+		}
+
 	}
 }
 
@@ -37,9 +42,11 @@ func TestCustomCommandsReserveBindings(t *testing.T) {
 	if b.Actions["prefix+shift+h"] != "command[0]" || b.Actions["cmd+g"] != "command[0]" {
 		t.Fatal(b)
 	}
-	if _, err := Resolve([]byte("[keys]\nsplit_vertical='prefix+g'\n[[keys.command]]\nkey='prefix+g'\ncommand='echo test'"), "fixture"); err == nil {
-		t.Fatal("conflicting command accepted")
+	resolved, err := Resolve([]byte("[keys]\nsplit_vertical='prefix+g'\n[[keys.command]]\nkey='prefix+g'\ncommand='echo test'"), "fixture")
+	if err != nil || len(resolved.Diagnostics) == 0 || resolved.Actions["prefix+g"] != "split_vertical" {
+		t.Fatal(resolved, err)
 	}
+
 }
 
 func TestPrefixTransport(t *testing.T) {

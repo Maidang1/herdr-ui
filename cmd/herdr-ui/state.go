@@ -127,6 +127,9 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			material = mygo.VibrancyNone
 		}
 		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Vibrancy: material, Content: native.View(screen.View)})
+		keyboard := &keyboardEndpoint{}
+		screen.SetActionHooks(keyboardHooks(ctx, s, keyboard, screen, post, func() { win.Close() }, resolvedBinary, target))
+		go keyboard.run(ctx, target.Socket, func() { post(func() {}) })
 		win.OnBlur(func() { post(func() { screen.SetWindowActive(false) }) })
 		win.OnFocus(func() { post(func() { screen.SetWindowActive(true) }) })
 		themeItems := map[mygo.ThemeSource]*mygo.MenuItem{}
@@ -196,7 +199,13 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			}
 		})
 		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Role: mygo.RoleAppMenu}, {Role: mygo.RoleEditMenu}, {Label: "View", Submenu: viewItems}, {Label: "Terminal", Submenu: terminalItems}, {Label: "Help", Submenu: helpItems}, {Role: mygo.RoleWindowMenu}}))
-		win.OnClosed(func() { offAppearance(); screen.DetachTerminal(); closed.Store(true); cancel() })
+		win.OnClosed(func() {
+			offAppearance()
+			screen.CloseCommandSurface()
+			screen.DetachTerminal()
+			closed.Store(true)
+			cancel()
+		})
 		start()
 		if closeAfter > 0 {
 			time.AfterFunc(closeAfter, func() {

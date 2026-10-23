@@ -40,7 +40,7 @@ func TestTerminalPanelKeepsNoWorkspacesState(t *testing.T) {
 	w := New(a, nil)
 	w.ConnectTerminal(host, state, context.Background(), func(fn func()) { fn() })
 	tt := native.NewTester(w.View, 820, 560)
-	if !tt.HasText("No workspaces") || !tt.HasText("Workspaces opened in Herdr will appear here.") {
+	if !tt.HasText("No workspaces") || !tt.HasText("Press the prefix then Shift+N to create a workspace.") {
 		t.Fatal(tt.Texts())
 	}
 }

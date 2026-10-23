@@ -272,13 +272,15 @@ func (w *Window) drawTerminal(c *native.Context, v app.View, p design.Palette, t
 		}
 		el := t.host.View(c.Key(fmt.Sprintf("terminal:%d:%s:%d", t.binding.TargetID, t.binding.TerminalID, t.binding.Generation)), t.binding).Fill()
 		if requestFocus && pane.ID == v.PaneID {
-			el.Focus()
+			if !w.modalOpen() {
+				el.Focus()
+			}
 			w.terminal.focused = pane.ID
 		} else if !requestFocus && el.Focused() && pane.ID != v.PaneID {
 			w.app.SelectPane(pane.ID)
 			w.BlurInput()
 		}
-		if !requestFocus && pane.ID == v.PaneID && !el.Focused() && w.controller != nil {
+		if !requestFocus && pane.ID == v.PaneID && !el.Focused() && w.controller != nil && !w.modalOpen() {
 			w.controller.machine.Reset()
 		}
 	}

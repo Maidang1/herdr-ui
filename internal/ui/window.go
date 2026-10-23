@@ -7,27 +7,30 @@ import (
 	"github.com/bytedance/herdr-ui/internal/app"
 	"github.com/bytedance/herdr-ui/internal/design"
 	"github.com/bytedance/herdr-ui/internal/icons"
+	"github.com/bytedance/herdr-ui/internal/input"
 	"github.com/bytedance/herdr-ui/internal/session"
 	native "github.com/egoist/mygo/ui"
 )
 
 type Window struct {
-	app               *app.App
-	retry             func()
-	hidden            bool
-	terminal          *terminalPanel
-	controller        *actionController
-	actionState       func(string, bool)
-	projected         app.View
-	projectionVersion uint64
-	viewportWidth     float32
-	sidebarWidth      float32
-	sidebarVisible    bool
-	sidebarDragging   bool
-	sidebarDragOffset float32
-	helpFocusPending  bool
-	appearance        windowAppearance
-	projectionValid   bool
+	app                 *app.App
+	hooks               ActionHooks
+	commandSurfaceState *commandSurfaceState
+	retry               func()
+	hidden              bool
+	terminal            *terminalPanel
+	controller          *actionController
+	actionState         func(string, bool)
+	projected           app.View
+	projectionVersion   uint64
+	viewportWidth       float32
+	sidebarWidth        float32
+	sidebarVisible      bool
+	sidebarDragging     bool
+	sidebarDragOffset   float32
+	helpFocusPending    bool
+	appearance          windowAppearance
+	projectionValid     bool
 }
 
 func New(a *app.App, retry func()) *Window {
@@ -56,7 +59,24 @@ func (w *Window) View(c *native.Context) {
 	p := w.appearancePalette(c)
 	v := w.currentView()
 	root := native.Row(c).Fill().Padding(8).Gap(8).AlignItems(native.Stretch).TextColor(p.Text).FontSize(13)
+	if v.PaneID == "" && !w.modalOpen() && !w.referenceOpen() && !root.FocusWithin() {
+		root.Focus()
+	}
 	w.styleShell(c, root, p)
+	root.HandleInput(func(ev native.InputEvent) bool {
+		if ev.Kind != native.InputKeyDown || w.controller == nil || w.controller.bindingError != "" || w.modalOpen() || w.currentView().PaneID != "" {
+			return false
+		}
+		label, ok := input.NativeKey(ev.Mods, ev.Key)
+		if !ok {
+			return false
+		}
+		r := w.controller.machine.Handle(label, false)
+		if r.Action != "" {
+			w.DispatchIndex(r.Action, r.Index)
+		}
+		return r.Consumed
+	})
 	root.Children(func() {
 		if w.sidebarVisible {
 			w.sidebar(c, v, p)
@@ -70,6 +90,7 @@ func (w *Window) View(c *native.Context) {
 		content.Children(func() {
 			w.windowControls(c, p)
 			w.actionBar(c, v, p)
+			w.shortcutPanel(c, p)
 			if v.Stale && v.Error != "" {
 				native.Row(c).Padding(10, 16).Gap(12).AlignItems(native.Center).Children(func() {
 					native.Icon(c, icons.Unplug).Size(16, 16).TextColor(p.Danger)
@@ -82,7 +103,11 @@ func (w *Window) View(c *native.Context) {
 					native.Text(c, "Last synced "+v.Updated.Format("15:04:05")).FontSize(12).TextColor(p.Secondary).Padding(0, 16, 8, 16)
 				}
 			}
-			w.content(c, v, p)
+			if w.commandSurfaceState != nil {
+				w.commandSurface(c, p)
+			} else {
+				w.content(c, v, p)
+			}
 		})
 		if w.referenceOpen() {
 			w.referencePanel(c, p)
@@ -113,7 +138,7 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 		title, detail := "Connecting to Herdr…", "Waiting for the local session."
 		if v.State == session.Ready {
 			title = "No workspaces"
-			detail = "Workspaces opened in Herdr will appear here."
+			detail = "Press the prefix then Shift+N to create a workspace."
 		} else if v.State == session.Incompatible {
 			title = "This Herdr session is unavailable"
 			detail = "Check the connection details above and retry."
@@ -219,3 +244,5 @@ func paneDescription(pane app.PaneRow) string {
 	}
 	return label + " · " + statusLabel(pane.Status)
 }
+
+func (w *Window) SelectionRevision() uint64 { return w.app.ViewRevision() }

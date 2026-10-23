@@ -21,18 +21,22 @@ type actionController struct {
 	guarded         bool
 	guardKnown      bool
 	ratioGeneration uint64
+	shortcut        shortcutState
 	drag            *ratioDrag
 }
 
 type Action struct{ ID, Label string }
 
-var Actions = []Action{{"split_vertical", "Split right"}, {"split_horizontal", "Split down"}, {"focus_pane_left", "Focus left"}, {"focus_pane_down", "Focus down"}, {"focus_pane_up", "Focus up"}, {"focus_pane_right", "Focus right"}, {"previous_tab", "Previous tab"}, {"next_tab", "Next tab"}, {"zoom", "Zoom / restore"}, {"resize_mode", "Resize mode"}, {"toggle_sidebar", "Toggle sidebar"}, {"help", "Keyboard reference"}, {"close_pane", "Close pane"}}
+var Actions = []Action{
+	{"help", "Keyboard reference"}, {"settings", "Settings"}, {"new_workspace", "New workspace"}, {"new_worktree", "New worktree"}, {"open_worktree", "Open worktree"}, {"remove_worktree", "Remove worktree"}, {"rename_workspace", "Rename workspace"}, {"close_workspace", "Close workspace"}, {"workspace_picker", "Workspace navigator"}, {"goto", "Session navigator"}, {"detach", "Detach window"}, {"reload_config", "Reload configuration"}, {"open_notification_target", "Open notification target"}, {"previous_workspace", "Previous workspace"}, {"next_workspace", "Next workspace"}, {"previous_agent", "Previous agent"}, {"next_agent", "Next agent"}, {"focus_agent", "Focus agent by number"}, {"remote_image_paste", "Paste clipboard image"}, {"new_tab", "New tab"}, {"rename_tab", "Rename tab"}, {"previous_tab", "Previous tab"}, {"next_tab", "Next tab"}, {"move_tab_previous", "Move tab left"}, {"move_tab_next", "Move tab right"}, {"switch_tab", "Switch tab by number"}, {"switch_workspace", "Switch workspace by number"}, {"close_tab", "Close tab"}, {"rename_pane", "Rename pane"}, {"edit_scrollback", "Edit scrollback"}, {"copy_mode", "Copy mode"}, {"focus_pane_left", "Focus left"}, {"focus_pane_down", "Focus down"}, {"focus_pane_up", "Focus up"}, {"focus_pane_right", "Focus right"}, {"swap_pane_left", "Swap left"}, {"swap_pane_down", "Swap down"}, {"swap_pane_up", "Swap up"}, {"swap_pane_right", "Swap right"}, {"cycle_pane_next", "Next pane"}, {"cycle_pane_previous", "Previous pane"}, {"last_pane", "Last pane"}, {"split_vertical", "Split right"}, {"split_horizontal", "Split down"}, {"close_pane", "Close pane"}, {"zoom", "Zoom / restore"}, {"resize_mode", "Resize mode"}, {"resize_pane_left", "Resize left"}, {"resize_pane_down", "Resize down"}, {"resize_pane_up", "Resize up"}, {"resize_pane_right", "Resize right"}, {"toggle_sidebar", "Toggle sidebar"},
+}
 
 func (w *Window) ConfigureBindings(b input.Bindings, err error) {
 	if w.controller == nil {
 		w.controller = &actionController{}
 	}
 	w.controller.machine.Bindings = b
+	w.controller.bindingError = ""
 	if err != nil {
 		w.controller.bindingError = err.Error()
 	}
@@ -52,6 +56,19 @@ func (w *Window) syncInput() {
 	}
 	a := w.controller
 	v := w.currentView()
+	cp := &a.shortcut
+	if cp.copy != nil && cp.copyPane != "" {
+		p := w.app.Publication()
+		valid := false
+		if p.Snapshot != nil {
+			pane, exists := p.Snapshot.Pane(cp.copyPane)
+			valid = exists && pane.TerminalID == cp.copyTerminal
+		}
+		if !valid || cp.copyPane != v.PaneID || cp.copyTarget != v.TargetID || cp.copyEpoch != v.Epoch {
+			cp.copy = nil
+			cp.prompt = nil
+		}
+	}
 	if a.revision != w.app.ViewRevision() || a.target != v.TargetID || a.epoch != v.Epoch {
 		w.BlurInput()
 		a.revision = w.app.ViewRevision()
@@ -91,9 +108,15 @@ func (w *Window) keyPublished(binding terminalhost.Binding, mods native.Modifier
 		a.machine.Reset()
 		return terminalhost.KeyResult{}
 	}
+	if a.shortcut.navigate && w.navigateKey(label) {
+		return terminalhost.KeyResult{Consumed: true}
+	}
 	result := a.machine.Handle(label, false)
 	if result.Action != "" {
-		w.Dispatch(result.Action)
+		if result.Action == "remote_image_paste" && w.hooks.ReadImage != nil && len(w.hooks.ReadImage()) == 0 {
+			return terminalhost.KeyResult{}
+		}
+		w.DispatchIndex(result.Action, result.Index)
 	}
 	return terminalhost.KeyResult{Consumed: result.Consumed, Send: result.Send}
 }
@@ -105,7 +128,7 @@ func bindingMatchesPublication(binding terminalhost.Binding, spec terminalhost.S
 	return ok && pane.TerminalID == binding.TerminalID && pane.TerminalID == spec.TerminalID
 }
 func (w *Window) operation(kind session.OperationKind, direction string) (session.Operation, bool) {
-	if w.terminal == nil {
+	if w.terminal == nil || w.terminal.session == nil {
 		return session.Operation{}, false
 	}
 	v := w.currentView()
@@ -133,6 +156,9 @@ func actionKind(action string) session.OperationKind {
 	return 0
 }
 func (w *Window) Can(action string) bool {
+	if handled, enabled := w.canShortcut(action); handled {
+		return enabled
+	}
 	if action == "help" || action == "toggle_sidebar" {
 		return true
 	}
@@ -147,11 +173,15 @@ func (w *Window) Can(action string) bool {
 	_, ok := w.operation(kind, "")
 	return ok && !w.app.Pending(session.ClosePane, v.PaneID) && !w.app.Pending(kind, v.PaneID) && (kind != session.ExportLayout || (!v.Layout.Zoomed && len(v.Layout.Splits) > 0))
 }
-func (w *Window) Dispatch(action string) {
+func (w *Window) Dispatch(action string) { w.DispatchIndex(action, 0) }
+func (w *Window) DispatchIndex(action string, index int) {
 	if w.controller == nil {
 		return
 	}
 	a := w.controller
+	if w.dispatchShortcut(action, index) {
+		return
+	}
 	known := false
 	for _, item := range Actions {
 		if item.ID == action {
@@ -159,7 +189,7 @@ func (w *Window) Dispatch(action string) {
 		}
 	}
 	if !known && !strings.HasPrefix(action, "resize_") {
-		a.message = "This action is not available in this milestone: " + action
+		a.message = "Unknown action: " + action
 		return
 	}
 	if !w.Can(action) {
@@ -218,11 +248,23 @@ func (w *Window) Dispatch(action string) {
 	if !ok {
 		return
 	}
+	if kind == session.Neighbor && w.currentView().Layout.Zoomed {
+		op.Kind = session.Shortcut
+		op.Action = "focus_pane_direction"
+		w.runShortcut(op, nil)
+		return
+	}
 	intent, ok := w.app.BeginOperation(op)
 	if !ok {
 		return
 	}
-	w.execute(op, func(r session.OperationResult) { w.app.CompleteOperation(intent, r); w.terminal.session.Refresh() })
+	w.execute(op, func(r session.OperationResult) {
+		w.app.CompleteOperation(intent, r)
+		if op.Kind == session.ClosePane {
+			w.offerGroupClose(op, r)
+		}
+		w.terminal.session.Refresh()
+	})
 }
 func (w *Window) execute(op session.Operation, done func(session.OperationResult)) {
 	t := w.terminal

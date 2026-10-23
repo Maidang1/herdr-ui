@@ -426,3 +426,16 @@ func (h *Host) InputState(b Binding) InputState {
 	}
 	return InputState{}
 }
+
+// Send is used by client-owned input modes. Stale bindings cannot address a
+// replacement terminal; callers supply already attach-escaped bytes.
+func (h *Host) Send(b Binding, data []byte) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	e := h.lookup(b)
+	if e == nil || !e.installed || e.owned == nil {
+		return false
+	}
+	e.owned.Send(data)
+	return true
+}

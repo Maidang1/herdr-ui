@@ -31,6 +31,8 @@ make package       # 固定版本 mygo CLI，输出含原生库的本地签名 .
 
 默认窗口按事件同步，并差量 attach 当前标签的全部可见终端。普通工作区/标签/pane 选择保持窗口本地，不修改 Herdr 全局焦点；滚动通过显式目标 `pane.scroll` 更新服务端视口。可使用 `./bin/herdr-ui -socket /path/to/herdr.sock` 指定目标。
 
+快捷键覆盖工作区、标签、pane、worktree、导航、复制模式和自定义命令。默认先按 `Ctrl+B`，再按动作键；`?` 打开快捷键参考。设置与滚动历史通过内嵌 `$EDITOR` 打开，popup/插件交互通过内嵌 Herdr 客户端显示。支持范围、平台键位限制与验证方法见 [快捷键说明](docs/keyboard-parity.md)。缩放状态下切换隐藏 pane，以及图片粘贴和服务端自定义命令，会使用显式目标更新服务端焦点。
+
 M0 验证窗口连接某个已有终端：先运行 `make probe` 取得真实 `terminal_id`，然后执行：
 
 ```sh

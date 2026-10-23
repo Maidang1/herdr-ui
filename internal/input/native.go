@@ -21,7 +21,7 @@ func NativeKey(mods ui.Modifiers, key ui.Key) (string, bool) {
 	case key >= ui.KeyF1 && key <= ui.KeyF12:
 		name = "f" + strconv.Itoa(int(key-ui.KeyF1)+1)
 	default:
-		name = map[ui.Key]string{ui.KeyEnter: "enter", ui.KeyEscape: "esc", ui.KeyBackspace: "backspace", ui.KeyTab: "tab", ui.KeySpace: "space", ui.KeyLeft: "left", ui.KeyRight: "right", ui.KeyUp: "up", ui.KeyDown: "down", ui.KeyMinus: "minus", ui.KeyEqual: "=", ui.KeyComma: "comma", ui.KeyPeriod: "period", ui.KeySlash: "slash", ui.KeySemicolon: "semicolon", ui.KeyQuote: "quote", ui.KeyBracketLeft: "[", ui.KeyBracketRight: "]", ui.KeyBackslash: "backslash", ui.KeyBackquote: "backtick"}[key]
+		name = map[ui.Key]string{ui.KeyHome: "home", ui.KeyEnd: "end", ui.KeyDelete: "delete", ui.KeyInsert: "insert", ui.KeyPageUp: "pageup", ui.KeyPageDown: "pagedown", ui.KeyEnter: "enter", ui.KeyEscape: "esc", ui.KeyBackspace: "backspace", ui.KeyTab: "tab", ui.KeySpace: "space", ui.KeyLeft: "left", ui.KeyRight: "right", ui.KeyUp: "up", ui.KeyDown: "down", ui.KeyMinus: "minus", ui.KeyEqual: "=", ui.KeyComma: "comma", ui.KeyPeriod: "period", ui.KeySlash: "slash", ui.KeySemicolon: "semicolon", ui.KeyQuote: "quote", ui.KeyBracketLeft: "[", ui.KeyBracketRight: "]", ui.KeyBackslash: "backslash", ui.KeyBackquote: "backtick"}[key]
 	}
 	if name == "" {
 		return "", false

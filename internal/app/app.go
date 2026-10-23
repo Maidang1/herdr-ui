@@ -59,6 +59,7 @@ type App struct {
 	nextIntent        uint64
 	intents           map[uint64]*pendingIntent
 	actionMessage     string
+	lastPane          string
 	publication       session.PublishedSnapshot
 	snapshot          *session.Snapshot
 	workspaceID       string
@@ -84,6 +85,7 @@ func (a *App) Update(p session.PublishedSnapshot) {
 		a.visitedTabs = make(map[string]bool)
 	}
 	if a.publication.TargetID != p.TargetID {
+		a.lastPane = ""
 		clear(a.sidebar)
 		a.snapshot = nil
 		a.workspaceID = ""
@@ -152,6 +154,11 @@ func (a *App) Update(p session.PublishedSnapshot) {
 				}
 			}
 			if visible, ok := s.Layout(t.ID); ok && visible.Zoomed {
+				if t.ID == a.tabs[a.workspaceID] && a.panes[t.ID] != "" && a.panes[t.ID] != visible.FocusedPaneID {
+					if _, exists := s.Pane(a.panes[t.ID]); exists {
+						a.lastPane = a.panes[t.ID]
+					}
+				}
 				id = visible.FocusedPaneID
 			}
 			a.panes[t.ID] = id
@@ -207,6 +214,7 @@ func (a *App) SelectWorkspace(id string) {
 		if _, ok := a.snapshot.Workspace(id); ok {
 			a.version++
 			a.viewRevision++
+			a.saveLastPane()
 			a.workspaceID = id
 			a.rememberCurrent()
 		}
@@ -217,6 +225,7 @@ func (a *App) SelectTab(id string) {
 		if t, ok := a.snapshot.Tab(id); ok && t.WorkspaceID == a.workspaceID {
 			a.version++
 			a.viewRevision++
+			a.saveLastPane()
 			a.tabs[t.WorkspaceID] = id
 			a.rememberCurrent()
 		}
@@ -230,6 +239,9 @@ func (a *App) SelectPane(id string) {
 			}
 			a.version++
 			a.viewRevision++
+			if a.panes[a.tabs[a.workspaceID]] != id {
+				a.saveLastPane()
+			}
 			a.workspaceID = p.WorkspaceID
 			a.tabs[p.WorkspaceID] = p.TabID
 			a.panes[p.TabID] = id
@@ -347,4 +359,36 @@ func (a *App) View() View {
 		}
 	}
 	return v
+}
+
+func (a *App) saveLastPane() {
+	if id := a.panes[a.tabs[a.workspaceID]]; id != "" {
+		a.lastPane = id
+	}
+}
+func (a *App) SelectLastPane() {
+	if a.lastPane != "" {
+		a.SelectPane(a.lastPane)
+	}
+}
+
+// Publication returns the immutable authoritative snapshot currently projected
+// by this window. UI intents must use this revision, not an unapplied update.
+func (a *App) Publication() session.PublishedSnapshot { return a.publication }
+
+// LastPaneID exposes a validated navigation destination without selecting it.
+func (a *App) LastPaneID() string {
+	if a.snapshot != nil {
+		if _, ok := a.snapshot.Pane(a.lastPane); ok {
+			return a.lastPane
+		}
+	}
+	return ""
+}
+
+func (a *App) ClearActionMessage() {
+	if a.actionMessage != "" {
+		a.actionMessage = ""
+		a.version++
+	}
 }
