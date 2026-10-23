@@ -74,7 +74,7 @@ func TestDividerPointerKeepsExistingTerminalFocus(t *testing.T) {
 			terminal := native.Box(c.Key("simulated-terminal")).Fill().Focusable().AutoFocus().Label("Terminal")
 			terminal.HandleInput(func(ev native.InputEvent) bool { return ev.Kind == native.InputKeyDown })
 			focused = terminal.Focused()
-			w.dividers(c, layout.Projection{Splits: []layout.SplitRect{split}}, design.Colors(false))
+			w.dividers(c, layout.Projection{Splits: []layout.SplitRect{split}}, []layout.SplitRect{split}, nil, design.Colors(false))
 		})
 	}, 200, 100)
 	tester.Frame()
@@ -86,5 +86,58 @@ func TestDividerPointerKeepsExistingTerminalFocus(t *testing.T) {
 	}
 	if !focused {
 		t.Fatal("divider pointer interaction cleared terminal focus")
+	}
+}
+
+func TestDividersKeepLayoutCapturedBeforeSelectionChanges(t *testing.T) {
+	w := New(app.New(), nil)
+	w.controller = &actionController{}
+	split := layout.SplitRect{ID: "old-tab-split", Direction: "right", Ratio: .5, Rect: layout.Rect{W: 200, H: 100}}
+	frame := app.View{Layout: session.PaneLayout{Splits: []layout.SplitRect{split}}}
+	projection := layout.Projection{Splits: []layout.SplitRect{split}}
+	tester := native.NewTester(func(c *native.Context) {
+		// Selection changes during a frame, after its geometry was projected.
+		// The newly selected single-pane/zoomed layout has no dividers.
+		w.projected = app.View{}
+		w.projectionValid = true
+		w.projectionVersion = w.app.Version()
+		native.Box(c).Fill().Children(func() { w.dividers(c, projection, frame.Layout.Splits, nil, design.Colors(false)) })
+	}, 200, 100)
+	if _, ok := tester.Find("Resize split"); !ok {
+		t.Fatal("lost divider from captured frame")
+	}
+}
+
+func TestDividerSourceMatchesIdentityInsteadOfSlicePosition(t *testing.T) {
+	a := layout.SplitRect{ID: "opaque-A", Direction: "right", Ratio: .3}
+	b := layout.SplitRect{ID: "opaque-B", Direction: "down", Ratio: .7}
+	source, ok := dividerSource("opaque-A", []layout.SplitRect{b, a}, nil)
+	if !ok || source != a {
+		t.Fatal("matched another split by position", source)
+	}
+	if _, ok := dividerSource("removed", []layout.SplitRect{b, a}, nil); ok {
+		t.Fatal("rendered a split absent from captured layout")
+	}
+}
+
+func TestPreviewDividerUsesCapturedDragWithoutAuthoritativeSplits(t *testing.T) {
+	split := layout.SplitRect{ID: "opaque-original", Direction: "down", Ratio: .6, Rect: layout.Rect{W: 200, H: 100}}
+	drag := &ratioDrag{ready: true, split: split, op: session.Operation{Path: []bool{true}}}
+	source, ok := dividerSource("root1", nil, drag)
+	if !ok || source != split {
+		t.Fatal("preview lost captured drag source", source)
+	}
+	if _, ok := dividerSource("root", nil, drag); ok {
+		t.Fatal("rendered inactive preview split")
+	}
+	w := New(app.New(), nil)
+	w.controller = &actionController{}
+	tester := native.NewTester(func(c *native.Context) {
+		native.Box(c).Fill().Children(func() {
+			w.dividers(c, layout.Projection{Splits: []layout.SplitRect{{ID: "root1", Direction: "down", Ratio: .6, Rect: split.Rect}}}, nil, drag, design.Colors(false))
+		})
+	}, 200, 100)
+	if _, ok := tester.Find("Resize split"); !ok {
+		t.Fatal("preview divider not rendered")
 	}
 }

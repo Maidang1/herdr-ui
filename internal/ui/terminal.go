@@ -137,8 +137,10 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 		geometry := v.Layout
 		geometry.Splits = gridDividers(geometry.Splits)
 		w.updateDrag(v)
+		var previewDrag *ratioDrag
 		if w.controller != nil && w.controller.drag != nil && w.controller.drag.ready {
-			geometry.Panes, geometry.Splits = preview(w.controller.drag.root, geometry.Area)
+			previewDrag = w.controller.drag
+			geometry.Panes, geometry.Splits = preview(previewDrag.root, geometry.Area)
 		}
 		projection, err := layout.Project(geometry.Area, geometry.Panes, geometry.Splits, layout.Rect{W: float64(bounds.W), H: float64(bounds.H)})
 		if err != nil {
@@ -224,7 +226,7 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			})
 		}
 		if valid && !v.Layout.Zoomed {
-			w.dividers(c, projection, p)
+			w.dividers(c, projection, v.Layout.Splits, previewDrag, p)
 		}
 		targets := make([]session.ScrollTarget, 0, len(t.panes))
 		for _, spec := range specs {

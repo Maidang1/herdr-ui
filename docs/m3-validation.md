@@ -37,3 +37,9 @@ Divider 通过 fresh export 树的 descendant pane 矩形并集匹配路径，�
 独立规格与质量审查中修复了：保留 Ctrl-B 绑定误报、ResizeMode 规则与嵌套边界、准备阶段 NotSent 分类、zoom 快照归一化、缓存绕过、divider 网格命中偏差，以及只读 export 造成新快照再触发 export 的循环。结果丢失的 split 在重连后不会自动重放，测试确认服务端仅接收到一次请求。
 
 比例完成回调还校验本地单调 resize generation：旧拖动/键盘操作的迟到错误不能覆盖新操作；最终 release 后预览已移除的错误仍可见。分隔线 KeepFocus 的 headless 点击回归证明应用内部焦点保留；按键入口在派发前校验最新 pane→terminal 映射，旧 binding 不能操作替换后的新 terminal。这些内部回归仍不等同于系统鼠标/输入法验收。
+
+## 运行反馈修复：切换布局时 divider 越界
+
+实际 `make run` 反馈暴露 `resize.go` 的下标越界：终端区域先用帧内捕获的布局生成 projection，pane 渲染中的本地选择又改变了当前 AppView，divider 随后读取新布局并按旧 projection 的下标索引。当新布局没有 split 时，旧 projection 的第一个 split 触发 panic。此前自动回归没有覆盖同一帧内布局选择变化。
+
+新增 headless 回归首先复现相同 panic。修复后 divider 显式接收生成该帧 projection 的 source splits 与 preview drag，以 ID 对应来源，避免再次读取当前选择或依赖两个数组同序；preview 只使用捕获的活动 split。回归覆盖选中布局变为空、source splits 重排、来源缺失与 preview 没有权威 split 列表的情况。

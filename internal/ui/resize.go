@@ -207,27 +207,37 @@ func preview(root *layout.Node, area layout.Rect) ([]layout.PaneRect, []layout.S
 	walk(root, area, "root")
 	return panes, splits
 }
-func (w *Window) dividers(c *native.Context, projection layout.Projection, p design.Palette) {
+
+// dividerSource pairs projected geometry with the layout captured for that frame.
+// Preview IDs belong to the cloned tree; authoritative IDs remain opaque.
+func dividerSource(id string, sources []layout.SplitRect, drag *ratioDrag) (layout.SplitRect, bool) {
+	if drag != nil {
+		pathID := "root"
+		for _, second := range drag.op.Path {
+			if second {
+				pathID += "1"
+			} else {
+				pathID += "0"
+			}
+		}
+		return drag.split, id == pathID
+	}
+	for _, source := range sources {
+		if source.ID == id {
+			return source, true
+		}
+	}
+	return layout.SplitRect{}, false
+}
+
+func (w *Window) dividers(c *native.Context, projection layout.Projection, sources []layout.SplitRect, previewDrag *ratioDrag, p design.Palette) {
 	if w.controller == nil {
 		return
 	}
-	v := w.currentView()
-	for i, s := range projection.Splits {
-		s := s
-		source := v.Layout.Splits[i]
-		if d := w.controller.drag; d != nil && d.ready {
-			id := "root"
-			for _, second := range d.op.Path {
-				if second {
-					id += "1"
-				} else {
-					id += "0"
-				}
-			}
-			if s.ID != id {
-				continue
-			}
-			source = d.split
+	for _, s := range projection.Splits {
+		source, ok := dividerSource(s.ID, sources, previewDrag)
+		if !ok {
+			continue
 		}
 		r := s.Rect
 		x, y, width, height := r.X, r.Y, r.W, r.H
