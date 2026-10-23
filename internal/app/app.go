@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bytedance/herdr-ui/internal/session"
+	"github.com/bytedance/herdr-ui/internal/sidebarinfo"
 )
 
 type View struct {
@@ -20,11 +21,21 @@ type View struct {
 	ActionMessage                                   string
 	Updated                                         time.Time
 	Rows                                            []WorkspaceRow
+	Agents                                          []AgentRow
 	WorkspaceID, WorkspaceName, Path, TabID, PaneID string
 	Tabs                                            []TabRow
 	Panes                                           []PaneRow
 }
+type AgentRow struct {
+	WorkspaceID, WorkspaceName, TabID, PaneID, Agent, Status string
+	Selected                                                 bool
+}
+
 type WorkspaceRow struct {
+	Branch, Remote                        string
+	Ahead, Behind                         int
+	GitKnown, PortsKnown                  bool
+	Ports                                 []int
 	ID, Name, Path, PaneID, Status, Agent string
 	Depth                                 int
 	Selected                              bool
@@ -42,6 +53,7 @@ type PaneRow struct {
 }
 
 type App struct {
+	sidebar           map[string]sidebarinfo.Entry
 	version           uint64
 	viewRevision      uint64
 	nextIntent        uint64
@@ -64,6 +76,7 @@ func New() *App {
 func (a *App) Update(p session.PublishedSnapshot) {
 	a.version++
 	defer a.applyPending()
+	defer a.pruneSidebar()
 	if a.tabs == nil {
 		a.tabs = make(map[string]string)
 		a.panes = make(map[string]string)
@@ -71,6 +84,7 @@ func (a *App) Update(p session.PublishedSnapshot) {
 		a.visitedTabs = make(map[string]bool)
 	}
 	if a.publication.TargetID != p.TargetID {
+		clear(a.sidebar)
 		a.snapshot = nil
 		a.workspaceID = ""
 		clear(a.tabs)
@@ -250,6 +264,19 @@ func (a *App) View() View {
 		id := a.panes[a.tabs[w.ID]]
 		p, _ := s.Pane(id)
 		r := WorkspaceRow{ID: w.ID, Name: w.Label, Path: w.CheckoutPath, PaneID: id, Agent: p.Agent, Status: p.Status, Selected: w.ID == v.WorkspaceID}
+		if w.Status != "" {
+			r.Status = w.Status
+		}
+		if details, ok := a.sidebar[w.ID]; ok {
+			info := details.Info
+			r.Branch = info.Branch
+			r.Remote = info.Remote
+			r.Ahead = info.Ahead
+			r.Behind = info.Behind
+			r.GitKnown = info.GitKnown
+			r.PortsKnown = info.PortsKnown
+			r.Ports = append([]int(nil), info.Ports...)
+		}
 		if r.Path == "" {
 			r.Path = p.CWD
 		}
@@ -257,6 +284,9 @@ func (a *App) View() View {
 			ps := s.Panes(t.ID)
 			for _, p := range ps {
 				r.Panes = append(r.Panes, paneRow(p, r.Selected && p.ID == v.PaneID))
+				if p.Agent != "" {
+					v.Agents = append(v.Agents, AgentRow{WorkspaceID: w.ID, WorkspaceName: w.Label, TabID: t.ID, PaneID: p.ID, Agent: p.Agent, Status: p.Status, Selected: r.Selected && p.ID == v.PaneID})
+				}
 			}
 			if r.Selected {
 				name := t.Label

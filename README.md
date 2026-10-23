@@ -9,6 +9,8 @@ Herdr 的原生桌面客户端，第一版面向本机 macOS，使用 **Go + myg
 - [API schema](reference/herdr-api-schema.json)：机器可读参考，接入时以目标 Herdr 实际版本为准。
 - [图标素材与授权](assets/icons/NOTICE.md)。
 
+侧栏按 Herdr 的 spaces / agents 信息分区：工作区显示真实分支、ahead/behind 与监听端口，代理单独按工作区分组，不展开普通 shell 标题。API 未导出的本地 Git/进程信息由后台有界采集，细节与验证见 [侧栏修正记录](docs/sidebar-validation.md)。
+
 终端直接使用 `github.com/egoist/mygo/plugins/terminal`，通过 `herdr terminal attach <terminal_id>` 连接已有会话；状态从第一版起使用 `events.subscribe`，由事件触发权威快照更新，不定时轮询。
 
 通用图标采用 `lucide-static`，agent 品牌图标采用 `@lobehub/icons-static-svg`：开发时按需导出并嵌入 SVG，由 mygo 显示，运行时无需 Node/npm。单色使用 `ui.Icon`，彩色使用 `ui.Image`。

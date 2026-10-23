@@ -16,7 +16,6 @@ type Window struct {
 	app               *app.App
 	retry             func()
 	hidden            bool
-	expanded          map[string]bool
 	terminal          *terminalPanel
 	controller        *actionController
 	actionState       func(string, bool)
@@ -33,7 +32,7 @@ type Window struct {
 }
 
 func New(a *app.App, retry func()) *Window {
-	return &Window{app: a, retry: retry, expanded: map[string]bool{}, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, appearance: windowAppearance{active: true}}
+	return &Window{app: a, retry: retry, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, appearance: windowAppearance{active: true}}
 }
 
 func (w *Window) currentView() app.View {
@@ -84,113 +83,6 @@ func (w *Window) View(c *native.Context) {
 			w.referencePanel(c, p)
 		}
 	})
-}
-
-func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
-	native.Column(c.Key("workspace-sidebar")).Label("Workspace sidebar").Width(w.sidebarWidth).Shrink(0).Background(p.Sidebar).AlignItems(native.Stretch).Gap(6).Children(func() {
-		native.Row(c).Height(36).Shrink(0).Padding(0, 8).AlignItems(native.Center).DragWindow().Children(func() {
-			native.Box(c).Grow(1)
-			toggle := w.iconButton(c, "hide-sidebar", icons.PanelLeft, "Hide sidebar", p)
-			if toggle.Clicked() {
-				w.Dispatch("toggle_sidebar")
-			}
-		})
-		native.Text(c, "Workspaces").FontSize(12).TextColor(p.Secondary).PaddingX(12)
-		native.Scroll(c).Grow(1).Label("Workspaces").Children(func() {
-			native.Column(c).Gap(0).Children(func() {
-				for _, row := range v.Rows {
-					w.workspace(c, row, p)
-				}
-			})
-		})
-		native.Row(c).Height(28).PaddingX(12).AlignItems(native.Center).Gap(7).Children(func() {
-			icon, color, label := connection(v.State, c.Theme().Dark)
-			native.Icon(c, icon).Size(14, 14).TextColor(color).Label(label).Tooltip(label)
-			native.Text(c, "Local").FontSize(12).TextColor(p.Secondary)
-			native.Box(c).Grow(1)
-			button := w.iconButton(c, "keyboard-reference-button", icons.Keyboard, "Keyboard reference", p)
-			if button.Clicked() {
-				w.Dispatch("help")
-			}
-		})
-		w.sidebarResizeHandle(c)
-	})
-}
-
-func (w *Window) workspace(c *native.Context, row app.WorkspaceRow, p design.Palette) {
-	native.Row(c.Key("workspace:"+row.ID)).Padding(0, 0, 0, float32(row.Depth*16)).Height(42).Children(func() {
-		button := native.ButtonBase(c.Key("select:"+row.ID)).Grow(1).MinWidth(0).Height(42).Radius(8).Padding(4, 8).Label(row.Name + " · " + statusLabel(row.Status)).Tooltip(row.Path).Selected(row.Selected).TextColor(p.Text)
-		if row.Selected {
-			button.Background(p.Selected)
-		} else if button.Pressed() {
-			button.Background(p.Pressed)
-		} else if button.Hovered() {
-			button.Background(p.Hover)
-		}
-		if button.FocusVisible() {
-			button.Border(2, p.Focus)
-		}
-		button.Children(func() {
-			native.Row(c).FillWidth().Gap(8).AlignItems(native.Center).Children(func() {
-				icon := icons.Folder
-				if row.Depth > 0 {
-					icon = icons.GitBranch
-				}
-				native.Icon(c, icon).Size(16, 16).TextColor(p.Secondary)
-				native.Column(c).Grow(1).MinWidth(0).Gap(0).Children(func() {
-					native.Text(c, row.Name).FontSize(13).SingleLine()
-					native.Text(c, row.Path).FontSize(12).TextColor(p.Secondary).SingleLine()
-				})
-				if len(row.Panes) == 0 {
-					w.stateIcon(c, row.Name, row.Status)
-				}
-			})
-		})
-		if button.Clicked() {
-			w.app.SelectWorkspace(row.ID)
-			w.BlurInput()
-		}
-		if len(row.Panes) > 0 {
-			toggle := native.ButtonBase(c.Key("expand:"+row.ID)).Size(24, 42).Center().Label("Toggle panes for " + row.Name).Expanded(w.expanded[row.ID])
-			w.controlState(toggle, p)
-			toggle.Children(func() {
-				icon := icons.ChevronRight
-				if w.expanded[row.ID] {
-					icon = icons.ChevronDown
-				}
-				native.Icon(c, icon).Size(14, 14).TextColor(p.Secondary)
-			})
-			if toggle.Clicked() {
-				w.expanded[row.ID] = !w.expanded[row.ID]
-			}
-		}
-	})
-	if w.expanded[row.ID] {
-		for _, pane := range row.Panes {
-			button := native.ButtonBase(c.Key("pane:"+pane.ID)).Height(28).FillWidth().Padding(0, 8, 0, float32(32+row.Depth*16)).Radius(6).Label(paneDescription(pane)).Selected(pane.Selected).TextColor(p.Text)
-			if pane.Selected {
-				button.Background(p.Selected)
-			} else if button.Pressed() {
-				button.Background(p.Pressed)
-			} else if button.Hovered() {
-				button.Background(p.Hover)
-			}
-			if button.FocusVisible() {
-				button.Border(2, p.Focus)
-			}
-			button.Children(func() {
-				native.Row(c).Gap(8).AlignItems(native.Center).Children(func() {
-					native.Icon(c, icons.Agent(pane.Agent)).Size(14, 14).TextColor(p.Secondary).Tooltip(pane.Agent)
-					native.Text(c, pane.Title).SingleLine().FontSize(12).Grow(1).MinWidth(0)
-					w.stateIcon(c, pane.Title, pane.Status)
-				})
-			})
-			if button.Clicked() {
-				w.app.SelectPane(pane.ID)
-				w.BlurInput()
-			}
-		}
-	}
 }
 
 func (w *Window) header(c *native.Context, v app.View, p design.Palette) {
@@ -340,7 +232,7 @@ func (w *Window) stateIcon(c *native.Context, name, value string) {
 	native.Icon(c, icon).Size(14, 14).TextColor(color).Tooltip(label).Label(name + " · " + label)
 }
 func statusLabel(value string) string {
-	switch value {
+	switch strings.ToLower(value) {
 	case "working":
 		return "Working"
 	case "idle":
@@ -358,7 +250,7 @@ func statusLabel(value string) string {
 func status(value string, dark bool) (*native.SVG, native.Color, string) {
 	p := design.Colors(dark)
 	label := statusLabel(value)
-	switch value {
+	switch strings.ToLower(value) {
 	case "working":
 		return icons.Activity, p.Working, label
 	case "idle":

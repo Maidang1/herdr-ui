@@ -16,9 +16,9 @@ type Metadata struct {
 }
 
 type Workspace struct {
-	ID, Label, ActiveTabID, CheckoutPath, RepoRoot, RepoKey string
-	Linked                                                  bool
-	Number                                                  int
+	ID, Label, ActiveTabID, CheckoutPath, RepoRoot, RepoKey, Status string
+	Linked                                                          bool
+	Number                                                          int
 }
 type Tab struct {
 	ID, WorkspaceID, Label string
@@ -130,6 +130,7 @@ type workspaceWire struct {
 	ID          string `json:"workspace_id"`
 	Label       string `json:"label"`
 	ActiveTabID string `json:"active_tab_id"`
+	Status      string `json:"agent_status"`
 	Number      int    `json:"number"`
 	Worktree    *struct {
 		CheckoutPath string `json:"checkout_path"`
@@ -242,7 +243,7 @@ func DecodeSnapshot(data []byte) (*Snapshot, error) {
 		if _, exists := s.workspaceIndex[v.ID]; v.ID == "" || exists {
 			return nil, fmt.Errorf("missing or duplicate workspace ID %q", v.ID)
 		}
-		value := Workspace{ID: v.ID, Label: v.Label, ActiveTabID: v.ActiveTabID, Number: v.Number}
+		value := Workspace{ID: v.ID, Label: v.Label, ActiveTabID: v.ActiveTabID, Number: v.Number, Status: v.Status}
 		if v.Worktree != nil {
 			value.CheckoutPath = v.Worktree.CheckoutPath
 			value.RepoRoot = v.Worktree.RepoRoot

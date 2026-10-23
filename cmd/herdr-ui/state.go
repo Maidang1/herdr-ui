@@ -17,6 +17,7 @@ import (
 	"github.com/bytedance/herdr-ui/internal/herdr"
 	"github.com/bytedance/herdr-ui/internal/input"
 	"github.com/bytedance/herdr-ui/internal/session"
+	"github.com/bytedance/herdr-ui/internal/sidebarinfo"
 	"github.com/bytedance/herdr-ui/internal/terminalhost"
 	view "github.com/bytedance/herdr-ui/internal/ui"
 	"github.com/egoist/mygo"
@@ -43,6 +44,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		}
 	}
 	var host *terminalhost.Host
+	var sidebar *sidebarinfo.Collector
 	var closed, pending, starting, started atomic.Bool
 	var startup sync.WaitGroup
 	mygo.App.WhenReady(func() {
@@ -59,6 +61,9 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				}
 				latest := s.Latest()
 				a.Update(latest)
+				if sidebar != nil {
+					sidebar.Update(latest)
+				}
 				log.Printf("session target=%d epoch=%d revision=%d state=%s", latest.TargetID, latest.Epoch, latest.Revision, latest.State)
 				pending.Store(false)
 				// A notification coalesced while pending was true must not lose the
@@ -112,6 +117,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				})
 			}
 		}
+		sidebar = sidebarinfo.New(target, func(p sidebarinfo.Publication) { post(func() { a.UpdateSidebar(p) }) })
 		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key})
 		screen.ConnectTerminal(host, s, ctx, post)
 		prefs := mygo.Theme.Preferences()
@@ -211,6 +217,11 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 	cancel()
 	shutdown, stop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stop()
+	if sidebar != nil {
+		if err := sidebar.Close(shutdown); err != nil {
+			log.Printf("sidebar shutdown: %v", err)
+		}
+	}
 	if err := s.Close(shutdown); err != nil {
 		log.Printf("session shutdown: %v", err)
 	}

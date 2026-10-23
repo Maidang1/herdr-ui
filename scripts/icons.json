@@ -18,7 +18,9 @@
     "ChevronDown": "chevron-down",
     "Columns2": "columns-2",
     "Keyboard": "keyboard",
-    "X": "x"
+    "X": "x",
+    "Globe": "globe",
+    "CircleDot": "circle-dot"
   },
   "lobe": {
     "ClaudeCode": "claudecode",
@@ -27,6 +29,7 @@
     "Opencode": "opencode",
     "GithubCopilot": "githubcopilot",
     "Cursor": "cursor",
-    "Kimi": "kimi"
+    "Kimi": "kimi",
+    "RepositoryGithub": "github"
   }
 }
