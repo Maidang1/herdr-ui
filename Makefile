@@ -1,4 +1,4 @@
-.PHONY: build test integration probe window package
+.PHONY: build test integration probe run window package
 
 build:
 	CGO_ENABLED=0 go build -trimpath -o bin/herdr-ui ./cmd/herdr-ui
@@ -13,6 +13,9 @@ integration: build
 
 probe:
 	go run ./cmd/m0-probe
+
+run: build
+	./bin/herdr-ui
 
 window: build
 	./bin/herdr-ui -local-fixture

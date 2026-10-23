@@ -1,5 +1,5 @@
-// Herdr UI's M0 native window. This is an explicit terminal capability harness,
-// not the M1 session browser. No workspace/pane mutation is issued here.
+// Herdr UI defaults to the M1 read-only session browser. Explicit terminal or
+// local-fixture flags retain the M0 capability harness. No mutation is issued.
 package main
 
 import (
@@ -26,8 +26,8 @@ func main() {
 	closeAfter := flag.Duration("close-after", 0, "close the test window after a duration")
 	flag.Parse()
 	if !*local && *terminalID == "" {
-		fmt.Fprintln(os.Stderr, "M0: use -terminal <terminal_id> or -local-fixture; use cmd/m0-probe to inspect IDs")
-		os.Exit(2)
+		runStateWindow(*socket, *binary, *closeAfter)
+		return
 	}
 	var command, env []string
 	if *local {

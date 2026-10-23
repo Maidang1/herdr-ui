@@ -1,0 +1,9 @@
+{
+  "name": "herdr-ui-assets",
+  "private": true,
+  "scripts": { "icons": "node scripts/icons.mjs" },
+  "devDependencies": {
+    "lucide-static": "1.60.0",
+    "@lobehub/icons-static-svg": "1.98.0"
+  }
+}

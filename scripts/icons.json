@@ -1,0 +1,29 @@
+{
+  "lucide": {
+    "PanelLeft": "panel-left",
+    "Folder": "folder",
+    "GitBranch": "git-branch",
+    "Terminal": "terminal",
+    "Bot": "bot",
+    "Activity": "activity",
+    "Circle": "circle",
+    "MessageCircle": "message-circle",
+    "CircleAlert": "circle-alert",
+    "Check": "check",
+    "CircleHelp": "circle-help",
+    "CircleCheck": "circle-check",
+    "LoaderCircle": "loader-circle",
+    "Unplug": "unplug",
+    "ChevronRight": "chevron-right",
+    "ChevronDown": "chevron-down"
+  },
+  "lobe": {
+    "ClaudeCode": "claudecode",
+    "Codex": "codex",
+    "GeminiCLI": "geminicli",
+    "Opencode": "opencode",
+    "GithubCopilot": "githubcopilot",
+    "Cursor": "cursor",
+    "Kimi": "kimi"
+  }
+}
