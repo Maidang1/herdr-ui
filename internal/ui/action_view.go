@@ -29,14 +29,10 @@ func (w *Window) actionBar(c *native.Context, v app.View, p design.Palette) {
 			}
 		}
 	}
-	if a.machine.Awaiting || a.machine.Resize {
-		hint := "Prefix"
-		if a.machine.Resize {
-			hint = "Resize: arrows / h j k l · Esc to finish"
-		}
+	if a.machine.Resize {
 		native.Row(c).Padding(4, 16).Gap(6).AlignItems(native.Center).Children(func() {
 			native.Icon(c, icons.Keyboard).Size(14, 14).TextColor(p.Warning)
-			native.Text(c, hint).FontSize(12).TextColor(p.Warning)
+			native.Text(c, "Resize: arrows / h j k l · Esc to finish").FontSize(12).TextColor(p.Warning)
 		})
 	}
 	message := a.message

@@ -351,6 +351,11 @@ func (w *Window) runShortcut(op session.Operation, done func(session.OperationRe
 	if a.busy {
 		return
 	}
+	if w.terminal == nil || w.terminal.session == nil {
+		a.busy = false
+		w.controller.message = "No attached session."
+		return
+	}
 	a.busy = true
 	revision := w.app.ViewRevision()
 	publicationRevision := w.app.Publication().Revision

@@ -30,7 +30,7 @@ func workspaceSidebarFixture(t *testing.T) *Window {
 func TestSidebarShowsSpacesDetailsAndOnlyActualAgents(t *testing.T) {
 	w := workspaceSidebarFixture(t)
 	tester := native.NewTester(func(c *native.Context) { w.sidebar(c, w.currentView(), design.Colors(false)) }, 248, 800)
-	for _, text := range []string{"spaces", "Repo", "feat/sidebar", "↑13", "↓11", ":8080 :8081 :9200", "agents", "grouped", "codex", "Idle"} {
+	for _, text := range []string{"Spaces", "Repo", "feat/sidebar", "↑13", "↓11", ":8080 :8081 :9200", "Agents", "codex", "Idle"} {
 		if !tester.HasText(text) {
 			t.Fatalf("missing sidebar info %q: %v", text, tester.Texts())
 		}
@@ -45,6 +45,74 @@ func TestSidebarShowsSpacesDetailsAndOnlyActualAgents(t *testing.T) {
 	}
 	if w.app.View().PaneID != "agent" {
 		t.Fatal("agent click did not select its exact pane")
+	}
+}
+
+func TestSidebarFilterNarrowsSpacesAndAgents(t *testing.T) {
+	w := workspaceSidebarFixture(t)
+	tester := native.NewTester(func(c *native.Context) { w.sidebar(c, w.currentView(), design.Colors(false)) }, 248, 800)
+	if err := tester.Click("Filter spaces"); err != nil {
+		t.Fatal(err)
+	}
+	tester.Frame()
+	tester.Type("repo")
+	tester.Frame()
+	if tester.HasText("Shell only") {
+		t.Fatal("filter left non-matching workspace visible")
+	}
+	for _, text := range []string{"Repo", "codex", "Clear filter"} {
+		if !tester.HasText(text) {
+			t.Fatalf("missing filtered sidebar info %q: %v", text, tester.Texts())
+		}
+	}
+	tester.Key(0, native.KeyEscape)
+	tester.Frame()
+	if !tester.HasText("Shell only") {
+		t.Fatal("escape did not leave the filter field")
+	}
+	if w.sidebarFilterOn {
+		t.Fatal("escape did not deactivate the filter")
+	}
+}
+
+func TestSidebarAgentSortToggleFlattensGroups(t *testing.T) {
+	w := workspaceSidebarFixture(t)
+	tester := native.NewTester(func(c *native.Context) { w.sidebar(c, w.currentView(), design.Colors(false)) }, 248, 800)
+	if err := tester.Click("Sort agents: grouped"); err != nil {
+		t.Fatal(err)
+	}
+	tester.Frame()
+	if tester.HasText("Agents in Repo") {
+		t.Fatal("priority mode still groups agents under workspaces")
+	}
+	if !tester.HasText("Sort agents: priority") {
+		t.Fatal("toggle did not report the priority mode")
+	}
+	if err := tester.Click("Sort agents: priority"); err != nil {
+		t.Fatal(err)
+	}
+	tester.Frame()
+	if !tester.HasText("Agents in Repo") {
+		t.Fatal("grouped mode lost its workspace group")
+	}
+}
+
+func TestSidebarMenuOpensWindowCommands(t *testing.T) {
+	w := workspaceSidebarFixture(t)
+	tester := native.NewTester(func(c *native.Context) { w.sidebar(c, w.currentView(), design.Colors(false)) }, 248, 800)
+	for _, text := range []string{"Settings", "Reload configuration", "Detach window"} {
+		if tester.HasText(text) {
+			t.Fatal("menu content visible while closed", text)
+		}
+	}
+	if err := tester.Click("Sidebar menu"); err != nil {
+		t.Fatal(err)
+	}
+	tester.Frame()
+	for _, text := range []string{"Settings", "Keyboard reference", "Reload configuration", "Detach window"} {
+		if !tester.HasText(text) {
+			t.Fatalf("menu missing item %q: %v", text, tester.Texts())
+		}
 	}
 }
 

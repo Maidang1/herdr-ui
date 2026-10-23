@@ -24,7 +24,11 @@
     "Rows2": "rows-2",
     "Maximize2": "maximize-2",
     "Minimize2": "minimize-2",
-    "Ellipsis": "ellipsis"
+    "Ellipsis": "ellipsis",
+    "Plus": "plus",
+    "Search": "search",
+    "Settings": "settings",
+    "RotateCw": "rotate-cw"
   },
   "lobe": {
     "ClaudeCode": "claudecode",

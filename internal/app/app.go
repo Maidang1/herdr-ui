@@ -4,6 +4,7 @@ package app
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/herdr-ui/internal/session"
@@ -45,6 +46,7 @@ type TabRow struct {
 	ID, Name          string
 	Number, PaneCount int
 	Selected          bool
+	Status            string
 }
 type PaneRow struct {
 	ID, Title, Label, Agent, Status, TerminalID, CWD string
@@ -258,6 +260,30 @@ func paneRow(p session.Pane, selected bool) PaneRow {
 	return PaneRow{ID: p.ID, Title: p.Title, Label: p.Label, Agent: p.Agent, Status: p.Status, TerminalID: p.TerminalID, CWD: p.CWD, Selected: selected, Scroll: p.Scroll}
 }
 
+// agentStatus ranks the agent lifecycles inside a tab so the tab bar can show
+// one representative state. Blocked work outranks active work; unknown states
+// never mask a known one.
+func agentStatus(panes []session.Pane) string {
+	priority := []string{"blocked", "working", "done", "idle"}
+	best, bestRank := "", len(priority)
+	for _, pane := range panes {
+		if pane.Agent == "" || pane.Status == "" {
+			continue
+		}
+		rank := len(priority)
+		for i, want := range priority {
+			if strings.EqualFold(pane.Status, want) {
+				rank = i
+				break
+			}
+		}
+		if rank < bestRank {
+			best, bestRank = pane.Status, rank
+		}
+	}
+	return best
+}
+
 // View returns independently owned slices, including nested pane rows.
 func (a *App) View() View {
 	v := View{State: a.publication.State, Stale: a.publication.Stale, Error: a.publication.Error, Revision: a.publication.Revision, Updated: a.publication.Updated, TargetID: a.publication.TargetID, Epoch: a.publication.Epoch}
@@ -305,7 +331,7 @@ func (a *App) View() View {
 				if name == "" {
 					name = strconv.Itoa(t.Number)
 				}
-				v.Tabs = append(v.Tabs, TabRow{ID: t.ID, Name: name, Number: t.Number, PaneCount: len(ps), Selected: t.ID == v.TabID})
+				v.Tabs = append(v.Tabs, TabRow{ID: t.ID, Name: name, Number: t.Number, PaneCount: len(ps), Selected: t.ID == v.TabID, Status: agentStatus(ps)})
 				if t.ID == v.TabID {
 					for _, p := range ps {
 						v.Panes = append(v.Panes, paneRow(p, p.ID == v.PaneID))

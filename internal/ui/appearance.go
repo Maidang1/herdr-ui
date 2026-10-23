@@ -41,8 +41,10 @@ func (w *Window) styleShell(c *native.Context, root native.Element, p design.Pal
 	material := c.Vibrancy() && !w.appearance.reducedTransparency && !c.Preferences().HighContrast
 	alpha := float32(1)
 	if material {
+		// Keep the shell wash light enough for the behind-window blur to
+		// read; the sidebar tint layers its own frost over it.
 		c.Root().Background(native.Transparent)
-		alpha = .96
+		alpha = .8
 	} else {
 		c.Root().Background(p.Shell)
 	}

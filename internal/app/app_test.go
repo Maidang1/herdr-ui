@@ -191,3 +191,22 @@ func TestExplicitTargetChangeDropsOldData(t *testing.T) {
 		t.Fatalf("new target retained old target data: %+v", v)
 	}
 }
+
+func TestTabRowsCarryAggregatedAgentStatus(t *testing.T) {
+	a := New()
+	a.Update(session.PublishedSnapshot{Snapshot: snapshot(t, workspaces, tabs, panes, "w1", "a", "p1"), State: session.Ready})
+	v := a.View()
+	if v.Tabs[0].Status != "Working" || v.Tabs[1].Status != "" {
+		t.Fatalf("tab agent status: %+v", v.Tabs)
+	}
+}
+
+func TestAgentStatusBlockedOutranksWorking(t *testing.T) {
+	panes := []session.Pane{{Agent: "a", Status: "Working"}, {Agent: "b", Status: "Blocked"}, {Agent: "c", Status: "unknown"}}
+	if got := agentStatus(panes); got != "Blocked" {
+		t.Fatalf("blocked must outrank working: %q", got)
+	}
+	if got := agentStatus([]session.Pane{{Agent: "a", Status: "Future"}}); got != "" {
+		t.Fatalf("unknown statuses must not show a state: %q", got)
+	}
+}

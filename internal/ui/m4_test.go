@@ -156,6 +156,12 @@ func TestMinimalControlsReserveTrafficLightsWithoutInformationHeader(t *testing.
 	if !ok || toggle.X < 80 {
 		t.Fatal("sidebar control overlaps traffic lights", toggle)
 	}
+	if _, ok := tester.Find("Toggle sidebar"); ok {
+		t.Fatal("bottom tab bar rendered while the sidebar is hidden")
+	}
+	if _, ok := tester.Find("Tab Server"); !ok {
+		t.Fatal("tab pills did not move into the title strip")
+	}
 	for _, label := range []string{"Current tab", "Terminal layout"} {
 		if _, ok := tester.Find(label); ok {
 			t.Fatal("removed information header visible", label)

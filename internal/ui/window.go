@@ -31,10 +31,16 @@ type Window struct {
 	helpFocusPending    bool
 	appearance          windowAppearance
 	projectionValid     bool
+	sidebarFilter       string
+	sidebarFilterOn     bool
+	sidebarFilterFocus  bool
+	sidebarMenuOpen     bool
+	tabMenuOpen         bool
+	agentsGrouped       bool
 }
 
 func New(a *app.App, retry func()) *Window {
-	return &Window{app: a, retry: retry, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, appearance: windowAppearance{active: true}}
+	return &Window{app: a, retry: retry, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, agentsGrouped: true, appearance: windowAppearance{active: true}}
 }
 
 func (w *Window) currentView() app.View {
@@ -64,7 +70,7 @@ func (w *Window) View(c *native.Context) {
 	}
 	w.styleShell(c, root, p)
 	root.HandleInput(func(ev native.InputEvent) bool {
-		if ev.Kind != native.InputKeyDown || w.controller == nil || w.controller.bindingError != "" || w.modalOpen() || w.currentView().PaneID != "" {
+		if ev.Kind != native.InputKeyDown || w.controller == nil || w.controller.bindingError != "" || w.modalOpen() || w.sidebarFilterOn || w.currentView().PaneID != "" {
 			return false
 		}
 		label, ok := input.NativeKey(ev.Mods, ev.Key)
@@ -81,33 +87,39 @@ func (w *Window) View(c *native.Context) {
 		if w.sidebarVisible {
 			w.sidebar(c, v, p)
 		}
-		content := native.Column(c.Key("terminal-content")).Label("Terminal content").Grow(1).MinWidth(0).AlignItems(native.Stretch)
-		if w.terminal != nil && v.HasLayout && len(v.Layout.Panes) > 1 {
-			content.Background(native.Transparent)
-		} else {
-			content.Radius(16).Background(p.Content).Border(1, p.Border).Shadow(0, 1, 5, 0, p.ContentShadow).Clip()
-		}
-		content.Children(func() {
-			w.windowControls(c, p)
-			w.actionBar(c, v, p)
-			w.shortcutPanel(c, p)
-			if v.Stale && v.Error != "" {
-				native.Row(c).Padding(10, 16).Gap(12).AlignItems(native.Center).Children(func() {
-					native.Icon(c, icons.Unplug).Size(16, 16).TextColor(p.Danger)
-					native.Text(c, v.Error).TextColor(p.Danger).Grow(1)
-					if native.Button(c, "Retry").Label("Retry connection").Clicked() && w.retry != nil {
-						w.retry()
-					}
-				})
-				if !v.Updated.IsZero() {
-					native.Text(c, "Last synced "+v.Updated.Format("15:04:05")).FontSize(12).TextColor(p.Secondary).Padding(0, 16, 8, 16)
-				}
+		main := native.Column(c.Key("main-area")).Grow(1).MinWidth(0).AlignItems(native.Stretch).Gap(8)
+		main.Children(func() {
+			if len(v.Tabs) > 0 && w.sidebarVisible {
+				w.tabBar(c, v, p)
 			}
-			if w.commandSurfaceState != nil {
-				w.commandSurface(c, p)
+			content := native.Column(c.Key("terminal-content")).Label("Terminal content").Grow(1).MinWidth(0).AlignItems(native.Stretch)
+			if w.terminal != nil && v.HasLayout && len(v.Layout.Panes) > 1 {
+				content.Background(native.Transparent)
 			} else {
-				w.content(c, v, p)
+				content.Radius(16).Background(p.Content).Border(1, p.Border).Shadow(0, 1, 5, 0, p.ContentShadow).Clip()
 			}
+			content.Children(func() {
+				w.windowControls(c, v, p)
+				w.actionBar(c, v, p)
+				w.shortcutPanel(c, p)
+				if v.Stale && v.Error != "" {
+					native.Row(c).Padding(10, 16).Gap(12).AlignItems(native.Center).Children(func() {
+						native.Icon(c, icons.Unplug).Size(16, 16).TextColor(p.Danger)
+						native.Text(c, v.Error).TextColor(p.Danger).Grow(1)
+						if native.Button(c, "Retry").Label("Retry connection").Clicked() && w.retry != nil {
+							w.retry()
+						}
+					})
+					if !v.Updated.IsZero() {
+						native.Text(c, "Last synced "+v.Updated.Format("15:04:05")).FontSize(12).TextColor(p.Secondary).Padding(0, 16, 8, 16)
+					}
+				}
+				if w.commandSurfaceState != nil {
+					w.commandSurface(c, p)
+				} else {
+					w.content(c, v, p)
+				}
+			})
 		})
 		if w.referenceOpen() {
 			w.referencePanel(c, p)
@@ -116,16 +128,24 @@ func (w *Window) View(c *native.Context) {
 }
 
 // Reserve native traffic lights only when the sidebar no longer holds them.
-// This strip carries window controls, not workspace/tab/path information.
-func (w *Window) windowControls(c *native.Context, p design.Palette) {
+// The strip stays at 36pt so its controls' centers land on the lights' own
+// line (measured center y=26), and carries the tab strip inline — as the
+// reference apps do — so no empty bar sits between the lights and content.
+func (w *Window) windowControls(c *native.Context, v app.View, p design.Palette) {
 	if w.sidebarVisible {
 		return
 	}
 	bar := c.TitleBar()
-	native.Row(c).Height(max(36, bar.Height)).Shrink(0).PaddingX(12).Gap(8).AlignItems(native.Center).DragWindow().Children(func() {
+	native.Row(c).Height(36).Shrink(0).FillWidth().Padding(0, 4, 0, 0).AlignItems(native.Center).DragWindow().Children(func() {
 		native.Box(c).Width(bar.Left).Shrink(0)
 		if w.iconButton(c, "show-sidebar", icons.PanelLeft, "Show sidebar", p).Clicked() {
 			w.Dispatch("toggle_sidebar")
+		}
+		native.Box(c).Width(4).Shrink(0)
+		if len(v.Tabs) > 0 {
+			w.tabStripControls(c, v, p, true)
+		} else {
+			native.Box(c).Grow(1)
 		}
 	})
 }
