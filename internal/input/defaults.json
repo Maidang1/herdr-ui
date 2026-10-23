@@ -1,0 +1,206 @@
+[
+  {
+    "action": "help",
+    "key": "prefix+?"
+  },
+  {
+    "action": "settings",
+    "key": "prefix+s"
+  },
+  {
+    "action": "new_workspace",
+    "key": "prefix+shift+n"
+  },
+  {
+    "action": "new_worktree",
+    "key": "prefix+shift+g"
+  },
+  {
+    "action": "open_worktree",
+    "key": ""
+  },
+  {
+    "action": "remove_worktree",
+    "key": ""
+  },
+  {
+    "action": "rename_workspace",
+    "key": "prefix+shift+w"
+  },
+  {
+    "action": "close_workspace",
+    "key": "prefix+shift+d"
+  },
+  {
+    "action": "workspace_picker",
+    "key": "prefix+w"
+  },
+  {
+    "action": "goto",
+    "key": "prefix+g"
+  },
+  {
+    "action": "detach",
+    "key": "prefix+q"
+  },
+  {
+    "action": "reload_config",
+    "key": "prefix+shift+r"
+  },
+  {
+    "action": "open_notification_target",
+    "key": "prefix+o"
+  },
+  {
+    "action": "previous_workspace",
+    "key": ""
+  },
+  {
+    "action": "next_workspace",
+    "key": ""
+  },
+  {
+    "action": "previous_agent",
+    "key": ""
+  },
+  {
+    "action": "next_agent",
+    "key": ""
+  },
+  {
+    "action": "focus_agent",
+    "key": ""
+  },
+  {
+    "action": "new_tab",
+    "key": "prefix+c"
+  },
+  {
+    "action": "rename_tab",
+    "key": "prefix+shift+t"
+  },
+  {
+    "action": "previous_tab",
+    "key": "prefix+p"
+  },
+  {
+    "action": "next_tab",
+    "key": "prefix+n"
+  },
+  {
+    "action": "move_tab_previous",
+    "key": ""
+  },
+  {
+    "action": "move_tab_next",
+    "key": ""
+  },
+  {
+    "action": "switch_tab",
+    "key": "prefix+1..9"
+  },
+  {
+    "action": "switch_workspace",
+    "key": ""
+  },
+  {
+    "action": "close_tab",
+    "key": "prefix+shift+x"
+  },
+  {
+    "action": "rename_pane",
+    "key": "prefix+shift+p"
+  },
+  {
+    "action": "edit_scrollback",
+    "key": "prefix+e"
+  },
+  {
+    "action": "copy_mode",
+    "key": "prefix+["
+  },
+  {
+    "action": "focus_pane_left",
+    "key": "prefix+h"
+  },
+  {
+    "action": "focus_pane_down",
+    "key": "prefix+j"
+  },
+  {
+    "action": "focus_pane_up",
+    "key": "prefix+k"
+  },
+  {
+    "action": "focus_pane_right",
+    "key": "prefix+l"
+  },
+  {
+    "action": "swap_pane_left",
+    "key": "prefix+shift+h"
+  },
+  {
+    "action": "swap_pane_down",
+    "key": "prefix+shift+j"
+  },
+  {
+    "action": "swap_pane_up",
+    "key": "prefix+shift+k"
+  },
+  {
+    "action": "swap_pane_right",
+    "key": "prefix+shift+l"
+  },
+  {
+    "action": "cycle_pane_next",
+    "key": "prefix+tab"
+  },
+  {
+    "action": "cycle_pane_previous",
+    "key": "prefix+shift+tab"
+  },
+  {
+    "action": "last_pane",
+    "key": ""
+  },
+  {
+    "action": "split_vertical",
+    "key": "prefix+v"
+  },
+  {
+    "action": "split_horizontal",
+    "key": "prefix+minus"
+  },
+  {
+    "action": "close_pane",
+    "key": "prefix+x"
+  },
+  {
+    "action": "zoom",
+    "key": "prefix+z"
+  },
+  {
+    "action": "resize_mode",
+    "key": "prefix+r"
+  },
+  {
+    "action": "resize_pane_left",
+    "key": ""
+  },
+  {
+    "action": "resize_pane_down",
+    "key": ""
+  },
+  {
+    "action": "resize_pane_up",
+    "key": ""
+  },
+  {
+    "action": "resize_pane_right",
+    "key": ""
+  },
+  {
+    "action": "toggle_sidebar",
+    "key": "prefix+b"
+  }
+]

@@ -15,3 +15,8 @@
 # Local secrets.
 .env
 .env.*
+
+# M0 build and local verification artifacts.
+/bin/
+/dist/
+/.m0/

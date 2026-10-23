@@ -1,0 +1,7 @@
+{
+  "name": "Herdr UI M0",
+  "identifier": "dev.herdr.ui.m0",
+  "version": "0.0.1",
+  "main": "./cmd/herdr-ui",
+  "out": "dist"
+}
