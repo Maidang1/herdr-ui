@@ -16,11 +16,13 @@ import (
 	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/Maidang1/herdr-ui/internal/input"
+	"github.com/Maidang1/herdr-ui/internal/prefs"
 	"github.com/Maidang1/herdr-ui/internal/session"
 	"github.com/Maidang1/herdr-ui/internal/sidebarinfo"
 	"github.com/Maidang1/herdr-ui/internal/terminalhost"
 	view "github.com/Maidang1/herdr-ui/internal/ui"
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/terminal"
 	native "github.com/egoist/mygo/ui"
 )
 
@@ -33,6 +35,13 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	settings, prefsErr := prefs.Open("")
+	if prefsErr != nil {
+		log.Printf("prefs: %v", prefsErr)
+	}
+	// The saved appearance applies before the first window exists, as the
+	// framework's SetSource contract expects.
+	mygo.Theme.SetSource(mygo.ThemeSource(settings.Settings().WindowTheme))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	s := session.New(target)
@@ -118,17 +127,27 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			}
 		}
 		sidebar = sidebarinfo.New(target, func(p sidebarinfo.Publication) { post(func() { a.UpdateSidebar(p) }) })
-		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key})
+		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: terminal.Font{Size: settings.Settings().FontSize}, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key})
 		screen.ConnectTerminal(host, s, ctx, post)
-		prefs := mygo.Theme.Preferences()
-		screen.SetReducedTransparency(prefs.ReduceTransparency)
+		screen.SetInitialFontSize(settings.Settings().FontSize)
+		preferences := mygo.Theme.Preferences()
+		screen.SetReducedTransparency(preferences.ReduceTransparency)
 		material := mygo.VibrancySidebar
-		if prefs.ReduceTransparency || prefs.HighContrast {
+		if preferences.ReduceTransparency || preferences.HighContrast {
 			material = mygo.VibrancyNone
 		}
 		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Vibrancy: material, Content: native.View(screen.View)})
 		keyboard := &keyboardEndpoint{}
-		screen.SetActionHooks(keyboardHooks(ctx, s, keyboard, screen, post, func() { win.Close() }, resolvedBinary, target))
+		hooks := keyboardHooks(ctx, s, keyboard, screen, post, func() { win.Close() }, resolvedBinary, target)
+		hooks.FontSize = func(size float32) {
+			host.SetFont(terminal.Font{Size: size})
+			go func() {
+				if _, err := settings.Update(func(v *prefs.Settings) { v.FontSize = size }); err != nil {
+					log.Printf("prefs: %v", err)
+				}
+			}()
+		}
+		screen.SetActionHooks(hooks)
 		go keyboard.run(ctx, target.Socket, func() { post(func() {}) })
 		win.OnBlur(func() { post(func() { screen.SetWindowActive(false) }) })
 		win.OnFocus(func() { post(func() { screen.SetWindowActive(true) }) })
@@ -137,16 +156,16 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			if closed.Load() {
 				return
 			}
-			prefs := mygo.Theme.Preferences()
+			preferences := mygo.Theme.Preferences()
 			material := mygo.VibrancySidebar
-			if prefs.ReduceTransparency || prefs.HighContrast {
+			if preferences.ReduceTransparency || preferences.HighContrast {
 				material = mygo.VibrancyNone
 			}
 			for source, item := range themeItems {
 				item.SetChecked(source == mygo.Theme.Source())
 			}
 			win.SetVibrancy(material)
-			post(func() { screen.SetReducedTransparency(prefs.ReduceTransparency) })
+			post(func() { screen.SetReducedTransparency(preferences.ReduceTransparency) })
 		})
 		viewItems := []*mygo.MenuItem{}
 		terminalItems := []*mygo.MenuItem{}
@@ -154,16 +173,21 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		menuItems := map[string]*mygo.MenuItem{}
 		menuEnabled := map[string]bool{}
 		menuLabels := map[string]string{}
+		// Window-level commands keep their direct key equivalents, as Herdr
+		// and Kero do; the prefix chords remain Herdr's own layer beneath.
+		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J"}
 		for _, action := range view.Actions {
 			action := action
 			label := screen.ActionLabel(action.ID)
 			if binding := screen.BindingLabel(action.ID); binding != "" {
 				label += " · " + binding
 			}
-			item := &mygo.MenuItem{Label: label, Disabled: !screen.Can(action.ID), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.Dispatch(action.ID) }) }}
+			item := &mygo.MenuItem{Label: label, Accelerator: accelerators[action.ID], Disabled: !screen.Can(action.ID), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.Dispatch(action.ID) }) }}
 			switch action.ID {
-			case "toggle_sidebar", "previous_tab", "next_tab":
+			case "toggle_sidebar", "previous_tab", "next_tab", "zoom_in", "zoom_out", "zoom_reset":
 				viewItems = append(viewItems, item)
+			case "attention":
+				terminalItems = append([]*mygo.MenuItem{item}, terminalItems...)
 			case "help":
 				helpItems = append(helpItems, item)
 			default:
@@ -179,7 +203,14 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			source mygo.ThemeSource
 		}{{"System", mygo.ThemeSystem}, {"Light", mygo.ThemeLight}, {"Dark", mygo.ThemeDark}} {
 			source := choice.source
-			item := &mygo.MenuItem{Label: choice.label, Type: mygo.MenuItemRadio, Checked: mygo.Theme.Source() == source, Click: func(_ *mygo.MenuItem, _ *mygo.Window) { mygo.Theme.SetSource(source) }}
+			item := &mygo.MenuItem{Label: choice.label, Type: mygo.MenuItemRadio, Checked: mygo.Theme.Source() == source, Click: func(_ *mygo.MenuItem, _ *mygo.Window) {
+				mygo.Theme.SetSource(source)
+				go func() {
+					if _, err := settings.Update(func(v *prefs.Settings) { v.WindowTheme = string(source) }); err != nil {
+						log.Printf("prefs: %v", err)
+					}
+				}()
+			}}
 			themeItems[source] = item
 			appearanceItems = append(appearanceItems, item)
 		}

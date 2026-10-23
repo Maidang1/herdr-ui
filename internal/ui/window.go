@@ -37,10 +37,70 @@ type Window struct {
 	sidebarMenuOpen     bool
 	tabMenuOpen         bool
 	agentsGrouped       bool
+	fontSize            float32
+	fontSizeDefault     float32
 }
 
 func New(a *app.App, retry func()) *Window {
-	return &Window{app: a, retry: retry, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, agentsGrouped: true, appearance: windowAppearance{active: true}}
+	return &Window{app: a, retry: retry, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, agentsGrouped: true, fontSize: 13, fontSizeDefault: 13, appearance: windowAppearance{active: true}}
+}
+
+// SetInitialFontSize applies the persisted terminal font size before the
+// first terminal attaches, and remembers it as the size Actual Size
+// returns to.
+func (w *Window) SetInitialFontSize(size float32) {
+	w.fontSize = clampFontSize(size)
+	w.fontSizeDefault = w.fontSize
+}
+
+// SetFontSize pushes a new size to every attached terminal through the
+// FontSize hook, which also persists it.
+func (w *Window) SetFontSize(size float32) {
+	w.fontSize = clampFontSize(size)
+	if w.hooks.FontSize != nil {
+		w.hooks.FontSize(w.fontSize)
+	}
+}
+
+func clampFontSize(size float32) float32 { return max(8, min(48, size)) }
+
+// applyFontZoom steps the terminal font size, as Herdr's and Kero's zoom
+// commands do; a zero step returns to the persisted default.
+func (w *Window) applyFontZoom(step float32) {
+	if step == 0 {
+		w.SetFontSize(w.fontSizeDefault)
+		return
+	}
+	w.SetFontSize(w.fontSize + step)
+}
+
+// jumpToAttention cycles through the agents that need a reply, starting
+// after the one currently selected, as Kero's ⌘J does.
+func (w *Window) jumpToAttention() {
+	v := w.currentView()
+	var waiting []app.AgentRow
+	for _, row := range v.Agents {
+		if strings.EqualFold(row.Status, "blocked") {
+			waiting = append(waiting, row)
+		}
+	}
+	if len(waiting) == 0 {
+		if w.controller != nil {
+			w.controller.message = "No agent is waiting for you."
+		}
+		return
+	}
+	start := 0
+	for i, row := range waiting {
+		if row.Selected {
+			start = i + 1
+			break
+		}
+	}
+	target := waiting[start%len(waiting)]
+	w.app.SelectWorkspace(target.WorkspaceID)
+	w.app.SelectPane(target.PaneID)
+	w.BlurInput()
 }
 
 func (w *Window) currentView() app.View {

@@ -51,10 +51,14 @@ type Config struct {
 	Changed  func()
 	OnScroll func(Binding, int)
 	OnKey    func(Binding, ui.Modifiers, ui.Key, InputState) KeyResult
+	// Font sizes every new terminal attaches with; a zero Size falls back
+	// to the plugin's own default.
+	Font terminal.Font
 }
 type instance interface {
 	View(*ui.Context) ui.Element
 	Send([]byte)
+	SetFont(terminal.Font)
 	Close() error
 }
 type factory func(terminal.Options) (instance, error)
@@ -315,6 +319,24 @@ func (h *Host) View(c *ui.Context, b Binding) ui.Element {
 	return t.View(c)
 }
 
+// SetFont applies f to every attached terminal and remembers it for the
+// next attach. It runs on the UI thread, like View; instances update
+// outside the lock for the same reason View renders there.
+func (h *Host) SetFont(f terminal.Font) {
+	h.mu.Lock()
+	h.cfg.Font = f
+	live := make([]instance, 0, len(h.entries))
+	for _, e := range h.entries {
+		if e.installed {
+			live = append(live, e.owned)
+		}
+	}
+	h.mu.Unlock()
+	for _, t := range live {
+		t.SetFont(f)
+	}
+}
+
 // Close marks all callbacks stale before closing any plugin. It waits only for
 // the caller's context, and subsequent calls can continue waiting for cleanup.
 func (h *Host) Close(ctx context.Context) error {
@@ -349,7 +371,11 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 	// reappear when the plugin builds the child process environment.
 	env = append(env, "HERDR_SESSION=", "HERDR_PANE_ID=", "HERDR_TAB_ID=", "HERDR_WORKSPACE_ID=")
 	light, dark := terminalThemes()
-	return terminal.Options{Command: cmd, Env: env, Dir: e.spec.CWD, Font: terminal.Font{Size: 13}, Padding: terminal.Padding{X: 16, Y: 12}, Theme: light, DarkTheme: dark, RightClick: terminal.RightClickCopyOrPaste, ClipboardRead: terminal.ClipboardDeny,
+	font := h.cfg.Font
+	if font.Size <= 0 {
+		font.Size = 13
+	}
+	return terminal.Options{Command: cmd, Env: env, Dir: e.spec.CWD, Font: font, Padding: terminal.Padding{X: 16, Y: 12}, Theme: light, DarkTheme: dark, RightClick: terminal.RightClickCopyOrPaste, ClipboardRead: terminal.ClipboardDeny,
 		OnTitle: func(_ string) { h.post(e, func() {}) },
 		OnExit: func(code int) {
 			h.post(e, func() {

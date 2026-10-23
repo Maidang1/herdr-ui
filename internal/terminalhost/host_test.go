@@ -30,6 +30,7 @@ func (f *fakeTerminal) View(*ui.Context) ui.Element {
 	f.views++
 	return ui.Element{}
 }
+func (f *fakeTerminal) SetFont(terminal.Font) {}
 
 type harness struct {
 	h       *Host
