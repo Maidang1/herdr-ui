@@ -616,7 +616,7 @@ JSON重连保留当前目标仍存活的插件实例；新快照映射不符再�
 
 自动测试集中在协议分帧与超限、订阅确认前后竞态、dirty 刷新合并、旧代次丢弃、选择失效、RPC 结果未知、pane/terminal ID 替换、同名代理的 pane 隔离、缺少分支时的真实路径副行、布局路径、prefix 转义和插件生命周期。终端网格、中文输入法、分屏拖动和原生材质用真实窗口验收。M0 阶段暴露接口不足时先补最小适配；不借机扩展产品功能。
 
-编码从M0开始，用可运行验证结果更新本文。当前 `cmd/herdr-ui` 默认按权威布局差量显示当前标签的全部可见真实终端，显式 `-terminal` / `-local-fixture` 保留 M0 验证；`cmd/m0-probe` 为只读协议/绑定探针。Session 已支持 Scroll、Neighbor、Split、Zoom、ExportLayout、SetRatio 的闭合操作；App 保持本地选择和迟到动作意图防护。M3 的工具栏、原生菜单、业务 prefix 与布局动作已接线，证据及边界见 [M3 验收记录](m3-validation.md)。M0 原生 IME、程序接管鼠标/滚动与完整 resolver 对照仍须通过验收，不据自动测试宣称兼容。
+编码从M0开始，用可运行验证结果更新本文。当前 `cmd/herdr-ui` 默认按权威布局差量显示当前标签的全部可见真实终端，显式 `-terminal` / `-local-fixture` 保留 M0 验证；`cmd/m0-probe` 为只读协议/绑定探针。Session 已支持 Scroll、Neighbor、Split、Zoom、ExportLayout、SetRatio 的闭合操作；App 保持本地选择和迟到动作意图防护。M3 的工具栏、原生菜单、业务 prefix 与布局动作已接线，证据及边界见 [M3 验收记录](m3-validation.md)。M4 已将布局动作收拢到40px头部，加入344px右侧参考面板、220–320px侧栏、窄窗口布局及原生外观/辅助功能偏好，证据见 [M4 验收记录](m4-validation.md)。M0 原生 IME、程序接管鼠标/滚动与完整 resolver 对照仍须通过验收，不据自动测试宣称兼容。
 
 | 测试面 | 主要场景 |
 |---|---|

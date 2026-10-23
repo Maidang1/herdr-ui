@@ -171,10 +171,19 @@ func (w *Window) Dispatch(action string) {
 	}
 	switch action {
 	case "toggle_sidebar":
-		w.hidden = !w.hidden
+		if w.sidebarVisible {
+			w.hidden = true
+		} else {
+			w.hidden = false
+			if a.help && !chromeLayout(w.viewportWidth, w.sidebarWidth, false, true).sidebarVisible {
+				a.help = false
+				w.helpFocusPending = false
+			}
+		}
 		return
 	case "help":
 		a.help = !a.help
+		w.helpFocusPending = a.help
 		return
 	case "next_tab":
 		w.app.CycleTab(1)
@@ -297,3 +306,25 @@ func (w *Window) BindingLabel(action string) string {
 }
 
 func (w *Window) SetActionStateChanged(fn func(string, bool)) { w.actionState = fn }
+
+// ActionLabel describes the action's current effect for every native entry.
+func (w *Window) ActionLabel(id string) string {
+	switch id {
+	case "toggle_sidebar":
+		if w.sidebarVisible {
+			return "Hide sidebar"
+		}
+		return "Show sidebar"
+	case "zoom":
+		if w.currentView().Layout.Zoomed {
+			return "Restore pane"
+		}
+		return "Zoom pane"
+	}
+	for _, action := range Actions {
+		if action.ID == id {
+			return action.Label
+		}
+	}
+	return id
+}

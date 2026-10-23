@@ -203,13 +203,20 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			r := rect.Rect
 			native.Column(c.Key("pane-frame:"+pane.ID)).Absolute().Left(float32(r.X)).Top(float32(r.Y)).Size(float32(r.W), float32(r.H)).Clip().AlignItems(native.Stretch).Children(func() {
 				if len(projection.Panes) > 1 {
-					header := native.ButtonBase(c.Key("pane-heading:" + pane.ID)).Height(30).Shrink(0).FillWidth().PaddingX(12).Label("Focus " + pane.Title)
+					header := native.ButtonBase(c.Key("pane-heading:" + pane.ID)).Height(30).Shrink(0).FillWidth().PaddingX(12).Label("Focus " + paneDescription(pane))
 					if pane.ID == v.PaneID {
 						header.Background(p.Inset)
 					}
+					if header.FocusVisible() {
+						header.Border(2, p.Focus)
+					}
 					header.Children(func() {
 						native.Row(c).FillWidth().Gap(8).AlignItems(native.Center).Children(func() {
-							native.Icon(c, icons.Agent(pane.Agent)).Size(14, 14).TextColor(p.Secondary)
+							agentColor := p.Secondary
+							if pane.ID == v.PaneID {
+								agentColor = p.Accent
+							}
+							native.Icon(c, icons.Agent(pane.Agent)).Size(14, 14).TextColor(agentColor).Tooltip(pane.Agent)
 							label := native.Text(c, pane.Title).SingleLine().Grow(1)
 							if pane.ID == v.PaneID {
 								label.Bold()

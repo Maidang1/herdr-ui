@@ -15,7 +15,10 @@
     "LoaderCircle": "loader-circle",
     "Unplug": "unplug",
     "ChevronRight": "chevron-right",
-    "ChevronDown": "chevron-down"
+    "ChevronDown": "chevron-down",
+    "Columns2": "columns-2",
+    "Keyboard": "keyboard",
+    "X": "x"
   },
   "lobe": {
     "ClaudeCode": "claudecode",

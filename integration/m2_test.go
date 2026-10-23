@@ -82,6 +82,12 @@ func testWindowLifecycle(t *testing.T, multi bool) {
 	}
 	seed.Resize(80, 24)
 	waitScreen(t, seed, "M2_READY>")
+	if multi {
+		// Keep the remote shell producing output while the native multi-pane
+		// window takes ownership and applies its first real content dimensions.
+		seed.Send([]byte("printf '\\n\\1154_OUTPUT_STARTED\\n'; i=0; while [ $i -lt 200 ]; do echo M4_OUTPUT_$i; i=$((i+1)); sleep 0.01; done; printf '\\n\\1154_OUTPUT_DONE\\n'\r"))
+		waitScreen(t, seed, "M4_OUTPUT_STARTED")
+	}
 	if err := seed.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -197,6 +203,9 @@ func testWindowLifecycle(t *testing.T, multi bool) {
 		return term
 	}, "M2_READY>")
 	defer third.Close()
+	if multi {
+		waitScreen(t, third, "M4_OUTPUT_DONE")
+	}
 	third.Send([]byte("printf '\\n\\1152_ALIVE_AFTER_WINDOW\\n'\r"))
 	waitScreen(t, third, "M2_ALIVE_AFTER_WINDOW")
 	data, _ := os.ReadFile(filepath.Join(dir, "window.log"))
@@ -222,8 +231,18 @@ func testWindowLifecycle(t *testing.T, multi bool) {
 		pane, ok := p.Snapshot.Pane(paneID)
 		return ok && pane.Scroll.Known && pane.Scroll.MaxOffset > 10
 	})
-	p := state.Latest()
-	result := <-state.Execute(context.Background(), session.Operation{Kind: session.Scroll, TargetID: p.TargetID, Epoch: p.Epoch, PaneID: paneID, TerminalID: terminalID, Offset: 5})
+	var result session.OperationResult
+	// Output/scroll events can start a resync after the Ready observation.
+	// StaleTarget guarantees the request was not sent; only that test-side
+	// rejection may be retried. Never repeat an unknown mutation outcome.
+	wait(t, 5*time.Second, func() bool {
+		p := state.Latest()
+		if p.State != session.Ready || p.Stale {
+			return false
+		}
+		result = <-state.Execute(context.Background(), session.Operation{Kind: session.Scroll, TargetID: p.TargetID, Epoch: p.Epoch, PaneID: paneID, TerminalID: terminalID, Offset: 5})
+		return result.Status != session.StaleTarget
+	})
 	if result.Status != session.Succeeded || result.Scroll.Offset != 5 {
 		t.Fatal(result)
 	}

@@ -114,16 +114,40 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		}
 		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key})
 		screen.ConnectTerminal(host, s, ctx, post)
-		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Content: native.View(screen.View)})
-		win.OnBlur(screen.BlurInput)
+		prefs := mygo.Theme.Preferences()
+		screen.SetReducedTransparency(prefs.ReduceTransparency)
+		material := mygo.VibrancySidebar
+		if prefs.ReduceTransparency || prefs.HighContrast {
+			material = mygo.VibrancyNone
+		}
+		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Vibrancy: material, Content: native.View(screen.View)})
+		win.OnBlur(func() { post(func() { screen.SetWindowActive(false) }) })
+		win.OnFocus(func() { post(func() { screen.SetWindowActive(true) }) })
+		themeItems := map[mygo.ThemeSource]*mygo.MenuItem{}
+		offAppearance := mygo.Theme.OnUpdated(func() {
+			if closed.Load() {
+				return
+			}
+			prefs := mygo.Theme.Preferences()
+			material := mygo.VibrancySidebar
+			if prefs.ReduceTransparency || prefs.HighContrast {
+				material = mygo.VibrancyNone
+			}
+			for source, item := range themeItems {
+				item.SetChecked(source == mygo.Theme.Source())
+			}
+			win.SetVibrancy(material)
+			post(func() { screen.SetReducedTransparency(prefs.ReduceTransparency) })
+		})
 		viewItems := []*mygo.MenuItem{}
 		terminalItems := []*mygo.MenuItem{}
 		helpItems := []*mygo.MenuItem{}
 		menuItems := map[string]*mygo.MenuItem{}
 		menuEnabled := map[string]bool{}
+		menuLabels := map[string]string{}
 		for _, action := range view.Actions {
 			action := action
-			label := action.Label
+			label := screen.ActionLabel(action.ID)
 			if binding := screen.BindingLabel(action.ID); binding != "" {
 				label += " · " + binding
 			}
@@ -138,15 +162,35 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			}
 			menuItems[action.ID] = item
 			menuEnabled[action.ID] = !item.Disabled
+			menuLabels[action.ID] = label
 		}
+		appearanceItems := []*mygo.MenuItem{}
+		for _, choice := range []struct {
+			label  string
+			source mygo.ThemeSource
+		}{{"System", mygo.ThemeSystem}, {"Light", mygo.ThemeLight}, {"Dark", mygo.ThemeDark}} {
+			source := choice.source
+			item := &mygo.MenuItem{Label: choice.label, Type: mygo.MenuItemRadio, Checked: mygo.Theme.Source() == source, Click: func(_ *mygo.MenuItem, _ *mygo.Window) { mygo.Theme.SetSource(source) }}
+			themeItems[source] = item
+			appearanceItems = append(appearanceItems, item)
+		}
+		viewItems = append(viewItems, &mygo.MenuItem{Type: mygo.MenuItemSeparator}, &mygo.MenuItem{Label: "Appearance", Submenu: appearanceItems})
 		screen.SetActionStateChanged(func(id string, enabled bool) {
+			label := screen.ActionLabel(id)
+			if binding := screen.BindingLabel(id); binding != "" {
+				label += " · " + binding
+			}
+			if menuLabels[id] != label {
+				menuLabels[id] = label
+				menuItems[id].SetLabel(label)
+			}
 			if menuEnabled[id] != enabled {
 				menuEnabled[id] = enabled
 				menuItems[id].SetEnabled(enabled)
 			}
 		})
 		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Role: mygo.RoleAppMenu}, {Role: mygo.RoleEditMenu}, {Label: "View", Submenu: viewItems}, {Label: "Terminal", Submenu: terminalItems}, {Label: "Help", Submenu: helpItems}, {Role: mygo.RoleWindowMenu}}))
-		win.OnClosed(func() { screen.DetachTerminal(); closed.Store(true); cancel() })
+		win.OnClosed(func() { offAppearance(); screen.DetachTerminal(); closed.Store(true); cancel() })
 		start()
 		if closeAfter > 0 {
 			time.AfterFunc(closeAfter, func() {

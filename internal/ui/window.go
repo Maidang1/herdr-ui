@@ -22,11 +22,18 @@ type Window struct {
 	actionState       func(string, bool)
 	projected         app.View
 	projectionVersion uint64
+	viewportWidth     float32
+	sidebarWidth      float32
+	sidebarVisible    bool
+	sidebarDragging   bool
+	sidebarDragOffset float32
+	helpFocusPending  bool
+	appearance        windowAppearance
 	projectionValid   bool
 }
 
 func New(a *app.App, retry func()) *Window {
-	return &Window{app: a, retry: retry, expanded: map[string]bool{}}
+	return &Window{app: a, retry: retry, expanded: map[string]bool{}, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, appearance: windowAppearance{active: true}}
 }
 
 func (w *Window) currentView() app.View {
@@ -40,20 +47,23 @@ func (w *Window) currentView() app.View {
 
 func (w *Window) View(c *native.Context) {
 	w.syncInput()
+	width, _ := c.Size()
+	w.viewportWidth = width
+	w.sidebarVisible = chromeLayout(width, w.sidebarWidth, w.hidden, w.referenceOpen()).sidebarVisible
 	if w.actionState != nil {
 		for _, action := range Actions {
 			w.actionState(action.ID, w.Can(action.ID))
 		}
 	}
-	p := design.Colors(c.Theme().Dark)
+	p := w.appearancePalette(c)
 	v := w.currentView()
 	root := native.Row(c).Fill().Padding(8).Gap(8).AlignItems(native.Stretch).TextColor(p.Text).FontSize(13)
-	root.LinearGradient(native.LinearGradient{Angle: 180, Stops: []native.GradientStop{{Color: p.Top, At: 0}, {Color: p.Middle, At: .52}, {Color: p.Bottom, At: 1}}})
+	w.styleShell(c, root, p)
 	root.Children(func() {
-		if !w.hidden {
+		if w.sidebarVisible {
 			w.sidebar(c, v, p)
 		}
-		native.Column(c).Grow(1).MinWidth(0).AlignItems(native.Stretch).Radius(16).Background(p.Content).Border(1, p.Border).Clip().Children(func() {
+		native.Column(c.Key("terminal-content")).Label("Terminal content").Grow(1).MinWidth(0).AlignItems(native.Stretch).Radius(16).Background(p.Content).Border(1, p.Border).Shadow(0, 1, 5, 0, p.ContentShadow).Clip().Children(func() {
 			w.header(c, v, p)
 			w.actionBar(c, v, p)
 			if v.Stale && v.Error != "" {
@@ -70,21 +80,19 @@ func (w *Window) View(c *native.Context) {
 			}
 			w.content(c, v, p)
 		})
+		if w.referenceOpen() {
+			w.referencePanel(c, p)
+		}
 	})
 }
 
 func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
-	native.Column(c).Width(248).Shrink(0).AlignItems(native.Stretch).Gap(6).Children(func() {
+	native.Column(c.Key("workspace-sidebar")).Label("Workspace sidebar").Width(w.sidebarWidth).Shrink(0).Background(p.Sidebar).AlignItems(native.Stretch).Gap(6).Children(func() {
 		native.Row(c).Height(36).Shrink(0).Padding(0, 8).AlignItems(native.Center).DragWindow().Children(func() {
 			native.Box(c).Grow(1)
-			toggle := native.ButtonBase(c.Key("hide-sidebar")).Size(28, 28).Radius(6).Center().Label("Hide sidebar").Tooltip("Hide sidebar")
-			if toggle.Hovered() {
-				toggle.Background(p.Hover)
-			}
-			toggle.Children(func() { native.Icon(c, icons.PanelLeft).Size(16, 16).TextColor(p.Secondary) })
+			toggle := w.iconButton(c, "hide-sidebar", icons.PanelLeft, "Hide sidebar", p)
 			if toggle.Clicked() {
-				w.hidden = true
-				w.BlurInput()
+				w.Dispatch("toggle_sidebar")
 			}
 		})
 		native.Text(c, "Workspaces").FontSize(12).TextColor(p.Secondary).PaddingX(12)
@@ -99,17 +107,28 @@ func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
 			icon, color, label := connection(v.State, c.Theme().Dark)
 			native.Icon(c, icon).Size(14, 14).TextColor(color).Label(label).Tooltip(label)
 			native.Text(c, "Local").FontSize(12).TextColor(p.Secondary)
+			native.Box(c).Grow(1)
+			button := w.iconButton(c, "keyboard-reference-button", icons.Keyboard, "Keyboard reference", p)
+			if button.Clicked() {
+				w.Dispatch("help")
+			}
 		})
+		w.sidebarResizeHandle(c)
 	})
 }
 
 func (w *Window) workspace(c *native.Context, row app.WorkspaceRow, p design.Palette) {
 	native.Row(c.Key("workspace:"+row.ID)).Padding(0, 0, 0, float32(row.Depth*16)).Height(42).Children(func() {
-		button := native.ButtonBase(c.Key("select:"+row.ID)).Grow(1).MinWidth(0).Height(42).Radius(8).Padding(4, 8).Label(row.Name + " · " + statusLabel(row.Status)).Tooltip(row.Path)
+		button := native.ButtonBase(c.Key("select:"+row.ID)).Grow(1).MinWidth(0).Height(42).Radius(8).Padding(4, 8).Label(row.Name + " · " + statusLabel(row.Status)).Tooltip(row.Path).Selected(row.Selected).TextColor(p.Text)
 		if row.Selected {
 			button.Background(p.Selected)
+		} else if button.Pressed() {
+			button.Background(p.Pressed)
 		} else if button.Hovered() {
 			button.Background(p.Hover)
+		}
+		if button.FocusVisible() {
+			button.Border(2, p.Focus)
 		}
 		button.Children(func() {
 			native.Row(c).FillWidth().Gap(8).AlignItems(native.Center).Children(func() {
@@ -132,7 +151,8 @@ func (w *Window) workspace(c *native.Context, row app.WorkspaceRow, p design.Pal
 			w.BlurInput()
 		}
 		if len(row.Panes) > 0 {
-			toggle := native.ButtonBase(c.Key("expand:"+row.ID)).Size(24, 42).Center().Label("Toggle panes for " + row.Name)
+			toggle := native.ButtonBase(c.Key("expand:"+row.ID)).Size(24, 42).Center().Label("Toggle panes for " + row.Name).Expanded(w.expanded[row.ID])
+			w.controlState(toggle, p)
 			toggle.Children(func() {
 				icon := icons.ChevronRight
 				if w.expanded[row.ID] {
@@ -147,15 +167,20 @@ func (w *Window) workspace(c *native.Context, row app.WorkspaceRow, p design.Pal
 	})
 	if w.expanded[row.ID] {
 		for _, pane := range row.Panes {
-			button := native.ButtonBase(c.Key("pane:"+pane.ID)).Height(28).FillWidth().Padding(0, 8, 0, float32(32+row.Depth*16)).Radius(6).Label(pane.Title + " · " + statusLabel(pane.Status))
+			button := native.ButtonBase(c.Key("pane:"+pane.ID)).Height(28).FillWidth().Padding(0, 8, 0, float32(32+row.Depth*16)).Radius(6).Label(paneDescription(pane)).Selected(pane.Selected).TextColor(p.Text)
 			if pane.Selected {
 				button.Background(p.Selected)
+			} else if button.Pressed() {
+				button.Background(p.Pressed)
 			} else if button.Hovered() {
 				button.Background(p.Hover)
 			}
+			if button.FocusVisible() {
+				button.Border(2, p.Focus)
+			}
 			button.Children(func() {
 				native.Row(c).Gap(8).AlignItems(native.Center).Children(func() {
-					native.Icon(c, icons.Agent(pane.Agent)).Size(14, 14).TextColor(p.Secondary)
+					native.Icon(c, icons.Agent(pane.Agent)).Size(14, 14).TextColor(p.Secondary).Tooltip(pane.Agent)
 					native.Text(c, pane.Title).SingleLine().FontSize(12).Grow(1).MinWidth(0)
 					w.stateIcon(c, pane.Title, pane.Status)
 				})
@@ -169,43 +194,85 @@ func (w *Window) workspace(c *native.Context, row app.WorkspaceRow, p design.Pal
 }
 
 func (w *Window) header(c *native.Context, v app.View, p design.Palette) {
-	native.Row(c).Height(40).Shrink(0).PaddingX(16).Gap(12).AlignItems(native.Center).DragWindow().Children(func() {
-		if w.hidden {
-			native.Box(c).Width(c.TitleBar().Left)
-			toggle := native.ButtonBase(c.Key("show-sidebar")).Size(28, 28).Center().Label("Show sidebar").Tooltip("Show sidebar")
-			toggle.Children(func() { native.Icon(c, icons.PanelLeft).Size(16, 16).TextColor(p.Secondary) })
+	width, _ := c.Size()
+	compact := width < 1000 && (w.referenceOpen() || !w.sidebarVisible)
+	native.Row(c).Height(40).Shrink(0).PaddingX(12).Gap(8).AlignItems(native.Center).DragWindow().Children(func() {
+		if !w.sidebarVisible {
+			native.Box(c).Width(c.TitleBar().Left).Shrink(0)
+			toggle := w.iconButton(c, "show-sidebar", icons.PanelLeft, "Show sidebar", p)
 			if toggle.Clicked() {
-				w.hidden = false
-				w.BlurInput()
+				w.Dispatch("toggle_sidebar")
 			}
 		}
 		title := v.WorkspaceName
 		if title == "" {
 			title = "Herdr"
 		}
-		native.Text(c, title).FontSize(13).Bold().SingleLine()
+		titleWidth := float32(180)
+		if compact {
+			titleWidth = 110
+		}
+		native.Text(c, title).FontSize(13).Bold().SingleLine().MaxWidth(titleWidth).MinWidth(0).Shrink(1).Tooltip(title)
 		if len(v.Tabs) > 0 {
-			labels := make([]string, len(v.Tabs))
 			chosen := ""
-			for i, tab := range v.Tabs {
-				labels[i] = fmt.Sprintf("%d · %s", tab.Number, tab.Name)
+			for _, tab := range v.Tabs {
 				if tab.Selected {
-					chosen = labels[i]
+					chosen = fmt.Sprintf("%d · %s", tab.Number, tab.Name)
 				}
 			}
-			if native.Select(c.Key("tabs"), &chosen, labels).Width(144).Label("Current tab").Changed() {
-				for i, label := range labels {
-					if label == chosen {
-						w.app.SelectTab(v.Tabs[i].ID)
+			tabWidth := float32(144)
+			if compact {
+				tabWidth = 112
+			}
+			tabs := native.ButtonBase(c.Key("tabs")).Width(tabWidth).MinWidth(64).Height(28).Radius(6).PaddingX(8).Label("Current tab").Tooltip(chosen)
+			w.controlState(tabs, p)
+			tabs.Children(func() {
+				native.Row(c).Fill().Gap(5).AlignItems(native.Center).Children(func() {
+					native.Text(c, chosen).SingleLine().Grow(1).MinWidth(0)
+					native.Icon(c, icons.ChevronDown).Size(12, 12).TextColor(p.Secondary)
+				})
+			})
+			tabs.Menu(func(m *native.Menu) {
+				for _, tab := range v.Tabs {
+					label := fmt.Sprintf("%d · %s · %d panes", tab.Number, tab.Name, tab.PaneCount)
+					if m.Item(label).Checked(tab.Selected).Chosen() {
+						w.app.SelectTab(tab.ID)
 						w.BlurInput()
-						break
+					}
+				}
+			})
+		}
+		if v.Path != "" && !compact {
+			native.Text(c, v.Path).SingleLine().Selectable().TextColor(p.Secondary).Tooltip(v.Path).Grow(1).MinWidth(0)
+		} else {
+			native.Box(c).Grow(1)
+		}
+		if w.controller != nil && (w.controller.machine.Awaiting || w.controller.machine.Resize) {
+			hint := "Prefix"
+			if w.controller.machine.Resize {
+				hint = "Resize"
+			}
+			native.Icon(c, icons.Keyboard).Size(14, 14).TextColor(p.Warning).Label(hint)
+			if !compact {
+				native.Text(c, hint).FontSize(12).TextColor(p.Warning)
+			}
+		}
+		layout := w.iconButton(c, "layout-menu", icons.Columns2, "Terminal layout", p)
+		layout.Menu(func(m *native.Menu) {
+			for _, id := range []string{"split_vertical", "split_horizontal", "zoom", "resize_mode"} {
+				for _, action := range Actions {
+					if action.ID == id {
+						label := w.ActionLabel(action.ID)
+						if binding := w.BindingLabel(id); binding != "" {
+							label += " · " + binding
+						}
+						if m.Item(label).Disabled(!w.Can(id)).Chosen() {
+							w.Dispatch(id)
+						}
 					}
 				}
 			}
-		}
-		if v.Path != "" {
-			native.Text(c, v.Path).SingleLine().Selectable().TextColor(p.Secondary).Tooltip(v.Path).Grow(1).MinWidth(0)
-		}
+		})
 	})
 }
 
@@ -238,7 +305,7 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 				native.Text(c, "No panes in this tab").TextColor(p.Secondary)
 			}
 			for _, pane := range v.Panes {
-				row := native.ButtonBase(c.Key("detail:" + pane.ID)).FillWidth().Radius(10).Padding(14).Label(pane.Title + " · " + statusLabel(pane.Status))
+				row := native.ButtonBase(c.Key("detail:" + pane.ID)).FillWidth().Radius(10).Padding(14).Label(paneDescription(pane))
 				if pane.Selected {
 					row.Background(p.Inset)
 				} else if row.Hovered() {
@@ -314,4 +381,12 @@ func connection(state session.State, dark bool) (*native.SVG, native.Color, stri
 	default:
 		return icons.LoaderCircle, p.Warning, "Local " + strings.ToLower(string(state))
 	}
+}
+
+func paneDescription(pane app.PaneRow) string {
+	label := pane.Title
+	if pane.Agent != "" {
+		label += " · " + pane.Agent
+	}
+	return label + " · " + statusLabel(pane.Status)
 }

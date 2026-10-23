@@ -527,3 +527,64 @@ func TestPluginCapabilityDoesNotRequireNativeLoad(t *testing.T) {
 		t.Fatal(state, supported)
 	}
 }
+
+func TestRapidVisibleSetChangesRetainSharedPaneAndCloseEveryInstance(t *testing.T) {
+	var mu sync.Mutex
+	created := []*fakeTerminal{}
+	posts := make(chan func(), 1024)
+	h := newHost(Config{Binary: "/bin/herdr", Target: herdr.Target{Socket: "/tmp/m4-test.sock"}, Post: func(fn func()) { posts <- fn }}, func(terminal.Options) (instance, error) {
+		term := &fakeTerminal{}
+		mu.Lock()
+		created = append(created, term)
+		mu.Unlock()
+		return term, nil
+	})
+	left := Spec{TargetID: 1, PaneID: "left", TerminalID: "left-terminal"}
+	shared := Spec{TargetID: 1, PaneID: "shared", TerminalID: "shared-terminal"}
+	bindings, err := h.Reconcile([]Spec{left, shared})
+	if err != nil {
+		t.Fatal(err)
+	}
+	retained := bindings[1]
+	for h.Status(retained).State != Attached {
+		receive(t, posts)()
+	}
+	for i := 0; i < 100; i++ {
+		bindings, err = h.Reconcile([]Spec{shared})
+		if err != nil || bindings[0] != retained {
+			t.Fatal("shared visible binding replaced", err)
+		}
+		bindings, err = h.Reconcile([]Spec{left, shared})
+		if err != nil || bindings[1] != retained {
+			t.Fatal("restoring another pane replaced shared binding", err)
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := h.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	// Posted installation/title work may arrive late; it must not revive owners.
+	for {
+		select {
+		case fn := <-posts:
+			fn()
+		default:
+			goto drained
+		}
+	}
+drained:
+	mu.Lock()
+	defer mu.Unlock()
+	for _, term := range created {
+		term.mu.Lock()
+		closes := term.closes
+		term.mu.Unlock()
+		if closes != 1 {
+			t.Fatalf("instance closed %d times", closes)
+		}
+	}
+	if h.Status(retained).State != Closed {
+		t.Fatal("late UI work revived a closed binding")
+	}
+}
