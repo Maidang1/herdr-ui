@@ -18,18 +18,20 @@ import (
 const emptySnapshot = `{"type":"session_snapshot","snapshot":{"version":"test","protocol":22,"workspaces":[],"tabs":[],"panes":[],"layouts":[],"agents":[]}}`
 
 type fakeServer struct {
-	mu              sync.Mutex
-	calls           int
-	lifecycle       net.Conn
-	agentSubs       []net.Conn
-	scrollSubs      []net.Conn
-	scrollCalls     []uint64
-	scrollBlock     chan struct{}
-	batches         [][]string
-	result          string
-	rejectAgentOnce bool
-	block           chan struct{}
-	snapshots       chan int
+	mu                      sync.Mutex
+	calls                   int
+	lifecycle               net.Conn
+	agentSubs               []net.Conn
+	scrollSubs              []net.Conn
+	scrollCalls             []uint64
+	scrollBlock             chan struct{}
+	layoutBlock             chan struct{}
+	layoutCalls, ratioCalls int
+	batches                 [][]string
+	result                  string
+	rejectAgentOnce         bool
+	block                   chan struct{}
+	snapshots               chan int
 }
 
 func (f *fakeServer) target(t *testing.T) herdr.Target {
@@ -157,6 +159,22 @@ func (f *fakeServer) handle(c net.Conn) {
 				<-block
 			}
 			fmt.Fprintf(c, "{\"id\":%q,\"result\":{\"type\":\"pane_info\",\"pane\":{\"pane_id\":%q,\"terminal_id\":\"term\",\"scroll\":{\"offset_from_bottom\":%d,\"max_offset_from_bottom\":100,\"viewport_rows\":24}}}}\n", req.ID, params.PaneID, params.Offset)
+		case "pane.split":
+			f.mu.Lock()
+			f.layoutCalls++
+			block := f.layoutBlock
+			f.mu.Unlock()
+			if block != nil {
+				<-block
+			}
+			fmt.Fprintf(c, "{\"id\":%q,\"result\":{\"type\":\"pane_info\",\"pane\":{\"pane_id\":\"new\",\"workspace_id\":\"w\",\"tab_id\":\"t\"}}}\n", req.ID)
+		case "layout.export":
+			fmt.Fprintf(c, "{\"id\":%q,\"result\":{\"type\":\"layout_export\",\"layout\":{\"workspace_id\":\"w\",\"tab_id\":\"t\",\"root\":{\"type\":\"pane\",\"pane_id\":\"p\"}}}}\n", req.ID)
+		case "layout.set_split_ratio":
+			f.mu.Lock()
+			f.ratioCalls++
+			f.mu.Unlock()
+			fmt.Fprintf(c, "{\"id\":%q,\"result\":{\"type\":\"layout_split_ratio_set\"}}\n", req.ID)
 		}
 	}
 }

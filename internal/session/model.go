@@ -3,6 +3,8 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/bytedance/herdr-ui/internal/layout"
 )
 
 // Metadata contains the server's identity and focus observations. Focus is not a
@@ -35,6 +37,15 @@ type ScrollInfo struct {
 	Known                   bool
 }
 
+// PaneLayout retains only the server's visible rectangles, including zoom.
+type PaneLayout struct {
+	WorkspaceID, TabID, FocusedPaneID string
+	Zoomed                            bool
+	Area                              layout.Rect
+	Panes                             []layout.PaneRect
+	Splits                            []layout.SplitRect
+}
+
 // Snapshot owns all indexes and authoritative ordering. Once decoded, it is
 // immutable and may be shared between readers without synchronization.
 type Snapshot struct {
@@ -46,6 +57,15 @@ type Snapshot struct {
 	tabIndex       map[string]Tab
 	paneIndex      map[string]Pane
 	focusedPanes   map[string]string
+	layouts        map[string]PaneLayout
+}
+
+// Layout returns a value copy with independently owned geometry slices.
+func (s *Snapshot) Layout(tabID string) (PaneLayout, bool) {
+	v, ok := s.layouts[tabID]
+	v.Panes = append([]layout.PaneRect(nil), v.Panes...)
+	v.Splits = append([]layout.SplitRect(nil), v.Splits...)
+	return v, ok
 }
 
 // FocusedPane returns the layout's focus within a tab, including inactive tabs.
@@ -165,7 +185,12 @@ func (r *rectWire) valid() bool {
 	return r != nil && r.X != nil && r.Y != nil && r.Width != nil && r.Height != nil
 }
 
+func (r *rectWire) value() layout.Rect {
+	return layout.Rect{X: float64(*r.X), Y: float64(*r.Y), W: float64(*r.Width), H: float64(*r.Height)}
+}
+
 type layoutWire struct {
+	Zoomed        bool      `json:"zoomed"`
 	WorkspaceID   string    `json:"workspace_id"`
 	TabID         string    `json:"tab_id"`
 	FocusedPaneID string    `json:"focused_pane_id"`
@@ -212,6 +237,7 @@ func DecodeSnapshot(data []byte) (*Snapshot, error) {
 		return nil, fmt.Errorf("snapshot requires workspaces, tabs, panes, layouts and agents arrays")
 	}
 	s := &Snapshot{metadata: Metadata{w.Version, w.Protocol, w.FocusedWorkspaceID, w.FocusedTabID, w.FocusedPaneID}, workspaceIndex: make(map[string]Workspace), tabIndex: make(map[string]Tab), paneIndex: make(map[string]Pane), focusedPanes: make(map[string]string)}
+	s.layouts = make(map[string]PaneLayout)
 	for _, v := range w.Workspaces {
 		if _, exists := s.workspaceIndex[v.ID]; v.ID == "" || exists {
 			return nil, fmt.Errorf("missing or duplicate workspace ID %q", v.ID)
@@ -313,6 +339,7 @@ func DecodeSnapshot(data []byte) (*Snapshot, error) {
 		if !v.Area.valid() || v.Panes == nil || v.Splits == nil {
 			return nil, fmt.Errorf("layout %q missing geometry", v.TabID)
 		}
+		value := PaneLayout{WorkspaceID: v.WorkspaceID, TabID: v.TabID, FocusedPaneID: v.FocusedPaneID, Zoomed: v.Zoomed, Area: v.Area.value()}
 		seen := make(map[string]bool)
 		checkPane := func(id string) error {
 			if id == "" {
@@ -335,6 +362,7 @@ func DecodeSnapshot(data []byte) (*Snapshot, error) {
 				return nil, err
 			}
 			seen[p.PaneID] = true
+			value.Panes = append(value.Panes, layout.PaneRect{PaneID: p.PaneID, Rect: p.Rect.value()})
 		}
 		if v.FocusedPaneID != "" {
 			if err := checkPane(v.FocusedPaneID); err != nil {
@@ -348,7 +376,9 @@ func DecodeSnapshot(data []byte) (*Snapshot, error) {
 				return nil, fmt.Errorf("layout has invalid split")
 			}
 			splitIDs[split.ID] = true
+			value.Splits = append(value.Splits, layout.SplitRect{ID: split.ID, Direction: split.Direction, Ratio: *split.Ratio, Rect: split.Rect.value()})
 		}
+		s.layouts[v.TabID] = value
 	}
 	return s, nil
 }

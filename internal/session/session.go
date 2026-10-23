@@ -61,6 +61,7 @@ type Session struct {
 	operationMu                  sync.Mutex
 	nextOperation                uint64
 	pendingOperations            map[operationKey]*queuedOperation
+	reservedOperations           map[string]bool
 	operationOrder               []operationKey
 	operationWake                chan struct{}
 	visibleMu                    sync.Mutex

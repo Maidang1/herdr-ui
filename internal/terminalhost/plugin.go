@@ -61,3 +61,11 @@ func terminalThemes() (*terminal.Theme, *terminal.Theme) {
 	dark.SelectionText = dark.Foreground
 	return &light, &dark
 }
+
+// The optional assertion keeps ordinary builds compatible with pristine mygo.
+func (p *pluginInstance) InputState() InputState {
+	if t, ok := any(p.terminal).(interface{ Composing() bool }); ok {
+		return InputState{Composing: t.Composing(), Guarded: true}
+	}
+	return InputState{}
+}

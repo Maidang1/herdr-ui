@@ -15,6 +15,9 @@ type View struct {
 	Error                                           string
 	Revision                                        uint64
 	TargetID, Epoch                                 uint64
+	Layout                                          session.PaneLayout
+	HasLayout                                       bool
+	ActionMessage                                   string
 	Updated                                         time.Time
 	Rows                                            []WorkspaceRow
 	WorkspaceID, WorkspaceName, Path, TabID, PaneID string
@@ -40,6 +43,10 @@ type PaneRow struct {
 
 type App struct {
 	version           uint64
+	viewRevision      uint64
+	nextIntent        uint64
+	intents           map[uint64]*pendingIntent
+	actionMessage     string
 	publication       session.PublishedSnapshot
 	snapshot          *session.Snapshot
 	workspaceID       string
@@ -56,6 +63,7 @@ func New() *App {
 // Update replaces authoritative data while preserving valid local selections.
 func (a *App) Update(p session.PublishedSnapshot) {
 	a.version++
+	defer a.applyPending()
 	if a.tabs == nil {
 		a.tabs = make(map[string]string)
 		a.panes = make(map[string]string)
@@ -181,6 +189,7 @@ func (a *App) SelectWorkspace(id string) {
 	if a.snapshot != nil {
 		if _, ok := a.snapshot.Workspace(id); ok {
 			a.version++
+			a.viewRevision++
 			a.workspaceID = id
 			a.rememberCurrent()
 		}
@@ -190,6 +199,7 @@ func (a *App) SelectTab(id string) {
 	if a.snapshot != nil {
 		if t, ok := a.snapshot.Tab(id); ok && t.WorkspaceID == a.workspaceID {
 			a.version++
+			a.viewRevision++
 			a.tabs[t.WorkspaceID] = id
 			a.rememberCurrent()
 		}
@@ -199,6 +209,7 @@ func (a *App) SelectPane(id string) {
 	if a.snapshot != nil {
 		if p, ok := a.snapshot.Pane(id); ok {
 			a.version++
+			a.viewRevision++
 			a.workspaceID = p.WorkspaceID
 			a.tabs[p.WorkspaceID] = p.TabID
 			a.panes[p.TabID] = id
@@ -225,6 +236,8 @@ func (a *App) View() View {
 	v.WorkspaceID = a.workspaceID
 	v.TabID = a.tabs[v.WorkspaceID]
 	v.PaneID = a.panes[v.TabID]
+	v.Layout, v.HasLayout = s.Layout(v.TabID)
+	v.ActionMessage = a.actionMessage
 	rows := make(map[string]WorkspaceRow)
 	ws := s.Workspaces()
 	for _, w := range ws {

@@ -5,6 +5,8 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -237,4 +239,31 @@ func (b Bindings) Labels() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// LoadBindings resolves the user config location. Missing configuration uses
+// verified defaults; malformed configuration is an error.
+func LoadBindings(path string) (Bindings, error) {
+	if path == "" {
+		path = os.Getenv("HERDR_CONFIG_PATH")
+	}
+	if path == "" {
+		base := os.Getenv("XDG_CONFIG_HOME")
+		if base == "" {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return Bindings{}, err
+			}
+			base = filepath.Join(home, ".config")
+		}
+		path = filepath.Join(base, "herdr", "config.toml")
+	}
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return Resolve(nil, "defaults (missing "+path+")")
+	}
+	if err != nil {
+		return Bindings{}, fmt.Errorf("bindings %s: %w", path, err)
+	}
+	return Resolve(data, path)
 }

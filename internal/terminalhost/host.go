@@ -35,6 +35,14 @@ type Status struct {
 	Message  string
 	ExitCode int
 }
+
+// InputState reports whether native composition can be observed.
+type InputState struct{ Composing, Guarded bool }
+type KeyResult struct {
+	Consumed bool
+	Send     []byte
+}
+
 type Config struct {
 	Binary   string
 	Target   herdr.Target
@@ -42,6 +50,7 @@ type Config struct {
 	Post     func(func())
 	Changed  func()
 	OnScroll func(Binding, int)
+	OnKey    func(Binding, ui.Modifiers, ui.Key, InputState) KeyResult
 }
 type instance interface {
 	View(*ui.Context) ui.Element
@@ -348,15 +357,31 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 			})
 		},
 		OnKey: func(mods ui.Modifiers, k ui.Key) bool {
-			if mods != ui.Ctrl || k != ui.KeyB {
-				return false
-			}
 			h.mu.Lock()
-			if h.valid(e) && e.installed && e.status.State == Attached {
-				e.owned.Send([]byte{2, 2})
+			valid := h.valid(e) && e.installed && e.status.State == Attached
+			var state InputState
+			if valid {
+				state = instanceInputState(e.owned)
 			}
 			h.mu.Unlock()
-			return true
+			if !valid {
+				return mods == ui.Ctrl && k == ui.KeyB
+			}
+			result := KeyResult{}
+			if h.cfg.OnKey != nil {
+				result = h.cfg.OnKey(e.binding, mods, k, state)
+			}
+			if !result.Consumed && mods == ui.Ctrl && k == ui.KeyB {
+				result = KeyResult{Consumed: true, Send: []byte{2, 2}}
+			}
+			if result.Consumed && len(result.Send) > 0 {
+				h.mu.Lock()
+				if h.valid(e) && e.installed && e.status.State == Attached {
+					e.owned.Send(result.Send)
+				}
+				h.mu.Unlock()
+			}
+			return result.Consumed
 		},
 		OnScroll: func(rows int) bool {
 			h.mu.Lock()
@@ -380,4 +405,21 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 			return true
 		},
 	}, nil
+}
+
+func instanceInputState(t instance) InputState {
+	if capable, ok := t.(interface{ InputState() InputState }); ok {
+		return capable.InputState()
+	}
+	return InputState{}
+}
+
+// InputState returns an unavailable capability for stale or unattached bindings.
+func (h *Host) InputState(b Binding) InputState {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if e := h.lookup(b); e != nil && e.installed && e.status.State == Attached {
+		return instanceInputState(e.owned)
+	}
+	return InputState{}
 }

@@ -1,18 +1,18 @@
 .PHONY: build test integration probe run window package
 
 build:
-	CGO_ENABLED=0 go build -trimpath -o bin/herdr-ui ./cmd/herdr-ui
-	CGO_ENABLED=0 go build -trimpath -o bin/m0-probe ./cmd/m0-probe
+	CGO_ENABLED=0 ./scripts/go.sh build -trimpath -o bin/herdr-ui ./cmd/herdr-ui
+	CGO_ENABLED=0 ./scripts/go.sh build -trimpath -o bin/m0-probe ./cmd/m0-probe
 
 test:
-	go test ./...
-	go vet ./...
+	./scripts/go.sh test ./...
+	./scripts/go.sh vet ./...
 
 integration: build
-	CGO_ENABLED=0 HERDR_UI_M0_WINDOW_BINARY="$(CURDIR)/bin/herdr-ui" go test -tags integration -count=1 -v ./integration
+	CGO_ENABLED=0 HERDR_UI_M0_WINDOW_BINARY="$(CURDIR)/bin/herdr-ui" ./scripts/go.sh test -tags integration -count=1 -v ./integration
 
 probe:
-	go run ./cmd/m0-probe
+	./scripts/go.sh run ./cmd/m0-probe
 
 run: build
 	./bin/herdr-ui
@@ -22,4 +22,4 @@ window: build
 
 # The CLI resolves from the same exact mygo module revision as the application.
 package:
-	CGO_ENABLED=0 go run github.com/egoist/mygo/cmd/mygo build -skip-dmg
+	CGO_ENABLED=0 ./scripts/go.sh run github.com/egoist/mygo/cmd/mygo build -skip-dmg

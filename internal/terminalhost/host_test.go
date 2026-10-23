@@ -440,3 +440,87 @@ func TestShutdownRetiresQueuedGenerations(t *testing.T) {
 		t.Fatal("lifetime barriers leaked", len(h.tails), h.tasks)
 	}
 }
+
+func TestInputHookBeforeLiteralAndStale(t *testing.T) {
+	x := setup()
+	calls := 0
+	x.h.cfg.OnKey = func(b Binding, mods ui.Modifiers, k ui.Key, state InputState) KeyResult {
+		calls++
+		if state.Guarded {
+			t.Fatal("fake without optional capability reported guarded")
+		}
+		// Querying from the callback must not deadlock the host.
+		x.h.Status(b)
+		if k == ui.KeyB {
+			return KeyResult{Consumed: true, Send: []byte("hook")}
+		}
+		return KeyResult{}
+	}
+	b := reconcile(t, x)
+	o := receive(t, x.options)
+	x.release <- struct{}{}
+	receive(t, x.posts)()
+	if x.h.InputState(b).Guarded {
+		t.Fatal("unexpected guard")
+	}
+	if !o.OnKey(ui.Ctrl, ui.KeyB) || string(x.f.sent) != "hook" {
+		t.Fatal(x.f.sent)
+	}
+	x.h.cfg.OnKey = func(Binding, ui.Modifiers, ui.Key, InputState) KeyResult { return KeyResult{} }
+	if !o.OnKey(ui.Ctrl, ui.KeyB) || string(x.f.sent) != "hook\x02\x02" {
+		t.Fatal(x.f.sent)
+	}
+	finish(t, x)
+	x.h.cfg.OnKey = func(Binding, ui.Modifiers, ui.Key, InputState) KeyResult { calls++; return KeyResult{} }
+	o.OnKey(0, ui.KeyH)
+	if calls != 1 {
+		t.Fatal("stale hook called", calls)
+	}
+}
+
+type composingTerminal struct {
+	*fakeTerminal
+	composing bool
+}
+
+func (f *composingTerminal) InputState() InputState {
+	return InputState{Guarded: true, Composing: f.composing}
+}
+
+func TestCompositionCapabilityReachesHook(t *testing.T) {
+	x := setup()
+	native := &composingTerminal{fakeTerminal: x.f, composing: true}
+	x.h.create = func(o terminal.Options) (instance, error) { x.options <- o; <-x.release; return native, nil }
+	x.h.cfg.OnKey = func(b Binding, _ ui.Modifiers, _ ui.Key, state InputState) KeyResult {
+		if state != (InputState{Composing: true, Guarded: true}) {
+			t.Fatal(state)
+		}
+		return KeyResult{}
+	}
+	b := reconcile(t, x)
+	o := receive(t, x.options)
+	x.release <- struct{}{}
+	receive(t, x.posts)()
+	if state := x.h.InputState(b); !state.Guarded || !state.Composing {
+		t.Fatal(state)
+	}
+	if o.OnKey(0, ui.KeyV) {
+		t.Fatal("composition key intercepted")
+	}
+	native.composing = false
+	if state := x.h.InputState(b); !state.Guarded || state.Composing {
+		t.Fatal(state)
+	}
+	finish(t, x)
+	if state := x.h.InputState(b); state != (InputState{}) {
+		t.Fatal("stale capability", state)
+	}
+}
+
+func TestPluginCapabilityDoesNotRequireNativeLoad(t *testing.T) {
+	p := &pluginInstance{terminal: &terminal.Terminal{}}
+	_, supported := any(p.terminal).(interface{ Composing() bool })
+	if state := p.InputState(); state.Guarded != supported || state.Composing {
+		t.Fatal(state, supported)
+	}
+}

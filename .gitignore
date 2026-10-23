@@ -21,3 +21,6 @@
 /dist/
 /.m0/
 /node_modules/
+
+# Generated pinned dependency workspace and local patches.
+/.build/

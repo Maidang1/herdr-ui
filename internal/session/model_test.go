@@ -53,6 +53,32 @@ func TestSnapshotValuesAndImmutability(t *testing.T) {
 		t.Fatal("lost focus")
 	}
 }
+
+func TestSnapshotLayoutImmutabilityAndZoom(t *testing.T) {
+	s, err := DecodeSnapshot(modelFixture(t, func(s map[string]any) {
+		l := s["layouts"].([]any)[0].(map[string]any)
+		l["zoomed"] = true
+		l["splits"] = []any{map[string]any{"id": "root", "direction": "right", "ratio": .5, "rect": map[string]any{"x": 0, "y": 0, "width": 80, "height": 24}}}
+		s["panes"] = append(s["panes"].([]any), map[string]any{"pane_id": "hidden", "terminal_id": "hidden-term", "workspace_id": "w", "tab_id": "t"})
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l, ok := s.Layout("t")
+	if !ok || !l.Zoomed || l.WorkspaceID != "w" || l.TabID != "t" || l.FocusedPaneID != "p" || l.Area.W != 80 || len(l.Panes) != 1 || len(s.Panes("t")) != 2 || len(l.Splits) != 1 {
+		t.Fatalf("layout lost: %+v", l)
+	}
+	l.Panes[0].PaneID = "changed"
+	l.Splits[0].Ratio = .7
+	l.Area.W = 1
+	fresh, _ := s.Layout("t")
+	if fresh.Panes[0].PaneID != "p" || fresh.Splits[0].Ratio != .5 || fresh.Area.W != 80 {
+		t.Fatal("mutable layout", fresh)
+	}
+	if _, ok := s.Layout("missing"); ok {
+		t.Fatal("invented layout")
+	}
+}
 func TestSnapshotValidation(t *testing.T) {
 	cases := map[string]func(map[string]any){
 		"duplicate workspace": func(s map[string]any) { s["workspaces"] = append(s["workspaces"].([]any), s["workspaces"].([]any)[0]) },
