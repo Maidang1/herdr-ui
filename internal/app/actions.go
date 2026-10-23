@@ -54,7 +54,7 @@ func (a *App) CompleteOperation(intent Intent, result session.OperationResult) {
 			delete(a.intents, intent.ID)
 		}
 	case session.OutcomeUnknown:
-		a.actionMessage = "Result pending confirmation. The action was not retried."
+		a.actionMessage = "The previous action may have completed. Check the refreshed layout before repeating it. The action was not retried."
 	default:
 		a.actionMessage = fmt.Sprintf("%s: %s", result.Status, result.Error)
 		delete(a.intents, intent.ID)

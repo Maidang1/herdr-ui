@@ -137,6 +137,9 @@ func (a *App) Update(p session.PublishedSnapshot) {
 					id = ps[0].ID
 				}
 			}
+			if visible, ok := s.Layout(t.ID); ok && visible.Zoomed {
+				id = visible.FocusedPaneID
+			}
 			a.panes[t.ID] = id
 		}
 	}
@@ -208,6 +211,9 @@ func (a *App) SelectTab(id string) {
 func (a *App) SelectPane(id string) {
 	if a.snapshot != nil {
 		if p, ok := a.snapshot.Pane(id); ok {
+			if visible, ok := a.snapshot.Layout(p.TabID); ok && visible.Zoomed {
+				id = visible.FocusedPaneID
+			}
 			a.version++
 			a.viewRevision++
 			a.workspaceID = p.WorkspaceID

@@ -15,6 +15,7 @@ import (
 
 	"github.com/bytedance/herdr-ui/internal/app"
 	"github.com/bytedance/herdr-ui/internal/herdr"
+	"github.com/bytedance/herdr-ui/internal/input"
 	"github.com/bytedance/herdr-ui/internal/session"
 	"github.com/bytedance/herdr-ui/internal/terminalhost"
 	view "github.com/bytedance/herdr-ui/internal/ui"
@@ -100,6 +101,8 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			}()
 		}
 		screen := view.New(a, start)
+		bindings, bindingErr := input.LoadBindings("")
+		screen.ConfigureBindings(bindings, bindingErr)
 		post := func(fn func()) {
 			if !closed.Load() {
 				win.Update(func() {
@@ -109,9 +112,40 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				})
 			}
 		}
-		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll})
+		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key})
 		screen.ConnectTerminal(host, s, ctx, post)
 		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Content: native.View(screen.View)})
+		win.OnBlur(screen.BlurInput)
+		viewItems := []*mygo.MenuItem{}
+		terminalItems := []*mygo.MenuItem{}
+		helpItems := []*mygo.MenuItem{}
+		menuItems := map[string]*mygo.MenuItem{}
+		menuEnabled := map[string]bool{}
+		for _, action := range view.Actions {
+			action := action
+			label := action.Label
+			if binding := screen.BindingLabel(action.ID); binding != "" {
+				label += " · " + binding
+			}
+			item := &mygo.MenuItem{Label: label, Disabled: !screen.Can(action.ID), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.Dispatch(action.ID) }) }}
+			switch action.ID {
+			case "toggle_sidebar", "previous_tab", "next_tab":
+				viewItems = append(viewItems, item)
+			case "help":
+				helpItems = append(helpItems, item)
+			default:
+				terminalItems = append(terminalItems, item)
+			}
+			menuItems[action.ID] = item
+			menuEnabled[action.ID] = !item.Disabled
+		}
+		screen.SetActionStateChanged(func(id string, enabled bool) {
+			if menuEnabled[id] != enabled {
+				menuEnabled[id] = enabled
+				menuItems[id].SetEnabled(enabled)
+			}
+		})
+		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Role: mygo.RoleAppMenu}, {Role: mygo.RoleEditMenu}, {Label: "View", Submenu: viewItems}, {Label: "Terminal", Submenu: terminalItems}, {Label: "Help", Submenu: helpItems}, {Role: mygo.RoleWindowMenu}}))
 		win.OnClosed(func() { screen.DetachTerminal(); closed.Store(true); cancel() })
 		start()
 		if closeAfter > 0 {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/bytedance/herdr-ui/internal/herdr"
@@ -250,19 +251,33 @@ func pathKey(path []bool) string {
 	return b.String()
 }
 
-// ObserveScroll scopes the third subscription to the pane this window shows.
-// Its pane/terminal pair is validated against each authoritative snapshot.
+// ScrollTarget identifies a visible pane's server history subscription.
+type ScrollTarget struct{ PaneID, TerminalID string }
+
+// ObserveScroll preserves the single-pane caller contract.
 func (s *Session) ObserveScroll(paneID, terminalID string) {
+	if paneID == "" {
+		s.ObserveScrolls(nil)
+		return
+	}
+	s.ObserveScrolls([]ScrollTarget{{paneID, terminalID}})
+}
+
+// ObserveScrolls replaces the visible set, independent of keyboard focus.
+func (s *Session) ObserveScrolls(targets []ScrollTarget) {
+	targets = append([]ScrollTarget(nil), targets...)
+	slices.SortFunc(targets, func(a, b ScrollTarget) int { return strings.Compare(a.PaneID, b.PaneID) })
+	targets = slices.Compact(targets)
 	s.visibleMu.Lock()
-	changed := s.visiblePane != paneID || s.visibleTerminal != terminalID
-	s.visiblePane, s.visibleTerminal = paneID, terminalID
+	changed := !slices.Equal(s.visiblePanes, targets)
+	s.visiblePanes = targets
 	s.visibleMu.Unlock()
 	if changed {
 		s.Refresh()
 	}
 }
-func (s *Session) visibleScroll() (string, string) {
+func (s *Session) visibleScrolls() []ScrollTarget {
 	s.visibleMu.Lock()
 	defer s.visibleMu.Unlock()
-	return s.visiblePane, s.visibleTerminal
+	return append([]ScrollTarget(nil), s.visiblePanes...)
 }

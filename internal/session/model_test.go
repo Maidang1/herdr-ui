@@ -60,19 +60,20 @@ func TestSnapshotLayoutImmutabilityAndZoom(t *testing.T) {
 		l["zoomed"] = true
 		l["splits"] = []any{map[string]any{"id": "root", "direction": "right", "ratio": .5, "rect": map[string]any{"x": 0, "y": 0, "width": 80, "height": 24}}}
 		s["panes"] = append(s["panes"].([]any), map[string]any{"pane_id": "hidden", "terminal_id": "hidden-term", "workspace_id": "w", "tab_id": "t"})
+		l["panes"] = append(l["panes"].([]any), map[string]any{"pane_id": "hidden", "rect": map[string]any{"x": 40, "y": 0, "width": 40, "height": 24}})
+		l["panes"].([]any)[0].(map[string]any)["rect"].(map[string]any)["width"] = 40
 	}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	l, ok := s.Layout("t")
-	if !ok || !l.Zoomed || l.WorkspaceID != "w" || l.TabID != "t" || l.FocusedPaneID != "p" || l.Area.W != 80 || len(l.Panes) != 1 || len(s.Panes("t")) != 2 || len(l.Splits) != 1 {
+	if !ok || !l.Zoomed || l.WorkspaceID != "w" || l.TabID != "t" || l.FocusedPaneID != "p" || l.Area.W != 80 || len(l.Panes) != 1 || len(s.Panes("t")) != 2 || len(l.Splits) != 0 {
 		t.Fatalf("layout lost: %+v", l)
 	}
 	l.Panes[0].PaneID = "changed"
-	l.Splits[0].Ratio = .7
 	l.Area.W = 1
 	fresh, _ := s.Layout("t")
-	if fresh.Panes[0].PaneID != "p" || fresh.Splits[0].Ratio != .5 || fresh.Area.W != 80 {
+	if fresh.Panes[0].PaneID != "p" || fresh.Area.W != 80 || fresh.Panes[0].Rect.W != 80 {
 		t.Fatal("mutable layout", fresh)
 	}
 	if _, ok := s.Layout("missing"); ok {

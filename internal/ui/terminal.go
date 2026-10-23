@@ -9,12 +9,15 @@ import (
 	"github.com/bytedance/herdr-ui/internal/app"
 	"github.com/bytedance/herdr-ui/internal/design"
 	"github.com/bytedance/herdr-ui/internal/icons"
+	"github.com/bytedance/herdr-ui/internal/layout"
 	"github.com/bytedance/herdr-ui/internal/session"
 	"github.com/bytedance/herdr-ui/internal/terminalhost"
 	native "github.com/egoist/mygo/ui"
 )
 
 type terminalPanel struct {
+	panes       map[string]*terminalPanel
+	focused     string
 	host        *terminalhost.Host
 	session     *session.Session
 	ctx         context.Context
@@ -29,13 +32,15 @@ type terminalPanel struct {
 
 // ConnectTerminal is called by main during window assembly, on the UI thread.
 func (w *Window) ConnectTerminal(host *terminalhost.Host, s *session.Session, ctx context.Context, post func(func())) {
-	w.terminal = &terminalPanel{host: host, session: s, ctx: ctx, post: post}
+	w.terminal = &terminalPanel{host: host, session: s, ctx: ctx, post: post, panes: map[string]*terminalPanel{}}
 }
 
 func (w *Window) DetachTerminal() {
 	if t := w.terminal; t != nil {
 		t.host.Reconcile(nil)
 		t.session.ObserveScroll("", "")
+		t.panes = map[string]*terminalPanel{}
+		t.focused = ""
 		t.binding = terminalhost.Binding{}
 		t.spec = terminalhost.Spec{}
 		t.tracker = app.ScrollTracker{}
@@ -56,8 +61,8 @@ func (t *terminalPanel) install(binding terminalhost.Binding, spec terminalhost.
 // Scroll runs only from the plugin's UI-thread hook. Mouse/alternate-scroll
 // programs bypass that hook and retain the plugin's native terminal encoding.
 func (w *Window) Scroll(binding terminalhost.Binding, rows int) {
-	t := w.terminal
-	if t == nil || t.binding != binding {
+	t := w.paneForBinding(binding)
+	if t == nil {
 		return
 	}
 	published := t.session.Latest()
@@ -103,85 +108,193 @@ func (w *Window) Scroll(binding terminalhost.Binding, rows int) {
 	}()
 }
 
+func (w *Window) paneForBinding(binding terminalhost.Binding) *terminalPanel {
+	if w.terminal == nil {
+		return nil
+	}
+	for _, t := range w.terminal.panes {
+		if t.binding == binding {
+			return t
+		}
+	}
+	return nil
+}
+
 func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette) {
 	t := w.terminal
-	area := native.Column(c.Key("terminal-area")).Grow(1).FillWidth().MinHeight(0).AlignItems(native.Stretch)
+	area := native.Box(c.Key("terminal-area")).Grow(1).FillWidth().MinHeight(0).Clip()
 	area.Children(func() {
-		var pane app.PaneRow
-		for _, candidate := range v.Panes {
-			if candidate.ID == v.PaneID {
-				pane = candidate
-				break
-			}
-		}
-		wanted := terminalhost.Spec{TargetID: v.TargetID, TerminalID: pane.TerminalID, PaneID: pane.ID, CWD: pane.CWD}
-		same := t.spec.TargetID == wanted.TargetID && t.spec.TerminalID == wanted.TerminalID && t.spec.PaneID == wanted.PaneID && t.binding.Generation != 0
 		bounds := area.Bounds()
 		if bounds.W <= 0 || bounds.H <= 0 {
 			c.After(time.Millisecond)
 			return
 		}
-		latest := t.session.Latest()
-		valid := latest.State == session.Ready && !latest.Stale && latest.TargetID == v.TargetID && pane.ID != ""
-		if valid {
-			current, ok := latest.Snapshot.Pane(pane.ID)
-			valid = ok && current.TerminalID == pane.TerminalID
-		}
-		if valid {
-			bindings, err := t.host.Reconcile([]terminalhost.Spec{wanted})
-			if err != nil {
-				t.notice = err.Error()
-			} else {
-				t.install(bindings[0], wanted)
-				t.session.ObserveScroll(pane.ID, pane.TerminalID)
-			}
-		} else if !same {
+		if !v.HasLayout {
 			w.DetachTerminal()
-		}
-		if t.binding.Generation == 0 {
-			title := "Synchronizing terminal…"
-			if pane.ID == "" && v.State == session.Ready {
-				title = "No terminal in this tab"
-			}
-			native.Column(c).Grow(1).FillWidth().Center().Padding(24).Children(func() { native.Text(c, title).TextColor(p.Secondary) })
+			native.Text(c, "Synchronizing layout…").TextColor(p.Secondary)
 			return
 		}
-		status := t.host.Status(t.binding)
-		if !t.statusKnown || t.lastStatus != status.State {
-			t.statusKnown = true
-			t.lastStatus = status.State
-			log.Printf("attach target=%d terminal=%s generation=%d state=%v exit=%d", t.binding.TargetID, t.binding.TerminalID, t.binding.Generation, status.State, status.ExitCode)
+		geometry := v.Layout
+		geometry.Splits = gridDividers(geometry.Splits)
+		w.updateDrag(v)
+		if w.controller != nil && w.controller.drag != nil && w.controller.drag.ready {
+			geometry.Panes, geometry.Splits = preview(w.controller.drag.root, geometry.Area)
 		}
-		message := status.Message
-		if t.notice != "" {
-			if message != "" {
-				message += " · " + t.notice
-			} else {
-				message = t.notice
+		projection, err := layout.Project(geometry.Area, geometry.Panes, geometry.Splits, layout.Rect{W: float64(bounds.W), H: float64(bounds.H)})
+		if err != nil {
+			w.DetachTerminal()
+			native.Text(c, "Layout unavailable: "+err.Error()).TextColor(p.Danger)
+			return
+		}
+		latest := t.session.Latest()
+		valid := latest.State == session.Ready && !latest.Stale && latest.TargetID == v.TargetID && latest.Snapshot != nil
+		specs := []terminalhost.Spec{}
+		rows := map[string]app.PaneRow{}
+		for _, pane := range v.Panes {
+			rows[pane.ID] = pane
+		}
+		for _, rect := range projection.Panes {
+			pane, ok := rows[rect.PaneID]
+			if !ok || rect.Rect.W <= 32 || rect.Rect.H <= 24+boolHeight(len(projection.Panes) > 1) {
+				continue
+			}
+			if valid {
+				actual, ok := latest.Snapshot.Pane(pane.ID)
+				if !ok || actual.TerminalID != pane.TerminalID {
+					valid = false
+				}
+			}
+			specs = append(specs, terminalhost.Spec{TargetID: v.TargetID, PaneID: pane.ID, TerminalID: pane.TerminalID, CWD: pane.CWD})
+		}
+		if valid {
+			bindings, err := t.host.Reconcile(specs)
+			if err != nil {
+				native.Text(c, err.Error()).TextColor(p.Danger)
+				return
+			}
+			next := map[string]*terminalPanel{}
+			for i, spec := range specs {
+				child := t.panes[spec.PaneID]
+				if child == nil {
+					child = &terminalPanel{host: t.host, session: t.session, ctx: t.ctx, post: t.post}
+				}
+				child.install(bindings[i], spec)
+				next[spec.PaneID] = child
+			}
+			t.panes = next
+		} else {
+			for id, child := range t.panes {
+				row, ok := rows[id]
+				if !ok || child.spec.TargetID != v.TargetID || child.spec.TerminalID != row.TerminalID {
+					w.DetachTerminal()
+					break
+				}
 			}
 		}
-		if message != "" {
-			native.Row(c).Padding(8, 16).Gap(8).AlignItems(native.Center).Children(func() {
-				color := p.Secondary
-				if status.State == terminalhost.Failed {
-					color = p.Danger
-				}
-				native.Icon(c, icons.CircleAlert).Size(14, 14).TextColor(color)
-				native.Text(c, message).Grow(1).TextColor(color)
-				if status.State == terminalhost.Failed {
-					if native.Button(c, "Retry").Label("Retry terminal").Disabled(!valid).Clicked() {
-						t.host.Retry(t.binding)
+		requestFocus := t.focused != v.PaneID
+		for _, rect := range projection.Panes {
+			pane, ok := rows[rect.PaneID]
+			child := t.panes[rect.PaneID]
+			if !ok || child == nil {
+				continue
+			}
+			r := rect.Rect
+			native.Column(c.Key("pane-frame:"+pane.ID)).Absolute().Left(float32(r.X)).Top(float32(r.Y)).Size(float32(r.W), float32(r.H)).Clip().AlignItems(native.Stretch).Children(func() {
+				if len(projection.Panes) > 1 {
+					header := native.ButtonBase(c.Key("pane-heading:" + pane.ID)).Height(30).Shrink(0).FillWidth().PaddingX(12).Label("Focus " + pane.Title)
+					if pane.ID == v.PaneID {
+						header.Background(p.Inset)
+					}
+					header.Children(func() {
+						native.Row(c).FillWidth().Gap(8).AlignItems(native.Center).Children(func() {
+							native.Icon(c, icons.Agent(pane.Agent)).Size(14, 14).TextColor(p.Secondary)
+							label := native.Text(c, pane.Title).SingleLine().Grow(1)
+							if pane.ID == v.PaneID {
+								label.Bold()
+							}
+							w.stateIcon(c, pane.Title, pane.Status)
+						})
+					})
+					if header.Clicked() {
+						w.app.SelectPane(pane.ID)
+						w.BlurInput()
 					}
 				}
+				w.drawTerminal(c, v, p, child, pane, valid, requestFocus)
 			})
 		}
-		switch status.State {
-		case terminalhost.Starting:
-			native.Column(c).Grow(1).FillWidth().Center().Children(func() { native.Text(c, "Connecting terminal…").TextColor(p.Secondary) })
-		case terminalhost.Attached, terminalhost.Failed:
-			// The failed terminal's final screen contains actual CLI diagnostics such
-			// as owner contention; preserve it below Retry without logging its text.
-			t.host.View(c.Key(fmt.Sprintf("terminal:%d:%s:%d", t.binding.TargetID, t.binding.TerminalID, t.binding.Generation)), t.binding).Fill().AutoFocus()
+		if valid && !v.Layout.Zoomed {
+			w.dividers(c, projection, p)
 		}
+		targets := make([]session.ScrollTarget, 0, len(t.panes))
+		for _, spec := range specs {
+			if child := t.panes[spec.PaneID]; child != nil {
+				targets = append(targets, session.ScrollTarget{PaneID: child.spec.PaneID, TerminalID: child.spec.TerminalID})
+			}
+		}
+		t.session.ObserveScrolls(targets)
 	})
+}
+func boolHeight(b bool) float64 {
+	if b {
+		return 30
+	}
+	return 0
+}
+func (w *Window) drawTerminal(c *native.Context, v app.View, p design.Palette, t *terminalPanel, pane app.PaneRow, valid, requestFocus bool) {
+	status := t.host.Status(t.binding)
+	if !t.statusKnown || t.lastStatus != status.State {
+		t.statusKnown = true
+		t.lastStatus = status.State
+		log.Printf("attach target=%d terminal=%s generation=%d state=%v exit=%d", t.binding.TargetID, t.binding.TerminalID, t.binding.Generation, status.State, status.ExitCode)
+	}
+	message := status.Message
+	if t.notice != "" {
+		if message != "" {
+			message += " · " + t.notice
+		} else {
+			message = t.notice
+		}
+	}
+	if message != "" {
+		native.Row(c).Padding(8, 16).Gap(8).AlignItems(native.Center).Children(func() {
+			color := p.Secondary
+			if status.State == terminalhost.Failed {
+				color = p.Danger
+			}
+			native.Icon(c, icons.CircleAlert).Size(14, 14).TextColor(color)
+			native.Text(c, message).Grow(1).TextColor(color)
+			if status.State == terminalhost.Failed {
+				if native.Button(c, "Retry").Label("Retry terminal").Disabled(!valid).Clicked() {
+					t.host.Retry(t.binding)
+				}
+			}
+		})
+	}
+	switch status.State {
+	case terminalhost.Starting:
+		native.Column(c).Grow(1).FillWidth().Center().Children(func() { native.Text(c, "Connecting terminal…").TextColor(p.Secondary) })
+	case terminalhost.Attached, terminalhost.Failed:
+		// The failed terminal's final screen contains actual CLI diagnostics such
+		// as owner contention; preserve it below Retry without logging its text.
+		if w.controller != nil && pane.ID == v.PaneID {
+			state := t.host.InputState(t.binding)
+			w.controller.guarded = state.Guarded
+			w.controller.guardKnown = true
+			if state.Composing {
+				w.controller.machine.Reset()
+			}
+		}
+		el := t.host.View(c.Key(fmt.Sprintf("terminal:%d:%s:%d", t.binding.TargetID, t.binding.TerminalID, t.binding.Generation)), t.binding).Fill()
+		if requestFocus && pane.ID == v.PaneID {
+			el.Focus()
+			w.terminal.focused = pane.ID
+		} else if !requestFocus && el.Focused() && pane.ID != v.PaneID {
+			w.app.SelectPane(pane.ID)
+			w.BlurInput()
+		}
+		if !requestFocus && pane.ID == v.PaneID && !el.Focused() && w.controller != nil {
+			w.controller.machine.Reset()
+		}
+	}
 }

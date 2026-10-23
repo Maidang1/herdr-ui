@@ -23,9 +23,12 @@ type fakeServer struct {
 	lifecycle               net.Conn
 	agentSubs               []net.Conn
 	scrollSubs              []net.Conn
+	scrollBatches           [][]string
 	scrollCalls             []uint64
 	scrollBlock             chan struct{}
 	layoutBlock             chan struct{}
+	exportDrop              bool
+	dropSplit               bool
 	layoutCalls, ratioCalls int
 	batches                 [][]string
 	result                  string
@@ -95,17 +98,20 @@ func (f *fakeServer) handle(c net.Conn) {
 			json.Unmarshal(req.Params, &params)
 			var ids []string
 			isScroll := false
+			var scrollIDs []string
 			for _, sub := range params.Subscriptions {
 				if sub.Type == "pane.agent_status_changed" {
 					ids = append(ids, sub.PaneID)
 				}
 				if sub.Type == "pane.scroll_changed" {
 					isScroll = true
+					scrollIDs = append(scrollIDs, sub.PaneID)
 				}
 			}
 			f.mu.Lock()
 			if isScroll {
 				f.scrollSubs = append(f.scrollSubs, c)
+				f.scrollBatches = append(f.scrollBatches, scrollIDs)
 			} else if len(ids) == 0 {
 				f.lifecycle = c
 			} else {
@@ -167,8 +173,14 @@ func (f *fakeServer) handle(c net.Conn) {
 			if block != nil {
 				<-block
 			}
+			if f.dropSplit {
+				return
+			}
 			fmt.Fprintf(c, "{\"id\":%q,\"result\":{\"type\":\"pane_info\",\"pane\":{\"pane_id\":\"new\",\"workspace_id\":\"w\",\"tab_id\":\"t\"}}}\n", req.ID)
 		case "layout.export":
+			if f.exportDrop {
+				return
+			}
 			fmt.Fprintf(c, "{\"id\":%q,\"result\":{\"type\":\"layout_export\",\"layout\":{\"workspace_id\":\"w\",\"tab_id\":\"t\",\"root\":{\"type\":\"pane\",\"pane_id\":\"p\"}}}}\n", req.ID)
 		case "layout.set_split_ratio":
 			f.mu.Lock()

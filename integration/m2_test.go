@@ -16,7 +16,11 @@ import (
 	"github.com/egoist/mygo/plugins/terminal"
 )
 
-func TestDefaultWindowAttachesAndClosesLocally(t *testing.T) {
+func TestDefaultWindowAttachesAndClosesLocally(t *testing.T) { testWindowLifecycle(t, false) }
+func TestMultiPaneWindowAttachesAllVisibleAndClosesLocally(t *testing.T) {
+	testWindowLifecycle(t, true)
+}
+func testWindowLifecycle(t *testing.T, multi bool) {
 	windowBinary := os.Getenv("HERDR_UI_M0_WINDOW_BINARY")
 	if windowBinary == "" {
 		t.Skip("set HERDR_UI_M0_WINDOW_BINARY to test the real window")
@@ -86,6 +90,23 @@ func TestDefaultWindowAttachesAndClosesLocally(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("seed attach process did not exit")
 	}
+	terminals := []string{terminalID}
+	if multi {
+		source := paneID
+		for _, direction := range []string{"right", "down"} {
+			var split struct {
+				Pane struct {
+					ID         string `json:"pane_id"`
+					TerminalID string `json:"terminal_id"`
+				} `json:"pane"`
+			}
+			if err := herdr.Call(context.Background(), target, "pane.split", map[string]any{"target_pane_id": source, "direction": direction, "focus": true}, &split); err != nil {
+				t.Fatal(err)
+			}
+			source = split.Pane.ID
+			terminals = append(terminals, split.Pane.TerminalID)
+		}
+	}
 	window := exec.Command(windowBinary, "-socket", target.Socket, "-close-after", "5s")
 	window.Env = env
 	windowLog, err := os.Create(filepath.Join(dir, "window.log"))
@@ -120,22 +141,29 @@ func TestDefaultWindowAttachesAndClosesLocally(t *testing.T) {
 		}
 		return false
 	})
-	// The native default window has the direct attach owner; it must not have
-	// merely rendered a static pane summary or started a replacement shell.
-	second, err := terminal.New(terminal.Options{Command: args, Env: attachEnv})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer second.Close()
-	second.Resize(80, 24)
-	select {
-	case <-second.Done():
-		if second.ExitCode() == 0 {
-			t.Fatal("default window did not own attach")
+	// Every visible terminal must have an attach owner in the native window.
+	for _, id := range terminals {
+		attachArgs, attachEnvironment, err := target.Attach(binary, id, env)
+		if err != nil {
+			t.Fatal(err)
 		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("second owner not rejected")
+		second, err := terminal.New(terminal.Options{Command: attachArgs, Env: attachEnvironment})
+		if err != nil {
+			t.Fatal(err)
+		}
+		second.Resize(80, 24)
+		select {
+		case <-second.Done():
+			if second.ExitCode() == 0 {
+				t.Fatalf("window did not own %s", id)
+			}
+		case <-time.After(3 * time.Second):
+			second.Close()
+			t.Fatalf("second owner not rejected for %s", id)
+		}
+		second.Close()
 	}
+
 	done := make(chan error, 1)
 	go func() { done <- window.Wait() }()
 	select {
@@ -146,6 +174,20 @@ func TestDefaultWindowAttachesAndClosesLocally(t *testing.T) {
 		}
 	case <-time.After(8 * time.Second):
 		t.Fatal("window shutdown exceeded budget")
+	}
+	for _, id := range terminals[1:] {
+		attachArgs, attachEnvironment, err := target.Attach(binary, id, env)
+		if err != nil {
+			t.Fatal(err)
+		}
+		term := reattach(t, func() *terminal.Terminal {
+			v, err := terminal.New(terminal.Options{Command: attachArgs, Env: attachEnvironment})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return v
+		}, "$")
+		term.Close()
 	}
 	third := reattach(t, func() *terminal.Terminal {
 		term, err := terminal.New(terminal.Options{Command: args, Env: attachEnv})

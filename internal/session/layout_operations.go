@@ -52,7 +52,9 @@ func (s *Session) executeLayout(ctx context.Context, client *herdr.Client, q *qu
 	case SetRatio:
 		root, fingerprint, err := s.readTree(ctx, client, op)
 		if err != nil {
-			return reject(err)
+			// No mutation has been attempted when preparatory export fails.
+			q.complete(NotSent, err.Error(), ScrollInfo{})
+			return err
 		}
 		if fingerprint != op.Fingerprint {
 			q.complete(StaleTarget, "layout structure changed", ScrollInfo{})

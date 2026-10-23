@@ -144,6 +144,9 @@ func Resolve(data []byte, source string) (Bindings, error) {
 							return b, fmt.Errorf("keys.%s: unsafe direct binding %s intercepts typing", d.Action, n)
 						}
 					}
+					if n == "ctrl+b" && b.Prefix != "ctrl+b" {
+						return b, fmt.Errorf("keys.%s: ctrl+b is reserved for literal attach transport", d.Action)
+					}
 					if n == b.Prefix || n == "prefix+"+b.Prefix {
 						if !configured {
 							continue

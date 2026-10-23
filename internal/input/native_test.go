@@ -36,7 +36,7 @@ func TestCompositionAndResize(t *testing.T) {
 	if r := m.Handle("r", false); r.Action != "resize_mode" || !m.Resize {
 		t.Fatal(r, m)
 	}
-	for _, k := range []string{"h", "left"} {
+	for _, k := range []string{"h", "left", "shift+left", "ctrl+h"} {
 		if r := m.Key(k); r.Action != "resize_left" || !r.Consumed || !m.Resize {
 			t.Fatal(r, m)
 		}
@@ -44,7 +44,10 @@ func TestCompositionAndResize(t *testing.T) {
 	if r := m.Key("a"); !r.Consumed || !m.Resize {
 		t.Fatal(r, m)
 	}
-	if r := m.Key("q"); !r.Consumed || m.Resize {
+	if r := m.Key("q"); !r.Consumed || !m.Resize {
+		t.Fatal(r, m)
+	}
+	if r := m.Key("shift+esc"); !r.Consumed || m.Resize {
 		t.Fatal(r, m)
 	}
 	m.Resize = true
@@ -80,5 +83,11 @@ func TestLoadBindingsConfigPrecedenceAndErrors(t *testing.T) {
 	os.WriteFile(invalid, []byte("[keys]\nprefix = ["), 0600)
 	if _, err = LoadBindings(invalid); err == nil {
 		t.Fatal("invalid explicit config silently fell back")
+	}
+}
+
+func TestLiteralTransportBindingCannotBeAdvertisedAsAction(t *testing.T) {
+	if _, err := Resolve([]byte("[keys]\nprefix='ctrl+a'\nsplit_vertical='ctrl+b'\n"), "test"); err == nil {
+		t.Fatal("reserved literal ctrl+b accepted as business action")
 	}
 }

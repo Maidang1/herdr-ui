@@ -47,25 +47,25 @@ type PublishedSnapshot struct {
 var targets atomic.Uint64
 
 type Session struct {
-	target                       herdr.Target
-	targetID                     uint64
-	mu                           sync.RWMutex
-	latest                       PublishedSnapshot
-	started, closed              bool
-	cancel                       context.CancelFunc
-	notify                       func()
-	done                         chan struct{}
-	refresh                      chan struct{}
-	wake                         chan struct{}
-	unknown                      sync.Map
-	operationMu                  sync.Mutex
-	nextOperation                uint64
-	pendingOperations            map[operationKey]*queuedOperation
-	reservedOperations           map[string]bool
-	operationOrder               []operationKey
-	operationWake                chan struct{}
-	visibleMu                    sync.Mutex
-	visiblePane, visibleTerminal string
+	target             herdr.Target
+	targetID           uint64
+	mu                 sync.RWMutex
+	latest             PublishedSnapshot
+	started, closed    bool
+	cancel             context.CancelFunc
+	notify             func()
+	done               chan struct{}
+	refresh            chan struct{}
+	wake               chan struct{}
+	unknown            sync.Map
+	operationMu        sync.Mutex
+	nextOperation      uint64
+	pendingOperations  map[operationKey]*queuedOperation
+	reservedOperations map[string]bool
+	operationOrder     []operationKey
+	operationWake      chan struct{}
+	visibleMu          sync.Mutex
+	visiblePanes       []ScrollTarget
 }
 
 func New(target herdr.Target) *Session {
@@ -275,7 +275,7 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 	defer func() { agents.close() }()
 	var scroll *watcher
 	defer func() { scroll.close() }()
-	scrollPane, scrollTerminal := "", ""
+	var scrollTargets []ScrollTarget
 	var agentIDs []string
 	bound := false
 	needSnapshot := true
@@ -310,7 +310,9 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 				if err := s.execute(ctx, client, q); err != nil {
 					return classify(err), wasReady
 				}
-				needSnapshot = true
+				if q.operation.Kind != ExportLayout && q.operation.Kind != Neighbor {
+					needSnapshot = true
+				}
 				lastWasOperation = true
 				continue
 			}
@@ -402,14 +404,19 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 			needSnapshot = true
 			continue
 		}
-		visiblePane, visibleTerminal := s.visibleScroll()
-		if pane, ok := snapshot.Pane(visiblePane); !ok || pane.TerminalID != visibleTerminal {
-			visiblePane, visibleTerminal = "", ""
+		visible := s.visibleScrolls()
+		targets := []ScrollTarget{}
+		subscriptions := []herdr.Subscription{}
+		for _, target := range visible {
+			if pane, ok := snapshot.Pane(target.PaneID); ok && pane.TerminalID == target.TerminalID {
+				targets = append(targets, target)
+				subscriptions = append(subscriptions, herdr.Subscription{Type: "pane.scroll_changed", PaneID: target.PaneID})
+			}
 		}
-		if visiblePane != scrollPane || visibleTerminal != scrollTerminal {
+		if !slices.Equal(targets, scrollTargets) {
 			var next *watcher
-			if visiblePane != "" {
-				next, err = s.watch(ctx, []herdr.Subscription{{Type: "pane.scroll_changed", PaneID: visiblePane}})
+			if len(subscriptions) > 0 {
+				next, err = s.watch(ctx, subscriptions)
 				if err != nil {
 					var remote *herdr.RemoteError
 					if errors.As(err, &remote) && remote.Code == "pane_not_found" {
@@ -421,7 +428,7 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 			}
 			old := scroll
 			scroll = next
-			scrollPane, scrollTerminal = visiblePane, visibleTerminal
+			scrollTargets = targets
 			old.close()
 			needSnapshot = true
 			s.publish(epoch, Resyncing, snapshot, nil)

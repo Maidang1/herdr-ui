@@ -371,6 +371,9 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 			if h.cfg.OnKey != nil {
 				result = h.cfg.OnKey(e.binding, mods, k, state)
 			}
+			if state.Composing {
+				return false
+			}
 			if !result.Consumed && mods == ui.Ctrl && k == ui.KeyB {
 				result = KeyResult{Consumed: true, Send: []byte{2, 2}}
 			}

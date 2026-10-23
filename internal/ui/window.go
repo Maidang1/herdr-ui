@@ -18,6 +18,8 @@ type Window struct {
 	hidden            bool
 	expanded          map[string]bool
 	terminal          *terminalPanel
+	controller        *actionController
+	actionState       func(string, bool)
 	projected         app.View
 	projectionVersion uint64
 	projectionValid   bool
@@ -27,14 +29,24 @@ func New(a *app.App, retry func()) *Window {
 	return &Window{app: a, retry: retry, expanded: map[string]bool{}}
 }
 
-func (w *Window) View(c *native.Context) {
-	p := design.Colors(c.Theme().Dark)
+func (w *Window) currentView() app.View {
 	if !w.projectionValid || w.projectionVersion != w.app.Version() {
 		w.projected = w.app.View()
 		w.projectionVersion = w.app.Version()
 		w.projectionValid = true
 	}
-	v := w.projected
+	return w.projected
+}
+
+func (w *Window) View(c *native.Context) {
+	w.syncInput()
+	if w.actionState != nil {
+		for _, action := range Actions {
+			w.actionState(action.ID, w.Can(action.ID))
+		}
+	}
+	p := design.Colors(c.Theme().Dark)
+	v := w.currentView()
 	root := native.Row(c).Fill().Padding(8).Gap(8).AlignItems(native.Stretch).TextColor(p.Text).FontSize(13)
 	root.LinearGradient(native.LinearGradient{Angle: 180, Stops: []native.GradientStop{{Color: p.Top, At: 0}, {Color: p.Middle, At: .52}, {Color: p.Bottom, At: 1}}})
 	root.Children(func() {
@@ -43,6 +55,7 @@ func (w *Window) View(c *native.Context) {
 		}
 		native.Column(c).Grow(1).MinWidth(0).AlignItems(native.Stretch).Radius(16).Background(p.Content).Border(1, p.Border).Clip().Children(func() {
 			w.header(c, v, p)
+			w.actionBar(c, v, p)
 			if v.Stale && v.Error != "" {
 				native.Row(c).Padding(10, 16).Gap(12).AlignItems(native.Center).Children(func() {
 					native.Icon(c, icons.Unplug).Size(16, 16).TextColor(p.Danger)
@@ -71,6 +84,7 @@ func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
 			toggle.Children(func() { native.Icon(c, icons.PanelLeft).Size(16, 16).TextColor(p.Secondary) })
 			if toggle.Clicked() {
 				w.hidden = true
+				w.BlurInput()
 			}
 		})
 		native.Text(c, "Workspaces").FontSize(12).TextColor(p.Secondary).PaddingX(12)
@@ -115,6 +129,7 @@ func (w *Window) workspace(c *native.Context, row app.WorkspaceRow, p design.Pal
 		})
 		if button.Clicked() {
 			w.app.SelectWorkspace(row.ID)
+			w.BlurInput()
 		}
 		if len(row.Panes) > 0 {
 			toggle := native.ButtonBase(c.Key("expand:"+row.ID)).Size(24, 42).Center().Label("Toggle panes for " + row.Name)
@@ -147,6 +162,7 @@ func (w *Window) workspace(c *native.Context, row app.WorkspaceRow, p design.Pal
 			})
 			if button.Clicked() {
 				w.app.SelectPane(pane.ID)
+				w.BlurInput()
 			}
 		}
 	}
@@ -160,6 +176,7 @@ func (w *Window) header(c *native.Context, v app.View, p design.Palette) {
 			toggle.Children(func() { native.Icon(c, icons.PanelLeft).Size(16, 16).TextColor(p.Secondary) })
 			if toggle.Clicked() {
 				w.hidden = false
+				w.BlurInput()
 			}
 		}
 		title := v.WorkspaceName
@@ -180,6 +197,7 @@ func (w *Window) header(c *native.Context, v app.View, p design.Palette) {
 				for i, label := range labels {
 					if label == chosen {
 						w.app.SelectTab(v.Tabs[i].ID)
+						w.BlurInput()
 						break
 					}
 				}
@@ -243,6 +261,7 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 				})
 				if row.Clicked() {
 					w.app.SelectPane(pane.ID)
+					w.BlurInput()
 				}
 			}
 		})

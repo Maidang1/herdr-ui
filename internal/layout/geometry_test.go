@@ -133,3 +133,16 @@ func TestFingerprintCloneAndAncestorPaths(t *testing.T) {
 		t.Fatal("accepted invalid tree")
 	}
 }
+
+func TestResizePrefersRequestedEdgeOverNearestAxis(t *testing.T) {
+	root := &Node{Type: "split", Direction: "right", Ratio: .5, First: &Node{Type: "split", Direction: "right", Ratio: .5, First: &Node{Type: "pane", PaneID: "a"}, Second: &Node{Type: "pane", PaneID: "b"}}, Second: &Node{Type: "pane", PaneID: "c"}}
+	for _, tc := range []struct {
+		pane, direction string
+		want            []bool
+	}{{"b", "right", []bool{}}, {"b", "left", []bool{false}}, {"c", "right", []bool{}}, {"a", "left", []bool{false}}} {
+		got, err := SplitForPane(root, tc.pane, tc.direction)
+		if err != nil || !reflect.DeepEqual(got, tc.want) {
+			t.Fatalf("%s %s: path=%v err=%v", tc.pane, tc.direction, got, err)
+		}
+	}
+}

@@ -504,6 +504,9 @@ func TestCompositionCapabilityReachesHook(t *testing.T) {
 	if state := x.h.InputState(b); !state.Guarded || !state.Composing {
 		t.Fatal(state)
 	}
+	if o.OnKey(ui.Ctrl, ui.KeyB) {
+		t.Fatal("composition used literal transport fallback")
+	}
 	if o.OnKey(0, ui.KeyV) {
 		t.Fatal("composition key intercepted")
 	}

@@ -378,6 +378,15 @@ func DecodeSnapshot(data []byte) (*Snapshot, error) {
 			splitIDs[split.ID] = true
 			value.Splits = append(value.Splits, layout.SplitRect{ID: split.ID, Direction: split.Direction, Ratio: *split.Ratio, Rect: split.Rect.value()})
 		}
+		// Herdr exports underlying rectangles even while zoomed. Visibility follows
+		// the explicit zoom flag and scoped focus, never the global focus.
+		if value.Zoomed {
+			if !seen[value.FocusedPaneID] {
+				return nil, fmt.Errorf("zoomed layout has no visible focused pane")
+			}
+			value.Panes = []layout.PaneRect{{PaneID: value.FocusedPaneID, Rect: value.Area}}
+			value.Splits = nil
+		}
 		s.layouts[v.TabID] = value
 	}
 	return s, nil

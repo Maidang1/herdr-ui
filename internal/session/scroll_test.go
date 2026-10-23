@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/bytedance/herdr-ui/internal/herdr"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -127,5 +128,32 @@ func TestParentCancellationCompletesConcurrentOperations(t *testing.T) {
 	}
 	if err := s.Close(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestVisibleScrollSetSubscribesEveryValidPaneOnce(t *testing.T) {
+	data := strings.Replace(populatedSnapshot, `"panes":[`, `"panes":[{"pane_id":"p2","terminal_id":"term2","workspace_id":"w","tab_id":"t"},`, 1)
+	f := &fakeServer{result: data}
+	s := New(f.target(t))
+	s.Start(context.Background(), nil)
+	defer s.Close(context.Background())
+	await(t, func() bool { return s.Latest().State == Ready })
+	targets := []ScrollTarget{{"p2", "term2"}, {"p", "term"}, {"p", "term"}, {"missing", "no"}}
+	s.ObserveScrolls(targets)
+	targets[0].PaneID = "mutated"
+	await(t, func() bool { f.mu.Lock(); defer f.mu.Unlock(); return len(f.scrollBatches) == 1 })
+	f.mu.Lock()
+	got := append([]string(nil), f.scrollBatches[0]...)
+	f.mu.Unlock()
+	if strings.Join(got, ",") != "p,p2" {
+		t.Fatal("visible subscription batch", got)
+	}
+	await(t, func() bool { return s.Latest().State == Ready })
+	epoch := s.Latest().Epoch
+	s.ObserveScrolls([]ScrollTarget{{"p2", "term2"}})
+	await(t, func() bool { f.mu.Lock(); defer f.mu.Unlock(); return len(f.scrollBatches) == 2 })
+	await(t, func() bool { return s.Latest().State == Ready })
+	if s.Latest().Epoch != epoch {
+		t.Fatal("visible set replacement reconnected session")
 	}
 }

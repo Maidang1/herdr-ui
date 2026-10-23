@@ -27,11 +27,12 @@ func (m *Machine) Handle(key string, composing bool) Result {
 		return Result{}
 	}
 	if m.Resize {
-		if key == "esc" || key == "enter" || key == "q" || m.Bindings.Actions["prefix+"+key] == "resize_mode" || m.Bindings.Actions[key] == "resize_mode" {
+		code := key[strings.LastIndex(key, "+")+1:]
+		if code == "esc" || code == "enter" || m.Bindings.Actions["prefix+"+key] == "resize_mode" || m.Bindings.Actions[key] == "resize_mode" {
 			m.Reset()
 			return Result{Consumed: true}
 		}
-		action := map[string]string{"h": "resize_left", "left": "resize_left", "j": "resize_down", "down": "resize_down", "k": "resize_up", "up": "resize_up", "l": "resize_right", "right": "resize_right"}[key]
+		action := map[string]string{"h": "resize_left", "left": "resize_left", "j": "resize_down", "down": "resize_down", "k": "resize_up", "up": "resize_up", "l": "resize_right", "right": "resize_right"}[code]
 		return Result{Consumed: true, Action: action}
 	}
 	if m.Awaiting {

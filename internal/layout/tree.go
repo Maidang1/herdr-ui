@@ -144,7 +144,7 @@ func FindPath(root *Node, paneID string) ([]bool, error) {
 	return nil, fmt.Errorf("pane %q absent from layout", paneID)
 }
 
-// SplitForPane returns the nearest ancestor along the requested resize axis.
+// SplitForPane prefers the requested edge, then falls back to its opposite.
 func SplitForPane(root *Node, paneID, direction string) ([]bool, error) {
 	axis := ""
 	switch direction {
@@ -159,13 +159,18 @@ func SplitForPane(root *Node, paneID, direction string) ([]bool, error) {
 	if err != nil {
 		return nil, err
 	}
-	for depth := len(path) - 1; depth >= 0; depth-- {
-		n, err := ResolvePath(root, path[:depth])
-		if err != nil {
-			return nil, err
-		}
-		if n.Direction == axis {
-			return append([]bool{}, path[:depth]...), nil
+	// Prefer the requested edge. Only fall back to the opposite edge when
+	// there is no ancestor split on that side, matching Herdr resize rules.
+	wantSecond := direction == "left" || direction == "up"
+	for _, second := range []bool{wantSecond, !wantSecond} {
+		for depth := len(path) - 1; depth >= 0; depth-- {
+			n, err := ResolvePath(root, path[:depth])
+			if err != nil {
+				return nil, err
+			}
+			if n.Direction == axis && path[depth] == second {
+				return append([]bool{}, path[:depth]...), nil
+			}
 		}
 	}
 	return nil, fmt.Errorf("pane %q has no split on %s axis", paneID, axis)
