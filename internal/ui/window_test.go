@@ -24,8 +24,11 @@ func TestWindowReadsRealStateAndLocalSelection(t *testing.T) {
 	if !tt.HasText("Real Workspace") || !tt.HasText("/real/project") || !tt.HasText("Shell") {
 		t.Fatal(tt.Texts())
 	}
-	if rect, ok := tt.Find("Current tab"); !ok || rect.Y > 60 {
-		t.Fatalf("header must stay at the top, bounds=%+v present=%v", rect, ok)
+	if _, ok := tt.Find("Current tab"); ok {
+		t.Fatal("removed information header remains visible")
+	}
+	if _, ok := tt.Find("Terminal layout"); ok {
+		t.Fatal("removed header layout toolbar remains visible")
 	}
 	if dir := os.Getenv("HERDR_UI_RENDER_DIR"); dir != "" {
 		if err := os.MkdirAll(dir, 0755); err != nil {

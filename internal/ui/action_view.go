@@ -7,11 +7,21 @@ import (
 	native "github.com/egoist/mygo/ui"
 )
 
-// actionBar only holds exceptional state; ordinary actions live in the header.
+// actionBar appears only for transient input modes or actionable errors.
 func (w *Window) actionBar(c *native.Context, v app.View, p design.Palette) {
 	a := w.controller
 	if a == nil {
 		return
+	}
+	if a.machine.Awaiting || a.machine.Resize {
+		hint := "Prefix"
+		if a.machine.Resize {
+			hint = "Resize: arrows / h j k l · Esc to finish"
+		}
+		native.Row(c).Padding(4, 16).Gap(6).AlignItems(native.Center).Children(func() {
+			native.Icon(c, icons.Keyboard).Size(14, 14).TextColor(p.Warning)
+			native.Text(c, hint).FontSize(12).TextColor(p.Warning)
+		})
 	}
 	message := a.message
 	if a.guardKnown && !a.guarded {

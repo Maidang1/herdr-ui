@@ -2,7 +2,6 @@
 package ui
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/bytedance/herdr-ui/internal/app"
@@ -63,7 +62,7 @@ func (w *Window) View(c *native.Context) {
 			w.sidebar(c, v, p)
 		}
 		native.Column(c.Key("terminal-content")).Label("Terminal content").Grow(1).MinWidth(0).AlignItems(native.Stretch).Radius(16).Background(p.Content).Border(1, p.Border).Shadow(0, 1, 5, 0, p.ContentShadow).Clip().Children(func() {
-			w.header(c, v, p)
+			w.windowControls(c, p)
 			w.actionBar(c, v, p)
 			if v.Stale && v.Error != "" {
 				native.Row(c).Padding(10, 16).Gap(12).AlignItems(native.Center).Children(func() {
@@ -85,86 +84,18 @@ func (w *Window) View(c *native.Context) {
 	})
 }
 
-func (w *Window) header(c *native.Context, v app.View, p design.Palette) {
-	width, _ := c.Size()
-	compact := width < 1000 && (w.referenceOpen() || !w.sidebarVisible)
-	native.Row(c).Height(40).Shrink(0).PaddingX(12).Gap(8).AlignItems(native.Center).DragWindow().Children(func() {
-		if !w.sidebarVisible {
-			native.Box(c).Width(c.TitleBar().Left).Shrink(0)
-			toggle := w.iconButton(c, "show-sidebar", icons.PanelLeft, "Show sidebar", p)
-			if toggle.Clicked() {
-				w.Dispatch("toggle_sidebar")
-			}
+// Reserve native traffic lights only when the sidebar no longer holds them.
+// This strip carries window controls, not workspace/tab/path information.
+func (w *Window) windowControls(c *native.Context, p design.Palette) {
+	if w.sidebarVisible {
+		return
+	}
+	bar := c.TitleBar()
+	native.Row(c).Height(max(36, bar.Height)).Shrink(0).PaddingX(12).Gap(8).AlignItems(native.Center).DragWindow().Children(func() {
+		native.Box(c).Width(bar.Left).Shrink(0)
+		if w.iconButton(c, "show-sidebar", icons.PanelLeft, "Show sidebar", p).Clicked() {
+			w.Dispatch("toggle_sidebar")
 		}
-		title := v.WorkspaceName
-		if title == "" {
-			title = "Herdr"
-		}
-		titleWidth := float32(180)
-		if compact {
-			titleWidth = 110
-		}
-		native.Text(c, title).FontSize(13).Bold().SingleLine().MaxWidth(titleWidth).MinWidth(0).Shrink(1).Tooltip(title)
-		if len(v.Tabs) > 0 {
-			chosen := ""
-			for _, tab := range v.Tabs {
-				if tab.Selected {
-					chosen = fmt.Sprintf("%d · %s", tab.Number, tab.Name)
-				}
-			}
-			tabWidth := float32(144)
-			if compact {
-				tabWidth = 112
-			}
-			tabs := native.ButtonBase(c.Key("tabs")).Width(tabWidth).MinWidth(64).Height(28).Radius(6).PaddingX(8).Label("Current tab").Tooltip(chosen)
-			w.controlState(tabs, p)
-			tabs.Children(func() {
-				native.Row(c).Fill().Gap(5).AlignItems(native.Center).Children(func() {
-					native.Text(c, chosen).SingleLine().Grow(1).MinWidth(0)
-					native.Icon(c, icons.ChevronDown).Size(12, 12).TextColor(p.Secondary)
-				})
-			})
-			tabs.Menu(func(m *native.Menu) {
-				for _, tab := range v.Tabs {
-					label := fmt.Sprintf("%d · %s · %d panes", tab.Number, tab.Name, tab.PaneCount)
-					if m.Item(label).Checked(tab.Selected).Chosen() {
-						w.app.SelectTab(tab.ID)
-						w.BlurInput()
-					}
-				}
-			})
-		}
-		if v.Path != "" && !compact {
-			native.Text(c, v.Path).SingleLine().Selectable().TextColor(p.Secondary).Tooltip(v.Path).Grow(1).MinWidth(0)
-		} else {
-			native.Box(c).Grow(1)
-		}
-		if w.controller != nil && (w.controller.machine.Awaiting || w.controller.machine.Resize) {
-			hint := "Prefix"
-			if w.controller.machine.Resize {
-				hint = "Resize"
-			}
-			native.Icon(c, icons.Keyboard).Size(14, 14).TextColor(p.Warning).Label(hint)
-			if !compact {
-				native.Text(c, hint).FontSize(12).TextColor(p.Warning)
-			}
-		}
-		layout := w.iconButton(c, "layout-menu", icons.Columns2, "Terminal layout", p)
-		layout.Menu(func(m *native.Menu) {
-			for _, id := range []string{"split_vertical", "split_horizontal", "zoom", "resize_mode"} {
-				for _, action := range Actions {
-					if action.ID == id {
-						label := w.ActionLabel(action.ID)
-						if binding := w.BindingLabel(id); binding != "" {
-							label += " · " + binding
-						}
-						if m.Item(label).Disabled(!w.Can(id)).Chosen() {
-							w.Dispatch(id)
-						}
-					}
-				}
-			}
-		})
 	})
 }
 

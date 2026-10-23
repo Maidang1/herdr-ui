@@ -9,7 +9,6 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -147,36 +146,25 @@ func populatedChromeWindow(t *testing.T) *Window {
 	w.app.Update(session.PublishedSnapshot{State: session.Ready, Snapshot: snapshot})
 	return w
 }
-func TestCompactHeaderReservesTrafficLightsAndKeepsLayoutMenu(t *testing.T) {
+func TestMinimalControlsReserveTrafficLightsWithoutInformationHeader(t *testing.T) {
 	w := populatedChromeWindow(t)
 	w.Dispatch("help")
 	tester := native.NewTester(w.View, 820, 560)
 	tester.SetTitleBar(native.TitleBar{Left: 80, Height: 44})
 	tester.Frame()
-	content, _ := tester.Find("Terminal content")
-	tabs, ok := tester.Find("Current tab")
-	if !ok || tabs.W < 64 {
-		t.Fatal("tab selector missing or squeezed", tabs)
+	toggle, ok := tester.Find("Show sidebar")
+	if !ok || toggle.X < 80 {
+		t.Fatal("sidebar control overlaps traffic lights", toggle)
 	}
-	layout, ok := tester.Find("Terminal layout")
-	if !ok || layout.X+layout.W > content.X+content.W {
-		t.Fatal("layout action clipped", layout, content)
+	for _, label := range []string{"Current tab", "Terminal layout"} {
+		if _, ok := tester.Find(label); ok {
+			t.Fatal("removed information header visible", label)
+		}
 	}
-	if tabs.X < 80 {
-		t.Fatal("tab selector overlaps traffic lights", tabs)
-	}
-	if err := tester.Click("Current tab"); err != nil {
-		t.Fatal(err)
-	}
-	menu := tester.Menu()
-	if len(menu) != 2 || !strings.Contains(menu[0], "1 panes") || !strings.Contains(menu[1], "Server") {
-		t.Fatal("tab menu did not show real names/counts", menu)
-	}
-	if err := tester.ChooseMenuItem("2 · Server · 1 panes"); err != nil {
-		t.Fatal(err)
-	}
+	w.Dispatch("next_tab")
+	tester.Frame()
 	if w.app.View().TabID != "other" {
-		t.Fatal("native menu did not select tab")
+		t.Fatal("tab switching action no longer available")
 	}
 }
 func TestShowTemporarilyCollapsedSidebarRestoresIt(t *testing.T) {
