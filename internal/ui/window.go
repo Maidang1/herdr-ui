@@ -326,3 +326,15 @@ func paneDescription(pane app.PaneRow) string {
 }
 
 func (w *Window) SelectionRevision() uint64 { return w.app.ViewRevision() }
+
+// WindowActive reports whether the window currently holds the system
+// focus, for callers that stay quiet while the user is watching.
+func (w *Window) WindowActive() bool { return w.appearance.active }
+
+// JumpTo selects a workspace and the pane inside it, as a notification
+// click does.
+func (w *Window) JumpTo(workspaceID, paneID string) {
+	w.app.SelectWorkspace(workspaceID)
+	w.app.SelectPane(paneID)
+	w.BlurInput()
+}
