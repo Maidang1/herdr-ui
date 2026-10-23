@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
 )
 
 const processFixture = "101 1 Fri Oct 23 12:00:00 2026\n201 101 Fri Oct 23 12:01:00 2026\n202 201 Fri Oct 23 12:02:00 2026\n102 1 Fri Oct 23 13:00:00 2026\n302 102 Fri Oct 23 13:01:00 2026\n999 1 Fri Oct 23 14:00:00 2026\n"

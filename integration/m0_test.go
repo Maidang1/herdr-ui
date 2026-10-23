@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/herdr"
-	"github.com/bytedance/herdr-ui/internal/layout"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/layout"
 	"github.com/egoist/mygo/plugins/terminal"
 )
 

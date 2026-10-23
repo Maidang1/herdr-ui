@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/input"
-	"github.com/bytedance/herdr-ui/internal/session"
+	"github.com/Maidang1/herdr-ui/internal/input"
+	"github.com/Maidang1/herdr-ui/internal/session"
 )
 
 // ActionHooks are platform integrations. All callbacks run on the UI thread.

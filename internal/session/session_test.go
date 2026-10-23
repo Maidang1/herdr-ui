@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
 )
 
 const emptySnapshot = `{"type":"session_snapshot","snapshot":{"version":"test","protocol":22,"workspaces":[],"tabs":[],"panes":[],"layouts":[],"agents":[]}}`

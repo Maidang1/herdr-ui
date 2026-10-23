@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
 )
 
 func TestSidebarListenerHelper(t *testing.T) {

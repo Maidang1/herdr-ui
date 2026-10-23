@@ -1,6 +1,6 @@
 package app
 
-import "github.com/bytedance/herdr-ui/internal/session"
+import "github.com/Maidang1/herdr-ui/internal/session"
 
 // ScrollTracker is UI-thread owned. It accumulates against the latest desired
 // absolute offset, not a slow snapshot's baseline, without storing wheel history.

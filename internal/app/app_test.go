@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/session"
+	"github.com/Maidang1/herdr-ui/internal/session"
 )
 
 func snapshot(t *testing.T, workspaces, tabs, panes string, focus ...string) *session.Snapshot {

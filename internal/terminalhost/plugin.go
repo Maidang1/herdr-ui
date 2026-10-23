@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bytedance/herdr-ui/internal/design"
+	"github.com/Maidang1/herdr-ui/internal/design"
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )

@@ -2,7 +2,7 @@ package app
 
 import (
 	"fmt"
-	"github.com/bytedance/herdr-ui/internal/session"
+	"github.com/Maidang1/herdr-ui/internal/session"
 )
 
 type Intent struct{ ID uint64 }

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/bytedance/herdr-ui/internal/layout"
+	"github.com/Maidang1/herdr-ui/internal/layout"
 )
 
 // Metadata contains the server's identity and focus observations. Focus is not a

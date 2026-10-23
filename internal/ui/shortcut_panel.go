@@ -2,12 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"github.com/bytedance/herdr-ui/internal/session"
+	"github.com/Maidang1/herdr-ui/internal/session"
 	"strings"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/design"
-	"github.com/bytedance/herdr-ui/internal/input"
+	"github.com/Maidang1/herdr-ui/internal/design"
+	"github.com/Maidang1/herdr-ui/internal/input"
 	native "github.com/egoist/mygo/ui"
 )
 

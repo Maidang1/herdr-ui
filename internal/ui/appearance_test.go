@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/bytedance/herdr-ui/internal/app"
-	"github.com/bytedance/herdr-ui/internal/design"
+	"github.com/Maidang1/herdr-ui/internal/app"
+	"github.com/Maidang1/herdr-ui/internal/design"
 	native "github.com/egoist/mygo/ui"
 	"testing"
 )

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/app"
-	"github.com/bytedance/herdr-ui/internal/session"
+	"github.com/Maidang1/herdr-ui/internal/app"
+	"github.com/Maidang1/herdr-ui/internal/session"
 	native "github.com/egoist/mygo/ui"
 )
 

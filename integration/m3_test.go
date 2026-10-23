@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/herdr"
-	"github.com/bytedance/herdr-ui/internal/layout"
-	"github.com/bytedance/herdr-ui/internal/session"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/layout"
+	"github.com/Maidang1/herdr-ui/internal/session"
 )
 
 func TestLayoutOperations(t *testing.T) {

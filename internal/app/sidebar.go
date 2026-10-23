@@ -1,6 +1,6 @@
 package app
 
-import "github.com/bytedance/herdr-ui/internal/sidebarinfo"
+import "github.com/Maidang1/herdr-ui/internal/sidebarinfo"
 
 func (a *App) sidebarSources() map[string]string {
 	p := a.publication

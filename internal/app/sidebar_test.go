@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/bytedance/herdr-ui/internal/session"
-	"github.com/bytedance/herdr-ui/internal/sidebarinfo"
+	"github.com/Maidang1/herdr-ui/internal/session"
+	"github.com/Maidang1/herdr-ui/internal/sidebarinfo"
 	"testing"
 )
 

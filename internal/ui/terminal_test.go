@@ -2,10 +2,10 @@ package ui
 
 import (
 	"context"
-	"github.com/bytedance/herdr-ui/internal/app"
-	"github.com/bytedance/herdr-ui/internal/herdr"
-	"github.com/bytedance/herdr-ui/internal/session"
-	"github.com/bytedance/herdr-ui/internal/terminalhost"
+	"github.com/Maidang1/herdr-ui/internal/app"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/session"
+	"github.com/Maidang1/herdr-ui/internal/terminalhost"
 	native "github.com/egoist/mygo/ui"
 	"testing"
 )
