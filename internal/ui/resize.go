@@ -249,6 +249,11 @@ func (w *Window) dividers(c *native.Context, projection layout.Projection, sourc
 			height = 8
 		}
 		divider := native.Box(c.Key("divider:"+source.ID)).Absolute().Left(float32(x)).Top(float32(y)).Size(float32(width), float32(height)).Label("Resize split").KeepFocus()
+		if s.Direction == "right" {
+			divider.Cursor(native.CursorResizeEW)
+		} else {
+			divider.Cursor(native.CursorResizeNS)
+		}
 		divider.HandleInput(func(ev native.InputEvent) bool {
 			switch ev.Kind {
 			case native.InputPointerDown:
@@ -274,6 +279,10 @@ func (w *Window) dividers(c *native.Context, projection layout.Projection, sourc
 			}
 			return false
 		})
+		active := w.controller.drag != nil && w.controller.drag.split.ID == source.ID
+		if !active && !divider.Hovered() {
+			continue
+		}
 		divider.Children(func() {
 			line := native.Box(c).Absolute().Background(p.Border)
 			if s.Direction == "right" {

@@ -148,6 +148,15 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			native.Text(c, "Layout unavailable: "+err.Error()).TextColor(p.Danger)
 			return
 		}
+		multi := len(projection.Panes) > 1
+		cards := make([]layout.PaneRect, len(projection.Panes))
+		viewport := layout.Rect{W: float64(bounds.W), H: float64(bounds.H)}
+		for i, pane := range projection.Panes {
+			cards[i] = pane
+			if multi {
+				cards[i].Rect = cardBounds(pane.Rect, viewport)
+			}
+		}
 		latest := t.session.Latest()
 		valid := latest.State == session.Ready && !latest.Stale && latest.TargetID == v.TargetID && latest.Snapshot != nil
 		specs := []terminalhost.Spec{}
@@ -155,9 +164,9 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 		for _, pane := range v.Panes {
 			rows[pane.ID] = pane
 		}
-		for _, rect := range projection.Panes {
+		for _, rect := range cards {
 			pane, ok := rows[rect.PaneID]
-			if !ok || rect.Rect.W <= 32 || rect.Rect.H <= 24 {
+			if !ok || !hasCardContent(rect.Rect, multi) {
 				continue
 			}
 			if valid {
@@ -194,14 +203,14 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			}
 		}
 		requestFocus := t.focused != v.PaneID
-		for _, rect := range projection.Panes {
+		for _, rect := range cards {
 			pane, ok := rows[rect.PaneID]
 			child := t.panes[rect.PaneID]
-			if !ok || child == nil {
+			if !ok || child == nil || !hasCardContent(rect.Rect, multi) {
 				continue
 			}
 			r := rect.Rect
-			native.Column(c.Key("pane-frame:"+pane.ID)).Absolute().Left(float32(r.X)).Top(float32(r.Y)).Size(float32(r.W), float32(r.H)).Clip().AlignItems(native.Stretch).Children(func() {
+			w.paneCard(c, r, pane, pane.ID == v.PaneID, multi, p, func() {
 				w.drawTerminal(c, v, p, child, pane, valid, requestFocus)
 			})
 		}

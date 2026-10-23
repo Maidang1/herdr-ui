@@ -26,9 +26,9 @@ type Tab struct {
 	Focused                bool
 }
 type Pane struct {
-	ID, TerminalID, WorkspaceID, TabID, CWD, Title, Agent, Status string
-	Focused                                                       bool
-	Scroll                                                        ScrollInfo
+	ID, TerminalID, WorkspaceID, TabID, CWD, Title, Label, Agent, Status string
+	Focused                                                              bool
+	Scroll                                                               ScrollInfo
 }
 
 // ScrollInfo is server history, not the attach client's local scrollback.
@@ -285,7 +285,7 @@ func DecodeSnapshot(data []byte) (*Snapshot, error) {
 		if !ok || tab.WorkspaceID != v.WorkspaceID {
 			return nil, fmt.Errorf("pane %q has invalid workspace/tab reference", v.ID)
 		}
-		value := Pane{ID: v.ID, TerminalID: v.TerminalID, WorkspaceID: v.WorkspaceID, TabID: v.TabID, CWD: v.CWD, Title: firstValue(v.Label, v.Title, v.TerminalTitleStripped, v.TerminalTitle, v.ID), Agent: firstValue(v.DisplayAgent, v.Agent), Status: v.Status, Focused: v.Focused}
+		value := Pane{ID: v.ID, TerminalID: v.TerminalID, WorkspaceID: v.WorkspaceID, TabID: v.TabID, CWD: v.CWD, Label: v.Label, Title: firstValue(v.Label, v.Title, v.TerminalTitleStripped, v.TerminalTitle, v.ID), Agent: firstValue(v.DisplayAgent, v.Agent), Status: v.Status, Focused: v.Focused}
 		if v.Scroll != nil {
 			if v.Scroll.Offset > v.Scroll.MaxOffset {
 				return nil, fmt.Errorf("pane %q has invalid scroll metrics", v.ID)

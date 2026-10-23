@@ -61,7 +61,13 @@ func (w *Window) View(c *native.Context) {
 		if w.sidebarVisible {
 			w.sidebar(c, v, p)
 		}
-		native.Column(c.Key("terminal-content")).Label("Terminal content").Grow(1).MinWidth(0).AlignItems(native.Stretch).Radius(16).Background(p.Content).Border(1, p.Border).Shadow(0, 1, 5, 0, p.ContentShadow).Clip().Children(func() {
+		content := native.Column(c.Key("terminal-content")).Label("Terminal content").Grow(1).MinWidth(0).AlignItems(native.Stretch)
+		if w.terminal != nil && v.HasLayout && len(v.Layout.Panes) > 1 {
+			content.Background(native.Transparent)
+		} else {
+			content.Radius(16).Background(p.Content).Border(1, p.Border).Shadow(0, 1, 5, 0, p.ContentShadow).Clip()
+		}
+		content.Children(func() {
 			w.windowControls(c, p)
 			w.actionBar(c, v, p)
 			if v.Stale && v.Error != "" {

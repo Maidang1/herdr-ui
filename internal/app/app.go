@@ -47,9 +47,9 @@ type TabRow struct {
 	Selected          bool
 }
 type PaneRow struct {
-	ID, Title, Agent, Status, TerminalID, CWD string
-	Selected                                  bool
-	Scroll                                    session.ScrollInfo
+	ID, Title, Label, Agent, Status, TerminalID, CWD string
+	Selected                                         bool
+	Scroll                                           session.ScrollInfo
 }
 
 type App struct {
@@ -243,7 +243,7 @@ func (a *App) SelectPane(id string) {
 func (a *App) Version() uint64 { return a.version }
 
 func paneRow(p session.Pane, selected bool) PaneRow {
-	return PaneRow{ID: p.ID, Title: p.Title, Agent: p.Agent, Status: p.Status, TerminalID: p.TerminalID, CWD: p.CWD, Selected: selected, Scroll: p.Scroll}
+	return PaneRow{ID: p.ID, Title: p.Title, Label: p.Label, Agent: p.Agent, Status: p.Status, TerminalID: p.TerminalID, CWD: p.CWD, Selected: selected, Scroll: p.Scroll}
 }
 
 // View returns independently owned slices, including nested pane rows.

@@ -70,7 +70,7 @@ Herdr UI 是本机已运行的 Herdr 守护进程的原生客户端：展示工�
 
 ### 2.6 分屏与参考面板
 
-按2026-10-24用户标注，所有分屏均不显示局部标题行、pane ID或终端标题；每个区域直接显示终端，点击终端及方向快捷键切换焦点。分隔线视觉宽1px、命中区至少8px。布局动作及权威数据规则见 §5。
+按2026-10-24最新分屏参考图，多pane展示为独立圆角卡片：12px圆角、8px间距，间隙显示窗口外壳。32px轻量标识栏只使用明确的自定义pane label，普通shell使用通用Terminal标识；右侧徽标使用实际agent名称。没有可靠来源的模型/版本不生成徽标，不恢复工作区/路径/标签信息，也不使用pane ID或terminal title回退。单pane保持无标识栏的精简终端。点击卡片标识栏/终端或方向快捷键切换焦点。分隔拖动命中区至少8px，线条仅在hover/drag时显示。布局动作及权威数据规则见 §5。
 
 快捷键入口为侧栏底部28px键盘按钮或 prefix+?。参考面板在右侧，宽344px、非模态、无scrim与焦点陷阱；关闭恢复终端焦点，Esc只在面板持有焦点时关闭，终端中的Esc照常送入终端。
 
@@ -366,7 +366,7 @@ Error 分为 Rejected（明确未接受）、NotSent（发送前失败）、Outc
 
 ### 5.3 布局树与可见终端
 
-`PaneLayoutSnapshot` 提供 area、pane rect、split rect 和 zoom 状态。先把网格矩形投影到内容区 DIP，统一计算边界，各终端仅保留插件自身内边距，不再扣除局部标题高度。相邻 pane 共享同一个边界计算，避免浮点取整造成缝隙。
+`PaneLayoutSnapshot` 提供 area、pane rect、split rect 和 zoom 状态。先把网格矩形投影到内容区 DIP，统一计算边界，多pane在DIP投影后只收缩内部共享边缘各4px，保留外边界，再扣除卡片32px标识栏、2px边界和插件自身内边距；单pane不扣卡片标识栏或边界。相邻 pane 共享同一个边界计算，避免浮点取整造成缝隙。
 
 比例编辑需 `layout.export` 的树结构：按 first=false、second=true 生成 path，并将节点与快照 split 对应。开启拖动/resize 模式前取最新树；不能从 split.id 猜路径。树结构变化使当前拖动代次失效，取消预览并恢复权威布局。本地 `src/layout.rs:650` 已核实 false=first、true=second；集成测试仍需验证导出树、split 命中与修改的是同一节点。
 
