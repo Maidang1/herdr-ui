@@ -26,7 +26,7 @@ type actionController struct {
 
 type Action struct{ ID, Label string }
 
-var Actions = []Action{{"split_vertical", "Split right"}, {"split_horizontal", "Split down"}, {"focus_pane_left", "Focus left"}, {"focus_pane_down", "Focus down"}, {"focus_pane_up", "Focus up"}, {"focus_pane_right", "Focus right"}, {"previous_tab", "Previous tab"}, {"next_tab", "Next tab"}, {"zoom", "Zoom / restore"}, {"resize_mode", "Resize mode"}, {"toggle_sidebar", "Toggle sidebar"}, {"help", "Keyboard reference"}}
+var Actions = []Action{{"split_vertical", "Split right"}, {"split_horizontal", "Split down"}, {"focus_pane_left", "Focus left"}, {"focus_pane_down", "Focus down"}, {"focus_pane_up", "Focus up"}, {"focus_pane_right", "Focus right"}, {"previous_tab", "Previous tab"}, {"next_tab", "Next tab"}, {"zoom", "Zoom / restore"}, {"resize_mode", "Resize mode"}, {"toggle_sidebar", "Toggle sidebar"}, {"help", "Keyboard reference"}, {"close_pane", "Close pane"}}
 
 func (w *Window) ConfigureBindings(b input.Bindings, err error) {
 	if w.controller == nil {
@@ -127,6 +127,8 @@ func actionKind(action string) session.OperationKind {
 		return session.Neighbor
 	case action == "zoom":
 		return session.Zoom
+	case action == "close_pane":
+		return session.ClosePane
 	}
 	return 0
 }
@@ -143,7 +145,7 @@ func (w *Window) Can(action string) bool {
 		kind = session.ExportLayout
 	}
 	_, ok := w.operation(kind, "")
-	return ok && !w.app.Pending(kind, v.PaneID) && (kind != session.ExportLayout || (!v.Layout.Zoomed && len(v.Layout.Splits) > 0))
+	return ok && !w.app.Pending(session.ClosePane, v.PaneID) && !w.app.Pending(kind, v.PaneID) && (kind != session.ExportLayout || (!v.Layout.Zoomed && len(v.Layout.Splits) > 0))
 }
 func (w *Window) Dispatch(action string) {
 	if w.controller == nil {

@@ -100,3 +100,59 @@ func TestRemoteZoomCannotLeaveSelectedPaneHidden(t *testing.T) {
 		t.Fatal("sidebar selected hidden zoom pane")
 	}
 }
+
+func TestClosePaneWaitsForAuthoritativeRemovalWithoutStealingFocus(t *testing.T) {
+	for _, snapshotFirst := range []bool{false, true} {
+		t.Run(map[bool]string{false: "response-first", true: "snapshot-first"}[snapshotFirst], func(t *testing.T) {
+			a := New()
+			p := session.PublishedSnapshot{TargetID: 1, Epoch: 1, State: session.Ready, Revision: 1, Snapshot: snapshot(t, workspaces, tabs, panes, "w1", "a", "p1")}
+			a.Update(p)
+			op := session.Operation{Kind: session.ClosePane, TargetID: 1, Epoch: 1, WorkspaceID: "w1", TabID: "a", PaneID: "p1", TerminalID: "t1"}
+			intent, ok := a.BeginOperation(op)
+			if !ok {
+				t.Fatal("close rejected")
+			}
+			a.SelectTab("b")
+			fresh := snapshot(t, workspaces, tabs, `[{"pane_id":"p2","terminal_id":"t2","workspace_id":"w1","tab_id":"a"},{"pane_id":"p3","terminal_id":"t3","workspace_id":"w1","tab_id":"b"}]`, "w1", "a", "p2")
+			if snapshotFirst {
+				p.Revision++
+				p.Snapshot = fresh
+				a.Update(p)
+			}
+			a.CompleteOperation(intent, session.OperationResult{Status: session.Succeeded})
+			if !snapshotFirst {
+				if !a.Pending(session.ClosePane, "p1") {
+					t.Fatal("close released before authoritative removal")
+				}
+				if _, ok := a.BeginOperation(op); ok {
+					t.Fatal("duplicate close accepted against old snapshot")
+				}
+				p.Revision++
+				a.Update(p)
+				if !a.Pending(session.ClosePane, "p1") {
+					t.Fatal("unchanged snapshot released close")
+				}
+				p.Revision++
+				p.Snapshot = fresh
+				a.Update(p)
+			}
+			if a.Pending(session.ClosePane, "p1") || a.View().TabID != "b" || a.View().PaneID != "p3" {
+				t.Fatal("close stole focus or remained pending", a.View())
+			}
+		})
+	}
+}
+
+func TestClosePaneIntentEndsWhenTerminalMappingChanges(t *testing.T) {
+	a := New()
+	p := session.PublishedSnapshot{TargetID: 1, Epoch: 1, State: session.Ready, Revision: 1, Snapshot: snapshot(t, workspaces, tabs, panes, "w1", "a", "p1")}
+	a.Update(p)
+	intent, _ := a.BeginOperation(session.Operation{Kind: session.ClosePane, TargetID: 1, Epoch: 1, WorkspaceID: "w1", TabID: "a", PaneID: "p1", TerminalID: "t1"})
+	a.CompleteOperation(intent, session.OperationResult{Status: session.Succeeded})
+	p.Revision++
+	p.Snapshot = snapshot(t, workspaces, tabs, `[{"pane_id":"p1","terminal_id":"replacement","workspace_id":"w1","tab_id":"a"}]`, "w1", "a", "p1")
+	a.Update(p)
+	if a.Pending(session.ClosePane, "p1") {
+		t.Fatal("pending close followed a replacement terminal")
+	}
+}

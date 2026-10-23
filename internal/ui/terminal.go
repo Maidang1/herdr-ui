@@ -210,7 +210,7 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 				continue
 			}
 			r := rect.Rect
-			w.paneCard(c, r, pane, pane.ID == v.PaneID, multi, p, func() {
+			w.paneCard(c, r, pane, v, pane.ID == v.PaneID, multi, p, func() {
 				w.drawTerminal(c, v, p, child, pane, valid, requestFocus)
 			})
 		}

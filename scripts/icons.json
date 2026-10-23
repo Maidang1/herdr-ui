@@ -20,7 +20,11 @@
     "Keyboard": "keyboard",
     "X": "x",
     "Globe": "globe",
-    "CircleDot": "circle-dot"
+    "CircleDot": "circle-dot",
+    "Rows2": "rows-2",
+    "Maximize2": "maximize-2",
+    "Minimize2": "minimize-2",
+    "Ellipsis": "ellipsis"
   },
   "lobe": {
     "ClaudeCode": "claudecode",

@@ -21,6 +21,7 @@ const (
 	Zoom
 	ExportLayout
 	SetRatio
+	ClosePane
 )
 
 type ResultStatus string
@@ -91,7 +92,7 @@ func (s *Session) Execute(ctx context.Context, op Operation) <-chan OperationRes
 		q.complete(NotSent, ctx.Err().Error(), ScrollInfo{})
 		return q.result
 	}
-	if op.Kind < Scroll || op.Kind > SetRatio {
+	if op.Kind < Scroll || op.Kind > ClosePane {
 		q.complete(Rejected, "unsupported operation", ScrollInfo{})
 		return q.result
 	}
@@ -110,7 +111,7 @@ func (s *Session) Execute(ctx context.Context, op Operation) <-chan OperationRes
 	} else if op.Kind != Scroll {
 		key.nonce = q.id
 	}
-	if op.Kind == Split || op.Kind == Zoom {
+	if op.Kind == Split || op.Kind == Zoom || op.Kind == ClosePane {
 		if s.reservedOperations == nil {
 			s.reservedOperations = make(map[string]bool)
 		}

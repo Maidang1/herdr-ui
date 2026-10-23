@@ -42,6 +42,18 @@ func (s *Session) executeLayout(ctx context.Context, client *herdr.Client, q *qu
 		return err
 	}
 	switch op.Kind {
+	case ClosePane:
+		var response struct {
+			Type string `json:"type"`
+		}
+		if err := client.Call(ctx, "pane.close", map[string]string{"pane_id": op.PaneID}, &response); err != nil {
+			return reject(err)
+		}
+		if response.Type != "ok" {
+			return reject(&herdr.ProtocolError{Reason: "pane.close returned an invalid acknowledgement"})
+		}
+		q.complete(Succeeded, "", ScrollInfo{})
+		return nil
 	case ExportLayout:
 		root, fingerprint, err := s.readTree(ctx, client, op)
 		if err != nil {

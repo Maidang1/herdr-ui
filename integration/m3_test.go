@@ -145,5 +145,41 @@ func TestLayoutOperations(t *testing.T) {
 	if fresh.Fingerprint != exported.Fingerprint {
 		t.Fatal("ratio altered structure fingerprint")
 	}
-	t.Log("real split right/down, read-only neighbor, zoom visibility and nested ratio validated")
+	// Keep a separate workspace alive while closing every pane of the test
+	// workspace. This service and both workspaces are private to this test.
+	var survivor struct {
+		RootPane struct {
+			ID string `json:"pane_id"`
+		} `json:"root_pane"`
+	}
+	if err := herdr.Call(context.Background(), target, "workspace.create", map[string]any{"cwd": dir, "label": "Close survivor", "focus": false}, &survivor); err != nil {
+		t.Fatal(err)
+	}
+	state.Refresh()
+	wait(t, 5*time.Second, func() bool {
+		_, ok := state.Latest().Snapshot.Pane(survivor.RootPane.ID)
+		return ok
+	})
+	execute(session.ClosePane, down, "", nil)
+	awaitPanes(2)
+	for _, id := range []string{first, right, survivor.RootPane.ID} {
+		if _, ok := state.Latest().Snapshot.Pane(id); !ok {
+			t.Fatal("close removed another pane", id)
+		}
+	}
+	execute(session.ClosePane, right, "", nil)
+	awaitPanes(1)
+	execute(session.ClosePane, first, "", nil)
+	wait(t, 5*time.Second, func() bool {
+		p := state.Latest()
+		if p.Stale || p.State != session.Ready {
+			return false
+		}
+		_, exists := p.Snapshot.Workspace(pane.WorkspaceID)
+		return !exists
+	})
+	if _, ok := state.Latest().Snapshot.Pane(survivor.RootPane.ID); !ok {
+		t.Fatal("closing the last pane affected unrelated workspace")
+	}
+	t.Log("real split right/down, read-only neighbor, zoom visibility, nested ratio, and isolated pane/workspace close validated")
 }

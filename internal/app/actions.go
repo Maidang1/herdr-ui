@@ -50,7 +50,7 @@ func (a *App) CompleteOperation(intent Intent, result session.OperationResult) {
 	a.version++
 	switch result.Status {
 	case session.Succeeded:
-		if result.PaneID == "" {
+		if result.PaneID == "" && p.operation.Kind != session.ClosePane {
 			delete(a.intents, intent.ID)
 		}
 	case session.OutcomeUnknown:
@@ -77,6 +77,17 @@ func (a *App) applyPending() {
 			continue
 		}
 		if p.result.Status != session.Succeeded {
+			continue
+		}
+		if p.operation.Kind == session.ClosePane {
+			// Acknowledgement precedes the authoritative topology update. Keep
+			// duplicate closes blocked until the captured terminal is gone.
+			if a.snapshot != nil {
+				pane, ok := a.snapshot.Pane(p.operation.PaneID)
+				if !ok || pane.TerminalID != p.operation.TerminalID {
+					delete(a.intents, id)
+				}
+			}
 			continue
 		}
 		if p.viewRevision != a.viewRevision || a.workspaceID != p.operation.WorkspaceID || a.tabs[a.workspaceID] != p.operation.TabID {

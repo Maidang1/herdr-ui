@@ -28,7 +28,7 @@ func TestCardHeaderOmitsSyntheticTitlesAndUsesRealAgentBadge(t *testing.T) {
 	w := New(app.New(), nil)
 	for _, pane := range []app.PaneRow{{ID: "w13:p8", Title: "w13:p8"}, {ID: "agent", Title: "user@HOST:/repo", Agent: "codex"}} {
 		tester := native.NewTester(func(c *native.Context) {
-			w.paneCard(c, layout.Rect{W: 300, H: 200}, pane, false, true, design.Colors(false), func() { native.Box(c).Grow(1).FillWidth().Label("Terminal viewport") })
+			w.paneCard(c, layout.Rect{W: 300, H: 200}, pane, app.View{}, false, true, design.Colors(false), func() { native.Box(c).Grow(1).FillWidth().Label("Terminal viewport") })
 		}, 300, 200)
 		if tester.HasText(pane.Title) {
 			t.Fatal("synthetic/title metadata returned", pane.Title)
@@ -53,8 +53,8 @@ func TestCardContentAccountsForHeaderAndBorders(t *testing.T) {
 	if !hasCardContent(layout.Rect{W: 35, H: 59}, true) {
 		t.Fatal("card hides positive terminal content")
 	}
-	if !hasCardContent(layout.Rect{W: 33, H: 25}, false) {
-		t.Fatal("single terminal still reserves card chrome")
+	if !hasCardContent(layout.Rect{W: 33, H: 57}, false) {
+		t.Fatal("single terminal has no positive content after controls")
 	}
 }
 func TestSplitCardRenderArtifacts(t *testing.T) {
@@ -79,7 +79,7 @@ func TestSplitCardRenderArtifacts(t *testing.T) {
 					panes := []app.PaneRow{{ID: "left-top", Title: "w13:p8"}, {ID: "left-bottom", Agent: "claude"}, {ID: "right", Agent: "codex"}}
 					bounds := []layout.Rect{{W: viewport.W * .45, H: viewport.H * .55}, {Y: viewport.H * .55, W: viewport.W * .45, H: viewport.H * .45}, {X: viewport.W * .45, W: viewport.W * .55, H: viewport.H}}
 					for i, pane := range panes {
-						w.paneCard(c, cardBounds(bounds[i], viewport), pane, i == 2, true, p, func() { native.Box(c).Grow(1).FillWidth() })
+						w.paneCard(c, cardBounds(bounds[i], viewport), pane, app.View{}, i == 2, true, p, func() { native.Box(c).Grow(1).FillWidth() })
 					}
 				})
 			})

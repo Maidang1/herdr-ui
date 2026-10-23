@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -148,5 +149,89 @@ func TestSplitLostResponseIsNeverReplayedAfterReconnect(t *testing.T) {
 	defer f.mu.Unlock()
 	if f.layoutCalls != 1 {
 		t.Fatalf("split replayed %d times", f.layoutCalls)
+	}
+}
+
+func TestClosePaneUsesExplicitTargetAndRejectsDuplicate(t *testing.T) {
+	f := &fakeServer{result: populatedSnapshot, closeBlock: make(chan struct{})}
+	s := New(f.target(t))
+	s.Start(context.Background(), nil)
+	defer s.Close(context.Background())
+	await(t, func() bool { return s.Latest().State == Ready })
+	p := s.Latest()
+	op := Operation{Kind: ClosePane, TargetID: p.TargetID, Epoch: p.Epoch, WorkspaceID: "w", TabID: "t", PaneID: "p", TerminalID: "term"}
+	first := s.Execute(context.Background(), op)
+	await(t, func() bool { f.mu.Lock(); defer f.mu.Unlock(); return len(f.closeCalls) == 1 })
+	duplicate := <-s.Execute(context.Background(), op)
+	close(f.closeBlock)
+	if duplicate.Status != Busy {
+		t.Fatal("duplicate close accepted", duplicate)
+	}
+	if result := <-first; result.Status != Succeeded {
+		t.Fatal(result)
+	}
+	op.TerminalID = "replacement"
+	if result := <-s.Execute(context.Background(), op); result.Status != StaleTarget {
+		t.Fatal("mismatched terminal accepted", result)
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.closeCalls) != 1 || f.closeCalls[0] != "p" || f.closeExtra {
+		t.Fatal("close was not explicit pane-only", f.closeCalls, f.closeExtra)
+	}
+}
+
+func TestClosePaneConfirmationRequiredIsNotOverridden(t *testing.T) {
+	f := &fakeServer{result: populatedSnapshot, closeReject: true}
+	s := New(f.target(t))
+	s.Start(context.Background(), nil)
+	defer s.Close(context.Background())
+	await(t, func() bool { return s.Latest().State == Ready })
+	p := s.Latest()
+	result := <-s.Execute(context.Background(), Operation{Kind: ClosePane, TargetID: p.TargetID, Epoch: p.Epoch, WorkspaceID: "w", TabID: "t", PaneID: "p", TerminalID: "term"})
+	if result.Status != Rejected || !strings.Contains(result.Error, "confirmation_required") {
+		t.Fatal(result)
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.closeCalls) != 1 {
+		t.Fatal("close was repeated", f.closeCalls)
+	}
+}
+
+func TestClosePaneLostResponseIsNotReplayedAfterReconnect(t *testing.T) {
+	f := &fakeServer{result: populatedSnapshot, closeDrop: true}
+	s := New(f.target(t))
+	s.Start(context.Background(), nil)
+	defer s.Close(context.Background())
+	await(t, func() bool { return s.Latest().State == Ready })
+	p := s.Latest()
+	result := <-s.Execute(context.Background(), Operation{Kind: ClosePane, TargetID: p.TargetID, Epoch: p.Epoch, WorkspaceID: "w", TabID: "t", PaneID: "p", TerminalID: "term"})
+	if result.Status != OutcomeUnknown {
+		t.Fatal(result)
+	}
+	await(t, func() bool { latest := s.Latest(); return latest.State == Ready && latest.Epoch > p.Epoch })
+	latest := s.Latest()
+	result = <-s.Execute(context.Background(), Operation{Kind: ExportLayout, TargetID: latest.TargetID, Epoch: latest.Epoch, WorkspaceID: "w", TabID: "t", PaneID: "p", TerminalID: "term"})
+	if result.Status != Succeeded {
+		t.Fatal(result)
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.closeCalls) != 1 {
+		t.Fatal("close replayed", f.closeCalls)
+	}
+}
+
+func TestClosePaneRequiresSuccessfulResponseType(t *testing.T) {
+	f := &fakeServer{result: populatedSnapshot, closeResultType: "pane_info"}
+	s := New(f.target(t))
+	s.Start(context.Background(), nil)
+	defer s.Close(context.Background())
+	await(t, func() bool { return s.Latest().State == Ready })
+	p := s.Latest()
+	result := <-s.Execute(context.Background(), Operation{Kind: ClosePane, TargetID: p.TargetID, Epoch: p.Epoch, WorkspaceID: "w", TabID: "t", PaneID: "p", TerminalID: "term"})
+	if result.Status != OutcomeUnknown {
+		t.Fatal("malformed close acknowledgement accepted", result)
 	}
 }

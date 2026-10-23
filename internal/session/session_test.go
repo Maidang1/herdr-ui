@@ -18,23 +18,27 @@ import (
 const emptySnapshot = `{"type":"session_snapshot","snapshot":{"version":"test","protocol":22,"workspaces":[],"tabs":[],"panes":[],"layouts":[],"agents":[]}}`
 
 type fakeServer struct {
-	mu                      sync.Mutex
-	calls                   int
-	lifecycle               net.Conn
-	agentSubs               []net.Conn
-	scrollSubs              []net.Conn
-	scrollBatches           [][]string
-	scrollCalls             []uint64
-	scrollBlock             chan struct{}
-	layoutBlock             chan struct{}
-	exportDrop              bool
-	dropSplit               bool
-	layoutCalls, ratioCalls int
-	batches                 [][]string
-	result                  string
-	rejectAgentOnce         bool
-	block                   chan struct{}
-	snapshots               chan int
+	closeCalls                         []string
+	closeBlock                         chan struct{}
+	closeDrop, closeReject, closeExtra bool
+	closeResultType                    string
+	mu                                 sync.Mutex
+	calls                              int
+	lifecycle                          net.Conn
+	agentSubs                          []net.Conn
+	scrollSubs                         []net.Conn
+	scrollBatches                      [][]string
+	scrollCalls                        []uint64
+	scrollBlock                        chan struct{}
+	layoutBlock                        chan struct{}
+	exportDrop                         bool
+	dropSplit                          bool
+	layoutCalls, ratioCalls            int
+	batches                            [][]string
+	result                             string
+	rejectAgentOnce                    bool
+	block                              chan struct{}
+	snapshots                          chan int
 }
 
 func (f *fakeServer) target(t *testing.T) herdr.Target {
@@ -165,6 +169,30 @@ func (f *fakeServer) handle(c net.Conn) {
 				<-block
 			}
 			fmt.Fprintf(c, "{\"id\":%q,\"result\":{\"type\":\"pane_info\",\"pane\":{\"pane_id\":%q,\"terminal_id\":\"term\",\"scroll\":{\"offset_from_bottom\":%d,\"max_offset_from_bottom\":100,\"viewport_rows\":24}}}}\n", req.ID, params.PaneID, params.Offset)
+		case "pane.close":
+			var params map[string]json.RawMessage
+			json.Unmarshal(req.Params, &params)
+			var paneID string
+			json.Unmarshal(params["pane_id"], &paneID)
+			f.mu.Lock()
+			f.closeCalls = append(f.closeCalls, paneID)
+			f.closeExtra = len(params) != 1
+			block, drop, reject, resultType := f.closeBlock, f.closeDrop, f.closeReject, f.closeResultType
+			f.mu.Unlock()
+			if block != nil {
+				<-block
+			}
+			if drop {
+				return
+			}
+			if reject {
+				fmt.Fprintf(c, "{\"id\":%q,\"error\":{\"code\":\"confirmation_required\",\"message\":\"closing this pane would close a worktree group\"}}\n", req.ID)
+				continue
+			}
+			if resultType == "" {
+				resultType = "ok"
+			}
+			fmt.Fprintf(c, "{\"id\":%q,\"result\":{\"type\":%q}}\n", req.ID, resultType)
 		case "pane.split":
 			f.mu.Lock()
 			f.layoutCalls++

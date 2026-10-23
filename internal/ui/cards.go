@@ -33,15 +33,14 @@ func cardBounds(r, viewport layout.Rect) layout.Rect {
 
 // A card is drawable only while its plugin content has positive dimensions.
 func hasCardContent(r layout.Rect, multi bool) bool {
-	border, header := 0.0, 0.0
+	border, header := 0.0, cardHeaderHeight
 	if multi {
 		border = 2
-		header = cardHeaderHeight
 	}
 	return r.W > 32+border && r.H > 24+border+header
 }
 
-func (w *Window) paneCard(c *native.Context, r layout.Rect, pane app.PaneRow, selected, multi bool, p design.Palette, body func()) {
+func (w *Window) paneCard(c *native.Context, r layout.Rect, pane app.PaneRow, frameView app.View, selected, multi bool, p design.Palette, body func()) {
 	frame := native.Column(c.Key("pane-frame:"+pane.ID)).Absolute().Left(float32(r.X)).Top(float32(r.Y)).Size(float32(r.W), float32(r.H)).Clip().AlignItems(native.Stretch)
 	if multi {
 		border := p.Border
@@ -54,38 +53,40 @@ func (w *Window) paneCard(c *native.Context, r layout.Rect, pane app.PaneRow, se
 		frame.Radius(12).Background(p.Content).Border(1, border).Shadow(0, 1, 5, 0, p.ContentShadow)
 	}
 	frame.Children(func() {
-		if multi {
-			caption := pane.Label
-			if caption == "" && pane.Agent == "" {
-				caption = "Terminal"
-			}
-			focusLabel := caption
-			if focusLabel == "" {
-				focusLabel = pane.Agent
-			}
-			header := native.ButtonBase(c.Key("card-heading:" + pane.ID)).Height(float32(cardHeaderHeight)).Shrink(0).FillWidth().PaddingX(12).Label("Focus " + focusLabel).KeepFocus().TextColor(p.Text)
-			if header.FocusVisible() {
-				header.Border(2, p.Focus)
-			}
-			header.Children(func() {
-				native.Row(c).FillWidth().Gap(8).AlignItems(native.Center).Children(func() {
-					native.Icon(c, icons.Agent(pane.Agent)).Size(14, 14).TextColor(p.Secondary)
-					if caption != "" {
-						native.Text(c, caption).FontSize(12).TextColor(p.Secondary).SingleLine().MinWidth(0)
-					}
-					native.Box(c).Grow(1)
-					if pane.Agent != "" {
-						native.Box(c).Radius(10).Background(p.Inset).Padding(2, 8).MaxWidth(144).Children(func() {
-							native.Text(c, pane.Agent).FontSize(12).SingleLine().TextColor(p.Secondary).Tooltip(pane.Agent)
-						})
-					}
-				})
-			})
-			if header.Clicked() {
-				w.app.SelectPane(pane.ID)
-				w.BlurInput()
-			}
+		caption := pane.Label
+		if caption == "" && pane.Agent == "" {
+			caption = "Terminal"
 		}
+		focusLabel := caption
+		if focusLabel == "" {
+			focusLabel = pane.Agent
+		}
+		native.Row(c.Key("card-toolbar:" + pane.ID)).Height(float32(cardHeaderHeight)).Shrink(0).FillWidth().PaddingX(8).Gap(4).AlignItems(native.Center).Children(func() {
+			if r.W >= 180 {
+				focus := native.ButtonBase(c.Key("card-heading:" + pane.ID)).Grow(1).Shrink(1).MinWidth(0).Height(26).Radius(4).Label("Focus " + focusLabel).KeepFocus().TextColor(p.Text)
+				if focus.FocusVisible() {
+					focus.Border(2, p.Focus)
+				}
+				focus.Children(func() {
+					native.Row(c).FillWidth().MinWidth(0).Gap(6).AlignItems(native.Center).Children(func() {
+						native.Icon(c, icons.Agent(pane.Agent)).Size(14, 14).TextColor(p.Secondary)
+						if caption != "" {
+							native.Text(c, caption).FontSize(12).SingleLine().MinWidth(0).TextColor(p.Secondary)
+						}
+					})
+				})
+				if focus.Clicked() {
+					w.app.SelectPane(pane.ID)
+					w.BlurInput()
+				}
+				if pane.Agent != "" && r.W >= 260 {
+					native.Box(c).Radius(10).Background(p.Inset).Padding(2, 8).MaxWidth(88).Children(func() {
+						native.Text(c, pane.Agent).FontSize(12).SingleLine().TextColor(p.Secondary).Tooltip(pane.Agent)
+					})
+				}
+			}
+			w.cardControls(c, pane, frameView, r.W, p)
+		})
 		body()
 	})
 }
