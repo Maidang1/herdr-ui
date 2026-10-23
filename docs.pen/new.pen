@@ -1,0 +1,5416 @@
+{
+  "version": "2.21",
+  "children": [
+    {
+      "type": "frame",
+      "id": "o9b0gW",
+      "x": 0,
+      "y": 0,
+      "name": "01 · Workspaces — Native Light",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 1200,
+      "height": 800,
+      "fill": {
+        "type": "gradient",
+        "gradientType": "linear",
+        "enabled": true,
+        "rotation": 180,
+        "size": {
+          "height": 1
+        },
+        "colors": [
+          {
+            "color": "$window.tint.top",
+            "position": 0
+          },
+          {
+            "color": "$window.tint.middle",
+            "position": 0.52
+          },
+          {
+            "color": "$window.tint.bottom",
+            "position": 1
+          }
+        ]
+      },
+      "cornerRadius": 24,
+      "stroke": "$border.window",
+      "strokeWidth": 1,
+      "gap": 8,
+      "padding": [
+        8,
+        8,
+        8,
+        0
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "aHTd2",
+          "name": "Workspace sidebar",
+          "width": 248,
+          "height": "fill_container",
+          "fill": "#00000000",
+          "layout": "vertical",
+          "gap": 6,
+          "padding": [
+            0,
+            10,
+            8,
+            10
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "M7WTz0",
+              "name": "Window controls",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                6
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "vmZ6A",
+                  "name": "System traffic lights",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "I0ROt0",
+                      "name": "Close system control",
+                      "fill": "$system.close",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "XUdHF",
+                      "name": "Minimize system control",
+                      "fill": "$system.minimize",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "JHLVN",
+                      "name": "Zoom system control",
+                      "fill": "$system.zoom",
+                      "width": 12,
+                      "height": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "DN6nt",
+                  "name": "Toggle sidebar",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "ClkoE",
+                      "name": "Toggle sidebar icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "panel-left",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "GDqmp",
+              "name": "Workspace list heading",
+              "width": "fill_container",
+              "padding": [
+                0,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EXvGs",
+                  "name": "Workspaces label",
+                  "fill": "$text.secondary",
+                  "content": "Workspaces",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "i4bgXj",
+              "name": "Workspace tree",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "R5Ez0",
+                  "name": "Source workspace herdr-ui",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "wlG70",
+                      "name": "Expanded repository disclosure",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AfjR1",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "gkRBr",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Vp9N1",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "herdr-ui",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "vPemD",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "mPJ56",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "main",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "aNbnB",
+                  "name": "Selected worktree Fix login",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "$row.selected",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12,
+                    4,
+                    28
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "UJwOe",
+                      "name": "Nested worktree branch",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "git-branch",
+                      "library": "lucide",
+                      "fill": "$icon.active"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "x4qKN",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "DBbUO",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "WfIF6",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "Fix login",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "C7DbO",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "Yiqbn",
+                              "name": "Working status · codex",
+                              "metadata": {
+                                "type": "status",
+                                "state": "working",
+                                "tooltip": "codex · Working",
+                                "accessibleName": "codex is working"
+                              },
+                              "width": 14,
+                              "height": 14,
+                              "icon": "activity",
+                              "library": "lucide",
+                              "fill": "$status.working"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "BWaxI",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "worktree/fix-login",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KQeU3",
+                  "name": "Workspace corra",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "ElaVn",
+                      "name": "Collapsed repository disclosure",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-right",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wfEqL",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "miELF",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "l2mG98",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "corra",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "sOnvF",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "ZTElB",
+                              "name": "Idle status · corra",
+                              "metadata": {
+                                "type": "status",
+                                "state": "idle",
+                                "tooltip": "Idle",
+                                "accessibleName": "corra is idle"
+                              },
+                              "width": 12,
+                              "height": 12,
+                              "icon": "circle",
+                              "library": "lucide",
+                              "fill": "$status.idle"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "i3Z8x3",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "main",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "afNeW",
+              "name": "Sidebar flexible space",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "Flzxx",
+              "name": "Local connection footer",
+              "width": "fill_container",
+              "gap": 7,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "BSRw0",
+                  "name": "Connected status · Local",
+                  "metadata": {
+                    "type": "status",
+                    "state": "connected",
+                    "tooltip": "Connected to local Herdr",
+                    "accessibleName": "Connected to local Herdr"
+                  },
+                  "width": 14,
+                  "height": 14,
+                  "icon": "circle-check",
+                  "library": "lucide",
+                  "fill": "$status.success"
+                },
+                {
+                  "type": "text",
+                  "id": "LcRFk",
+                  "name": "Local host label",
+                  "fill": "$text.tertiary",
+                  "content": "Local",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "Jd0FQ",
+                  "name": "Connection footer spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "wXuOp",
+                  "name": "Keyboard shortcuts button",
+                  "metadata": {
+                    "type": "action",
+                    "shortcut": "cmd-/",
+                    "tooltip": "Keyboard shortcuts · ⌘/",
+                    "accessibleName": "Keyboard shortcuts"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "pJ5Hj",
+                      "name": "Keyboard shortcuts icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "keyboard",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "I4qWaz",
+          "name": "Terminal main panel",
+          "clip": true,
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$content.background",
+          "cornerRadius": 16,
+          "stroke": "$border.content",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "$shadow.content",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 5
+          },
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "J9Sr85",
+              "name": "Terminal header",
+              "width": "fill_container",
+              "height": 40,
+              "fill": "$content.header",
+              "gap": 12,
+              "padding": [
+                4,
+                16
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "y2WR3",
+                  "name": "Current worktree title",
+                  "fill": "$text.primary",
+                  "content": "Fix login",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "ARSJ2",
+                  "name": "Current tab selector",
+                  "metadata": {
+                    "type": "action",
+                    "tooltip": "Switch Tab",
+                    "accessibleName": "Current tab: 1, Dev. Switch tab"
+                  },
+                  "height": 28,
+                  "fill": "$surface.inset",
+                  "cornerRadius": 6,
+                  "gap": 6,
+                  "padding": [
+                    0,
+                    7
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "APJI4",
+                      "name": "Current tab label",
+                      "fill": "$text.primary",
+                      "content": "1 · Dev",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "qMKxq",
+                      "name": "Tab selector disclosure",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "hnOCh",
+                  "name": "Current checkout path",
+                  "fill": "$text.tertiary",
+                  "content": "…/herdr-ui/fix-login",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "X2YYd",
+                  "name": "Header flexible space",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "C8n3UJ",
+                  "x": 845,
+                  "y": 12.5,
+                  "name": "Attached agent name",
+                  "enabled": false,
+                  "fill": "$text.secondary",
+                  "content": "codex",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "T5ATz",
+                  "name": "Terminal layout actions",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "WKGNO",
+                      "name": "Split terminal icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "columns-2",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "P7Elvm",
+              "name": "Attached terminal viewport",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$terminal.background",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 18,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YAegF",
+                  "name": "Codex heading",
+                  "fill": "$terminal.foreground",
+                  "content": "OpenAI Codex",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "blPqb",
+                  "name": "Codex location",
+                  "fill": "$text.secondary",
+                  "content": "directory: ~/.herdr/worktrees/herdr-ui/fix-login",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Q3C17i",
+                  "name": "Terminal blank",
+                  "fill": "$terminal.foreground",
+                  "content": " ",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "oLVD4",
+                  "name": "User task",
+                  "fill": "$terminal.foreground",
+                  "content": "› Fix the login redirect after session expiry.",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "pmNsY",
+                  "name": "Agent progress",
+                  "fill": "$text.secondary",
+                  "content": "  Reading authentication flow and existing tests…",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "H9QPY",
+      "x": 1300,
+      "y": 0,
+      "name": "02 · Split Panes — Native Light",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 1200,
+      "height": 800,
+      "fill": {
+        "type": "gradient",
+        "gradientType": "linear",
+        "enabled": true,
+        "rotation": 180,
+        "size": {
+          "height": 1
+        },
+        "colors": [
+          {
+            "color": "$window.tint.top",
+            "position": 0
+          },
+          {
+            "color": "$window.tint.middle",
+            "position": 0.52
+          },
+          {
+            "color": "$window.tint.bottom",
+            "position": 1
+          }
+        ]
+      },
+      "cornerRadius": 24,
+      "stroke": "$border.window",
+      "strokeWidth": 1,
+      "gap": 8,
+      "padding": [
+        8,
+        8,
+        8,
+        0
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "z6Qlqd",
+          "name": "Workspace sidebar",
+          "width": 248,
+          "height": "fill_container",
+          "fill": "#00000000",
+          "layout": "vertical",
+          "gap": 6,
+          "padding": [
+            0,
+            10,
+            8,
+            10
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "qJjj0",
+              "name": "Window controls",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                6
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uYTEB",
+                  "name": "System traffic lights",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "B1sd5G",
+                      "name": "Close system control",
+                      "fill": "$system.close",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "aCUk4",
+                      "name": "Minimize system control",
+                      "fill": "$system.minimize",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "luE0m",
+                      "name": "Zoom system control",
+                      "fill": "$system.zoom",
+                      "width": 12,
+                      "height": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "CcrUn",
+                  "name": "Toggle sidebar",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "uB0mP",
+                      "name": "Toggle sidebar icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "panel-left",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "e3MLC",
+              "name": "Workspace list heading",
+              "width": "fill_container",
+              "padding": [
+                0,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "RfxSz",
+                  "name": "Workspaces label",
+                  "fill": "$text.secondary",
+                  "content": "Workspaces",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "E1G5l",
+              "name": "Workspace tree",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "OYOkz",
+                  "name": "Source workspace herdr-ui",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "zuRUf",
+                      "name": "Expanded repository disclosure",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jY0iP",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Mo6VY",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "UuwdM",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "herdr-ui",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SZb1Z",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "E71FEi",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "main",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Q7txFC",
+                  "name": "Selected worktree Fix login",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "$row.selected",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12,
+                    4,
+                    28
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "tpqhz",
+                      "name": "Nested worktree branch",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "git-branch",
+                      "library": "lucide",
+                      "fill": "$icon.active"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gmPEI",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Pzzxk",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "t732Vc",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "Fix login",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "DzoO3",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "e8cjVC",
+                              "name": "Working status · codex",
+                              "metadata": {
+                                "type": "status",
+                                "state": "working",
+                                "tooltip": "codex · Working",
+                                "accessibleName": "codex is working"
+                              },
+                              "width": 14,
+                              "height": 14,
+                              "icon": "activity",
+                              "library": "lucide",
+                              "fill": "$status.working"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "DyCB0",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "worktree/fix-login",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xmE3Z",
+                  "name": "Workspace corra",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "YWRHY",
+                      "name": "Collapsed repository disclosure",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-right",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qir2n",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "qHSIo",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "L43yjE",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "corra",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "x48oxa",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "W6xLu",
+                              "name": "Idle status · corra",
+                              "metadata": {
+                                "type": "status",
+                                "state": "idle",
+                                "tooltip": "Idle",
+                                "accessibleName": "corra is idle"
+                              },
+                              "width": 12,
+                              "height": 12,
+                              "icon": "circle",
+                              "library": "lucide",
+                              "fill": "$status.idle"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "udxMr",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "main",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "vu1Wk",
+              "name": "Sidebar flexible space",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "zDHsk",
+              "name": "Local connection footer",
+              "width": "fill_container",
+              "gap": 7,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "Zkm7H",
+                  "name": "Connected status · Local",
+                  "metadata": {
+                    "type": "status",
+                    "state": "connected",
+                    "tooltip": "Connected to local Herdr",
+                    "accessibleName": "Connected to local Herdr"
+                  },
+                  "width": 14,
+                  "height": 14,
+                  "icon": "circle-check",
+                  "library": "lucide",
+                  "fill": "$status.success"
+                },
+                {
+                  "type": "text",
+                  "id": "t2866X",
+                  "name": "Local host label",
+                  "fill": "$text.tertiary",
+                  "content": "Local",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "zAYqr",
+                  "name": "Connection footer spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "r2r91",
+                  "name": "Keyboard shortcuts button",
+                  "metadata": {
+                    "type": "action",
+                    "shortcut": "cmd-/",
+                    "tooltip": "Keyboard shortcuts · ⌘/",
+                    "accessibleName": "Keyboard shortcuts"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "nz74A",
+                      "name": "Keyboard shortcuts icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "keyboard",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "gvgew",
+          "name": "Terminal main panel",
+          "clip": true,
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$content.background",
+          "cornerRadius": 16,
+          "stroke": "$border.content",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "$shadow.content",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 5
+          },
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "JYQqw",
+              "name": "Terminal header",
+              "width": "fill_container",
+              "height": 40,
+              "fill": "$content.header",
+              "gap": 12,
+              "padding": [
+                4,
+                16
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "l1SVqN",
+                  "name": "Current worktree title",
+                  "fill": "$text.primary",
+                  "content": "Fix login",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "W8hEpU",
+                  "name": "Current tab selector",
+                  "metadata": {
+                    "type": "action",
+                    "tooltip": "Switch Tab",
+                    "accessibleName": "Current tab: 1, Dev. Switch tab"
+                  },
+                  "height": 28,
+                  "fill": "$surface.inset",
+                  "cornerRadius": 6,
+                  "gap": 6,
+                  "padding": [
+                    0,
+                    7
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wqf54",
+                      "name": "Current tab label",
+                      "fill": "$text.primary",
+                      "content": "1 · Dev",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "HfO7A",
+                      "name": "Tab selector disclosure",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "SwHt8",
+                  "name": "Current checkout path",
+                  "fill": "$text.tertiary",
+                  "content": "…/herdr-ui/fix-login",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "BvJUm",
+                  "name": "Header flexible space",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "AzFYe",
+                  "x": 845,
+                  "y": 12.5,
+                  "name": "Attached agent name",
+                  "enabled": false,
+                  "fill": "$text.secondary",
+                  "content": "codex",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "VKJcs",
+                  "name": "Prefix mode active indicator",
+                  "metadata": {
+                    "type": "state",
+                    "tooltip": "Prefix mode: Ctrl B pressed, waiting for an action key"
+                  },
+                  "fill": "$status.warning.background",
+                  "cornerRadius": 5,
+                  "gap": 5,
+                  "padding": [
+                    3,
+                    7
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "uL8Wo",
+                      "name": "Prefix active keyboard icon",
+                      "width": 13,
+                      "height": 13,
+                      "icon": "keyboard",
+                      "library": "lucide",
+                      "fill": "$status.warning"
+                    },
+                    {
+                      "type": "text",
+                      "id": "kqXdK",
+                      "name": "Prefix active label",
+                      "fill": "$status.warning",
+                      "content": "Prefix",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "vDvlq",
+                  "name": "Terminal layout actions",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "cAGjo",
+                      "name": "Split terminal icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "columns-2",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "SWEhv",
+              "name": "Herdr pane layout · right then down",
+              "clip": true,
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$terminal.background",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "g6ApO",
+                  "name": "Pane 1 · codex · focused",
+                  "metadata": {
+                    "type": "pane",
+                    "paneId": "w1:p1",
+                    "active": true
+                  },
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Mz1LH",
+                      "name": "codex pane header",
+                      "width": "fill_container",
+                      "height": 30,
+                      "fill": "$surface.inset",
+                      "gap": 7,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "TxUa4",
+                          "name": "codex terminal icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "terminal",
+                          "library": "lucide",
+                          "fill": "$action.accent"
+                        },
+                        {
+                          "type": "text",
+                          "id": "s2LwC",
+                          "name": "codex pane title",
+                          "fill": "$text.primary",
+                          "content": "codex",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "N7h9X",
+                          "name": "codex header spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "icon",
+                          "id": "cNuMZ",
+                          "name": "codex state",
+                          "metadata": {
+                            "type": "status",
+                            "tooltip": "codex terminal",
+                            "accessibleName": "codex terminal state"
+                          },
+                          "width": 12,
+                          "height": 12,
+                          "icon": "activity",
+                          "library": "lucide",
+                          "fill": "$status.working"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hxb2V",
+                      "name": "codex terminal content",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$terminal.background",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "padding": [
+                        16,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "B782o",
+                          "name": "codex output OpenAI Codex",
+                          "fill": "$terminal.foreground",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "OpenAI Codex",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font.mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "AZqSo",
+                          "name": "codex output › Fix the login redirect",
+                          "fill": "$terminal.foreground",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "› Fix the login redirect.",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font.mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "KSATV",
+                          "name": "codex output Reading authentication f",
+                          "fill": "$text.secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Reading authentication flow…",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font.mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "CmnJu",
+                          "name": "codex output Editing src/auth/session",
+                          "fill": "$text.secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Editing src/auth/session.ts",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font.mono",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EeiY3",
+                  "name": "Vertical split divider",
+                  "metadata": {
+                    "type": "interaction",
+                    "accessibleName": "Resize left and right panes",
+                    "minimumPaneSize": 160
+                  },
+                  "width": 1,
+                  "height": "fill_container",
+                  "fill": "$border.separator"
+                },
+                {
+                  "type": "frame",
+                  "id": "j5aK4O",
+                  "name": "Right pane column",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "y3ACVp",
+                      "name": "Pane 2 · shell",
+                      "metadata": {
+                        "type": "pane",
+                        "paneId": "w1:p2"
+                      },
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "eQOyp",
+                          "name": "zsh pane header",
+                          "width": "fill_container",
+                          "height": 30,
+                          "fill": "$content.header",
+                          "gap": 7,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "SMOPF",
+                              "name": "zsh terminal icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "terminal",
+                              "library": "lucide",
+                              "fill": "$icon.default"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Pg3Fo",
+                              "name": "zsh pane title",
+                              "fill": "$text.secondary",
+                              "content": "zsh",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Fliqh",
+                              "name": "zsh header spacer",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "dpsSw",
+                              "name": "zsh state",
+                              "metadata": {
+                                "type": "status",
+                                "tooltip": "zsh terminal",
+                                "accessibleName": "zsh terminal state"
+                              },
+                              "width": 12,
+                              "height": 12,
+                              "icon": "circle",
+                              "library": "lucide",
+                              "fill": "$status.idle"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "uRygk",
+                          "name": "zsh terminal content",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "fill": "$terminal.background",
+                          "layout": "vertical",
+                          "gap": 7,
+                          "padding": [
+                            16,
+                            14
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DZRob",
+                              "name": "zsh output herdr-ui  worktree/fix-l",
+                              "fill": "$text.secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "herdr-ui  worktree/fix-login",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font.mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "sbJYy",
+                              "name": "zsh output ❯ git status --short",
+                              "fill": "$terminal.foreground",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "❯ git status --short",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font.mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "yczqy",
+                              "name": "zsh output  M src/auth/session.ts",
+                              "fill": "$status.warning",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": " M src/auth/session.ts",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font.mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Dq7Wj",
+                              "name": "zsh output ❯ ▏",
+                              "fill": "$terminal.foreground",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "❯ ▏",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font.mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qGcIW",
+                      "name": "Horizontal split divider",
+                      "metadata": {
+                        "type": "interaction",
+                        "accessibleName": "Resize top and bottom panes",
+                        "minimumPaneSize": 120
+                      },
+                      "width": "fill_container",
+                      "height": 1,
+                      "fill": "$border.separator"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sysQq",
+                      "name": "Pane 3 · tests",
+                      "metadata": {
+                        "type": "pane",
+                        "paneId": "w1:p3"
+                      },
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LjaYd",
+                          "name": "tests pane header",
+                          "width": "fill_container",
+                          "height": 30,
+                          "fill": "$content.header",
+                          "gap": 7,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "O4qJfG",
+                              "name": "tests terminal icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "terminal",
+                              "library": "lucide",
+                              "fill": "$icon.default"
+                            },
+                            {
+                              "type": "text",
+                              "id": "pNwx7",
+                              "name": "tests pane title",
+                              "fill": "$text.secondary",
+                              "content": "tests",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "KZg40",
+                              "name": "tests header spacer",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "yM7qi",
+                              "name": "tests state",
+                              "metadata": {
+                                "type": "status",
+                                "tooltip": "tests terminal",
+                                "accessibleName": "tests terminal state"
+                              },
+                              "width": 12,
+                              "height": 12,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "$status.success"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "y1lPGm",
+                          "name": "tests terminal content",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "fill": "$terminal.background",
+                          "layout": "vertical",
+                          "gap": 7,
+                          "padding": [
+                            16,
+                            14
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "sxQ4O",
+                              "name": "tests output ❯ npm test -- auth",
+                              "fill": "$terminal.foreground",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "❯ npm test -- auth",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font.mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "bPnki",
+                              "name": "tests output ✓ session refresh",
+                              "fill": "$status.success",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "✓ session refresh",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font.mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "eA5pY",
+                              "name": "tests output ✓ redirects after expiry",
+                              "fill": "$status.success",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "✓ redirects after expiry",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font.mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wwnMQ",
+                              "name": "tests output 2 tests passed",
+                              "fill": "$text.secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "2 tests passed",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font.mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "g9ERT6",
+          "layoutPosition": "absolute",
+          "x": 934,
+          "y": 48,
+          "name": "Terminal split action menu",
+          "width": 248,
+          "fill": "$surface.elevated",
+          "cornerRadius": 10,
+          "stroke": "$border.content",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "$shadow.floating",
+            "offset": {
+              "x": 0,
+              "y": 8
+            },
+            "blur": 24
+          },
+          "layout": "vertical",
+          "gap": 2,
+          "padding": 6,
+          "children": [
+            {
+              "type": "frame",
+              "id": "A2c19g",
+              "name": "Split right menu action",
+              "width": "fill_container",
+              "height": 32,
+              "cornerRadius": 6,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "NJtyw",
+                  "name": "Split right menu icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "columns-2",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
+                {
+                  "type": "text",
+                  "id": "ZasTC",
+                  "name": "Split right menu label",
+                  "fill": "$text.primary",
+                  "content": "Split Right",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "vmMYW",
+                  "name": "Split right menu spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "z94R8",
+                  "name": "Split right shortcut",
+                  "fill": "$text.secondary",
+                  "content": "Ctrl B → v",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "SZXBm",
+              "name": "Split down menu action",
+              "width": "fill_container",
+              "height": 32,
+              "cornerRadius": 6,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "bGzKt",
+                  "name": "Split down menu icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "rows-2",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
+                {
+                  "type": "text",
+                  "id": "PyukX",
+                  "name": "Split down menu label",
+                  "fill": "$text.primary",
+                  "content": "Split Down",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "PHqen",
+                  "name": "Split down menu spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "YBLru",
+                  "name": "Split down shortcut",
+                  "fill": "$text.secondary",
+                  "content": "Ctrl B → -",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "lQASu",
+              "name": "Zoom pane menu action",
+              "width": "fill_container",
+              "height": 32,
+              "cornerRadius": 6,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "dpDJn",
+                  "name": "Zoom pane menu icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "maximize-2",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
+                {
+                  "type": "text",
+                  "id": "lawAU",
+                  "name": "Zoom pane menu label",
+                  "fill": "$text.primary",
+                  "content": "Zoom Pane",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "ocFqd",
+                  "name": "Zoom pane menu spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "gJJQb",
+                  "name": "Zoom pane shortcut",
+                  "fill": "$text.secondary",
+                  "content": "Ctrl B → z",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "T4zmpS",
+      "x": 2600,
+      "y": 0,
+      "name": "03 · Switch Tabs — Native Light",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 1200,
+      "height": 800,
+      "fill": {
+        "type": "gradient",
+        "gradientType": "linear",
+        "enabled": true,
+        "rotation": 180,
+        "size": {
+          "height": 1
+        },
+        "colors": [
+          {
+            "color": "$window.tint.top",
+            "position": 0
+          },
+          {
+            "color": "$window.tint.middle",
+            "position": 0.52
+          },
+          {
+            "color": "$window.tint.bottom",
+            "position": 1
+          }
+        ]
+      },
+      "cornerRadius": 24,
+      "stroke": "$border.window",
+      "strokeWidth": 1,
+      "gap": 8,
+      "padding": [
+        8,
+        8,
+        8,
+        0
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "fuJ7A",
+          "name": "Workspace sidebar",
+          "width": 248,
+          "height": "fill_container",
+          "fill": "#00000000",
+          "layout": "vertical",
+          "gap": 6,
+          "padding": [
+            0,
+            10,
+            8,
+            10
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "s24eYT",
+              "name": "Window controls",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                6
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "idgJa",
+                  "name": "System traffic lights",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "a0KZb",
+                      "name": "Close system control",
+                      "fill": "$system.close",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "d42x7",
+                      "name": "Minimize system control",
+                      "fill": "$system.minimize",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "fupxI",
+                      "name": "Zoom system control",
+                      "fill": "$system.zoom",
+                      "width": 12,
+                      "height": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "FFa5E",
+                  "name": "Toggle sidebar",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "zNbkU",
+                      "name": "Toggle sidebar icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "panel-left",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "yCScH",
+              "name": "Workspace list heading",
+              "width": "fill_container",
+              "padding": [
+                0,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tmeI8",
+                  "name": "Workspaces label",
+                  "fill": "$text.secondary",
+                  "content": "Workspaces",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "cbkWC",
+              "name": "Workspace tree",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "RRi30",
+                  "name": "Source workspace herdr-ui",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "p3a4Jh",
+                      "name": "Expanded repository disclosure",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YGt5r",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "V0ylf",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "PC5Bq",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "herdr-ui",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "V2Cwo",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "IteX8",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "main",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "f4cBc",
+                  "name": "Selected worktree Fix login",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "$row.selected",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12,
+                    4,
+                    28
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "cNGO2",
+                      "name": "Nested worktree branch",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "git-branch",
+                      "library": "lucide",
+                      "fill": "$icon.active"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dexrH",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "hKkYg",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DsDnN",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "Fix login",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xT8Mn",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "NdKWI",
+                              "name": "Working status · codex",
+                              "metadata": {
+                                "type": "status",
+                                "state": "working",
+                                "tooltip": "codex · Working",
+                                "accessibleName": "codex is working"
+                              },
+                              "width": 14,
+                              "height": 14,
+                              "icon": "activity",
+                              "library": "lucide",
+                              "fill": "$status.working"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "nEmig",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "worktree/fix-login",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "C7IvP",
+                  "name": "Workspace corra",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "cw7ei",
+                      "name": "Collapsed repository disclosure",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-right",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qEGVR",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pKmlu",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "k0BAQ",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "corra",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "BCCVj",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "fjDsZ",
+                              "name": "Idle status · corra",
+                              "metadata": {
+                                "type": "status",
+                                "state": "idle",
+                                "tooltip": "Idle",
+                                "accessibleName": "corra is idle"
+                              },
+                              "width": 12,
+                              "height": 12,
+                              "icon": "circle",
+                              "library": "lucide",
+                              "fill": "$status.idle"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "RNgKj",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "main",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "VdgPM",
+              "name": "Sidebar flexible space",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "bEBdo",
+              "name": "Local connection footer",
+              "width": "fill_container",
+              "gap": 7,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "Fj3RK",
+                  "name": "Connected status · Local",
+                  "metadata": {
+                    "type": "status",
+                    "state": "connected",
+                    "tooltip": "Connected to local Herdr",
+                    "accessibleName": "Connected to local Herdr"
+                  },
+                  "width": 14,
+                  "height": 14,
+                  "icon": "circle-check",
+                  "library": "lucide",
+                  "fill": "$status.success"
+                },
+                {
+                  "type": "text",
+                  "id": "Gx25B",
+                  "name": "Local host label",
+                  "fill": "$text.tertiary",
+                  "content": "Local",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "YV2Dx",
+                  "name": "Connection footer spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "C2vAL3",
+                  "name": "Keyboard shortcuts button",
+                  "metadata": {
+                    "type": "action",
+                    "shortcut": "cmd-/",
+                    "tooltip": "Keyboard shortcuts · ⌘/",
+                    "accessibleName": "Keyboard shortcuts"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "fgZbe",
+                      "name": "Keyboard shortcuts icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "keyboard",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "b1GHx",
+          "name": "Terminal main panel",
+          "clip": true,
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$content.background",
+          "cornerRadius": 16,
+          "stroke": "$border.content",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "$shadow.content",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 5
+          },
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "TJjCV",
+              "name": "Terminal header",
+              "width": "fill_container",
+              "height": 40,
+              "fill": "$content.header",
+              "gap": 12,
+              "padding": [
+                4,
+                16
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "dOAsB",
+                  "name": "Current worktree title",
+                  "fill": "$text.primary",
+                  "content": "Fix login",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "NZXt2",
+                  "name": "Current tab selector",
+                  "metadata": {
+                    "type": "action",
+                    "tooltip": "Switch Tab",
+                    "accessibleName": "Current tab: 1, Dev. Switch tab"
+                  },
+                  "height": 28,
+                  "fill": "$surface.inset",
+                  "cornerRadius": 6,
+                  "gap": 6,
+                  "padding": [
+                    0,
+                    7
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "cuMaQ",
+                      "name": "Current tab label",
+                      "fill": "$text.primary",
+                      "content": "1 · Dev",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "PEWtk",
+                      "name": "Tab selector disclosure",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "QDbJP",
+                  "name": "Current checkout path",
+                  "fill": "$text.tertiary",
+                  "content": "…/herdr-ui/fix-login",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "MiHwX",
+                  "name": "Header flexible space",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "Gr9yU",
+                  "x": 845,
+                  "y": 12.5,
+                  "name": "Attached agent name",
+                  "enabled": false,
+                  "fill": "$text.secondary",
+                  "content": "codex",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "xdJ2O",
+                  "name": "Terminal layout actions",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "vTkyo",
+                      "name": "Split terminal icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "columns-2",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Gxbgu",
+              "name": "Attached terminal viewport",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$terminal.background",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 18,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "W3Ma0Y",
+                  "name": "Codex heading",
+                  "fill": "$terminal.foreground",
+                  "content": "OpenAI Codex",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "OQIjP",
+                  "name": "Codex location",
+                  "fill": "$text.secondary",
+                  "content": "directory: ~/.herdr/worktrees/herdr-ui/fix-login",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "sEpwu",
+                  "name": "Terminal blank",
+                  "fill": "$terminal.foreground",
+                  "content": " ",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "f42n9E",
+                  "name": "User task",
+                  "fill": "$terminal.foreground",
+                  "content": "› Fix the login redirect after session expiry.",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "M0zBq",
+                  "name": "Agent progress",
+                  "fill": "$text.secondary",
+                  "content": "  Reading authentication flow and existing tests…",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "QESF5",
+          "layoutPosition": "absolute",
+          "x": 337,
+          "y": 48,
+          "name": "Existing tabs dropdown",
+          "metadata": {
+            "type": "menu",
+            "accessibleName": "Tabs in Fix login",
+            "notes": "Selection changes local viewed tab; restore its saved active pane without creating a tab."
+          },
+          "width": 272,
+          "fill": "$surface.elevated",
+          "cornerRadius": 10,
+          "stroke": "$border.content",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "$shadow.floating",
+            "offset": {
+              "x": 0,
+              "y": 8
+            },
+            "blur": 24
+          },
+          "layout": "vertical",
+          "gap": 2,
+          "padding": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "gF8rh",
+              "name": "Tab picker context",
+              "width": "fill_container",
+              "height": 28,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "BCtcF",
+                  "name": "Tab picker workspace context",
+                  "fill": "$text.secondary",
+                  "content": "Fix login · Tabs",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "G8IA3",
+              "name": "Dev existing tab option",
+              "metadata": {
+                "type": "tab",
+                "tabId": "tab-1",
+                "selected": true,
+                "accessibleName": "Dev, 3 panes, selected"
+              },
+              "width": "fill_container",
+              "height": 36,
+              "fill": "$surface.inset",
+              "cornerRadius": 6,
+              "gap": 9,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "j4yXSP",
+                  "name": "Dev tab index",
+                  "fill": "$text.secondary",
+                  "content": "1",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "U7sTWC",
+                  "name": "Dev tab name",
+                  "fill": "$text.primary",
+                  "content": "Dev",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "C9IH3",
+                  "name": "Dev option spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "GHkGG",
+                  "name": "Dev pane count icon",
+                  "width": 13,
+                  "height": 13,
+                  "icon": "panels-top-left",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
+                {
+                  "type": "text",
+                  "id": "tzZtL",
+                  "name": "Dev pane count",
+                  "fill": "$text.secondary",
+                  "content": "1",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "icon",
+                  "id": "y83Uhp",
+                  "name": "Dev selection mark",
+                  "width": 13,
+                  "height": 13,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$action.accent"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "JJruG",
+              "name": "Server existing tab option",
+              "metadata": {
+                "type": "tab",
+                "tabId": "tab-2",
+                "selected": false,
+                "accessibleName": "Server, 1 panes"
+              },
+              "width": "fill_container",
+              "height": 36,
+              "fill": "#00000000",
+              "cornerRadius": 6,
+              "gap": 9,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "zVcqJ",
+                  "name": "Server tab index",
+                  "fill": "$text.secondary",
+                  "content": "2",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "LF8gs",
+                  "name": "Server tab name",
+                  "fill": "$text.primary",
+                  "content": "Server",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "t6g0g",
+                  "name": "Server option spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "MCu3T",
+                  "name": "Server pane count icon",
+                  "width": 13,
+                  "height": 13,
+                  "icon": "panels-top-left",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
+                {
+                  "type": "text",
+                  "id": "Xkysu",
+                  "name": "Server pane count",
+                  "fill": "$text.secondary",
+                  "content": "1",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "icon",
+                  "id": "dHhYv",
+                  "name": "Server selection mark",
+                  "width": 13,
+                  "height": 13,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "#00000000"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "JjxGy",
+              "name": "Tab shortcuts separator",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "$border.separator"
+            },
+            {
+              "type": "frame",
+              "id": "ZzCMX",
+              "name": "Next Tab tab menu action",
+              "width": "fill_container",
+              "height": 28,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "m2MoMu",
+                  "name": "Next Tab tab menu label",
+                  "fill": "$text.primary",
+                  "content": "Next Tab",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "awdM5",
+                  "name": "Next Tab tab menu spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "X30gT0",
+                  "name": "Next Tab tab menu binding",
+                  "fill": "$text.secondary",
+                  "content": "Ctrl B → n",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Y70qNU",
+              "name": "Previous Tab tab menu action",
+              "width": "fill_container",
+              "height": 28,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vNVm9",
+                  "name": "Previous Tab tab menu label",
+                  "fill": "$text.primary",
+                  "content": "Previous Tab",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "gMoE0",
+                  "name": "Previous Tab tab menu spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "JMewT",
+                  "name": "Previous Tab tab menu binding",
+                  "fill": "$text.secondary",
+                  "content": "Ctrl B → p",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "mrp6E",
+      "x": 3900,
+      "y": 0,
+      "name": "04 · Shortcuts Reference — Nonmodal",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 1200,
+      "height": 800,
+      "fill": {
+        "type": "gradient",
+        "gradientType": "linear",
+        "enabled": true,
+        "rotation": 180,
+        "size": {
+          "height": 1
+        },
+        "colors": [
+          {
+            "color": "$window.tint.top",
+            "position": 0
+          },
+          {
+            "color": "$window.tint.middle",
+            "position": 0.52
+          },
+          {
+            "color": "$window.tint.bottom",
+            "position": 1
+          }
+        ]
+      },
+      "cornerRadius": 24,
+      "stroke": "$border.window",
+      "strokeWidth": 1,
+      "gap": 8,
+      "padding": [
+        8,
+        8,
+        8,
+        0
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "E5Z6M",
+          "name": "Workspace sidebar",
+          "width": 248,
+          "height": "fill_container",
+          "fill": "#00000000",
+          "layout": "vertical",
+          "gap": 6,
+          "padding": [
+            0,
+            10,
+            8,
+            10
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "DkSx8",
+              "name": "Window controls",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                6
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Tj2hC",
+                  "name": "System traffic lights",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "z0OG31",
+                      "name": "Close system control",
+                      "fill": "$system.close",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "x7zGj4",
+                      "name": "Minimize system control",
+                      "fill": "$system.minimize",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "j7UyKk",
+                      "name": "Zoom system control",
+                      "fill": "$system.zoom",
+                      "width": 12,
+                      "height": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "oK3QW",
+                  "name": "Toggle sidebar",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "iWMfy",
+                      "name": "Toggle sidebar icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "panel-left",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KqiVA",
+              "name": "Workspace list heading",
+              "width": "fill_container",
+              "padding": [
+                0,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YIGnu",
+                  "name": "Workspaces label",
+                  "fill": "$text.secondary",
+                  "content": "Workspaces",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Hv9OU",
+              "name": "Workspace tree",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "goZUV",
+                  "name": "Source workspace herdr-ui",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "R3aaY",
+                      "name": "Expanded repository disclosure",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "q4emcn",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "MwfEb",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wDSkO",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "herdr-ui",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "CSKjJ",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "vKpjX",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "main",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "OPcFG",
+                  "name": "Selected worktree Fix login",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "$row.selected",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12,
+                    4,
+                    28
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "j0C2Ri",
+                      "name": "Nested worktree branch",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "git-branch",
+                      "library": "lucide",
+                      "fill": "$icon.active"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DQJNU",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "bQtds",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "GCAvB",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "Fix login",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "WXYw8",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "S6hfc",
+                              "name": "Working status · codex",
+                              "metadata": {
+                                "type": "status",
+                                "state": "working",
+                                "tooltip": "codex · Working",
+                                "accessibleName": "codex is working"
+                              },
+                              "width": 14,
+                              "height": 14,
+                              "icon": "activity",
+                              "library": "lucide",
+                              "fill": "$status.working"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "HAVQU",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "worktree/fix-login",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "WlDqY",
+                  "name": "Workspace corra",
+                  "width": "fill_container",
+                  "height": 42,
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "gap": 8,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "AkaSq",
+                      "name": "Collapsed repository disclosure",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-right",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "LUcTe",
+                      "name": "Aligned workspace text column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Ldpod",
+                          "name": "Workspace title and state",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "zSk8L",
+                              "name": "Workspace title",
+                              "fill": "$text.primary",
+                              "content": "corra",
+                              "fontFamily": "$font.ui",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "qGlmI",
+                              "name": "Workspace title flexible space",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "njDyL",
+                              "name": "Idle status · corra",
+                              "metadata": {
+                                "type": "status",
+                                "state": "idle",
+                                "tooltip": "Idle",
+                                "accessibleName": "corra is idle"
+                              },
+                              "width": 12,
+                              "height": 12,
+                              "icon": "circle",
+                              "library": "lucide",
+                              "fill": "$status.idle"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "lW5od",
+                          "name": "Aligned branch subtitle",
+                          "fill": "$text.secondary",
+                          "content": "main",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "HRuKr",
+              "name": "Sidebar flexible space",
+              "width": "fill_container",
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "r5gnmr",
+              "name": "Local connection footer",
+              "width": "fill_container",
+              "gap": 7,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "jq8o2",
+                  "name": "Connected status · Local",
+                  "metadata": {
+                    "type": "status",
+                    "state": "connected",
+                    "tooltip": "Connected to local Herdr",
+                    "accessibleName": "Connected to local Herdr"
+                  },
+                  "width": 14,
+                  "height": 14,
+                  "icon": "circle-check",
+                  "library": "lucide",
+                  "fill": "$status.success"
+                },
+                {
+                  "type": "text",
+                  "id": "bzLtv",
+                  "name": "Local host label",
+                  "fill": "$text.tertiary",
+                  "content": "Local",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "l8UDu",
+                  "name": "Connection footer spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "MLQtI",
+                  "name": "Keyboard shortcuts button",
+                  "metadata": {
+                    "type": "action",
+                    "shortcut": "cmd-/",
+                    "tooltip": "Keyboard shortcuts · ⌘/",
+                    "accessibleName": "Keyboard shortcuts"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "z3QuIk",
+                      "name": "Keyboard shortcuts icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "keyboard",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "nYd3b",
+          "name": "Terminal main panel",
+          "clip": true,
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$content.background",
+          "cornerRadius": 16,
+          "stroke": "$border.content",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "$shadow.content",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 5
+          },
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "xm4Cj",
+              "name": "Terminal header",
+              "width": "fill_container",
+              "height": 40,
+              "fill": "$content.header",
+              "gap": 12,
+              "padding": [
+                4,
+                16
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "l2sQe",
+                  "x": 10,
+                  "y": 6.000000000000007,
+                  "name": "Collapsed-sidebar window controls",
+                  "enabled": false,
+                  "metadata": {
+                    "type": "chrome",
+                    "notes": "Visible only when the sidebar is collapsed; native window controls remain system-owned at runtime."
+                  },
+                  "width": 64,
+                  "height": 28,
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "ivwLZ",
+                      "name": "Close compact system control",
+                      "fill": "$system.close",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "jxc0A",
+                      "name": "Minimize compact system control",
+                      "fill": "$system.minimize",
+                      "width": 12,
+                      "height": 12
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "DK7v3",
+                      "name": "Zoom compact system control",
+                      "fill": "$system.zoom",
+                      "width": 12,
+                      "height": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "W8hFr",
+                  "name": "Current worktree title",
+                  "fill": "$text.primary",
+                  "content": "Fix login",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "V6Oi8",
+                  "name": "Current tab selector",
+                  "metadata": {
+                    "type": "action",
+                    "tooltip": "Switch Tab",
+                    "accessibleName": "Current tab: 1, Dev. Switch tab"
+                  },
+                  "height": 28,
+                  "fill": "$surface.inset",
+                  "cornerRadius": 6,
+                  "gap": 6,
+                  "padding": [
+                    0,
+                    7
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zSPGj",
+                      "name": "Current tab label",
+                      "fill": "$text.primary",
+                      "content": "1 · Dev",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "j0cdr",
+                      "name": "Tab selector disclosure",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "bSgBV",
+                  "name": "Current checkout path",
+                  "fill": "$text.tertiary",
+                  "content": "…/herdr-ui/fix-login",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "Kh8vT",
+                  "name": "Header flexible space",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "umvEA",
+                  "x": 845,
+                  "y": 12.5,
+                  "name": "Attached agent name",
+                  "enabled": false,
+                  "fill": "$text.secondary",
+                  "content": "codex",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "l0gMRG",
+                  "name": "Terminal layout actions",
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "mIJRu",
+                      "name": "Split terminal icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "columns-2",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KtLdb",
+              "name": "Attached terminal viewport",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$terminal.background",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 18,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Et3l6",
+                  "name": "Codex heading",
+                  "fill": "$terminal.foreground",
+                  "content": "OpenAI Codex",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "wGJSc",
+                  "name": "Codex location",
+                  "fill": "$text.secondary",
+                  "content": "directory: ~/.herdr/worktrees/herdr-ui/fix-login",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Di18J",
+                  "name": "Terminal blank",
+                  "fill": "$terminal.foreground",
+                  "content": " ",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "vUoUd",
+                  "name": "User task",
+                  "fill": "$terminal.foreground",
+                  "content": "› Fix the login redirect after session expiry.",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "eUcOU",
+                  "name": "Agent progress",
+                  "fill": "$text.secondary",
+                  "content": "  Reading authentication flow and existing tests…",
+                  "fontFamily": "$font.mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "KCmBq",
+          "name": "Keyboard shortcuts reference panel",
+          "width": 344,
+          "height": "fill_container",
+          "fill": "$surface.elevated",
+          "cornerRadius": 16,
+          "stroke": "$border.content",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "$shadow.content",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 5
+          },
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "DaZxs",
+              "name": "Keyboard sheet heading",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "hkG3k",
+                  "name": "Keyboard sheet icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "keyboard",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
+                {
+                  "type": "text",
+                  "id": "yK3Tb",
+                  "name": "Keyboard sheet title",
+                  "fill": "$text.primary",
+                  "content": "Keyboard Shortcuts",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 16,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "ocGwN",
+                  "name": "Keyboard heading spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "Yfxer",
+                  "name": "Close keyboard shortcuts",
+                  "metadata": {
+                    "type": "action",
+                    "shortcut": "escape",
+                    "accessibleName": "Close keyboard shortcuts"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "cornerRadius": 6,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "yoQFj",
+                      "name": "Close shortcuts icon",
+                      "width": 15,
+                      "height": 15,
+                      "icon": "x",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "XqH8a",
+              "name": "Prefix sequence explanation",
+              "width": "fill_container",
+              "fill": "$surface.inset",
+              "cornerRadius": 7,
+              "layout": "vertical",
+              "gap": 7,
+              "padding": [
+                8,
+                10
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "NLRB1",
+                  "name": "Prefix key sequence",
+                  "fill": "$text.primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Press Ctrl B, release, then press an action key.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "y8RBZ",
+                  "name": "Prefix focus directions",
+                  "fill": "$text.secondary",
+                  "content": "h left   j down   k up   l right",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "y0fBF1",
+              "name": "Terminals shortcut section",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "eRQrv",
+                  "name": "Terminals shortcut heading",
+                  "fill": "$text.secondary",
+                  "content": "Terminals",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "lneTt",
+                  "name": "Split right shortcut row",
+                  "width": "fill_container",
+                  "height": 26,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sOh6M",
+                      "name": "Split right shortcut description",
+                      "fill": "$text.primary",
+                      "content": "Split Right",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NrxfS",
+                      "name": "Split right shortcut spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "IXunL",
+                      "name": "Split right keycap",
+                      "height": 22,
+                      "fill": "$surface.inset",
+                      "cornerRadius": 5,
+                      "padding": [
+                        0,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WFY7T",
+                          "name": "Split right key combination",
+                          "fill": "$text.secondary",
+                          "content": "Ctrl B → v",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "s8O5c",
+                  "name": "Split down shortcut row",
+                  "width": "fill_container",
+                  "height": 26,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wvNOe",
+                      "name": "Split down shortcut description",
+                      "fill": "$text.primary",
+                      "content": "Split Down",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TH7Cs",
+                      "name": "Split down shortcut spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Zmgbj",
+                      "name": "Split down keycap",
+                      "height": 22,
+                      "fill": "$surface.inset",
+                      "cornerRadius": 5,
+                      "padding": [
+                        0,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "j37g1Z",
+                          "name": "Split down key combination",
+                          "fill": "$text.secondary",
+                          "content": "Ctrl B → -",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EMtvm",
+                  "name": "Focus pane shortcut row",
+                  "width": "fill_container",
+                  "height": 26,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "VCCxW",
+                      "name": "Focus pane shortcut description",
+                      "fill": "$text.primary",
+                      "content": "Focus Pane",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nPyDw",
+                      "name": "Focus pane shortcut spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "LOuPe",
+                      "name": "Focus pane keycap",
+                      "height": 22,
+                      "fill": "$surface.inset",
+                      "cornerRadius": 5,
+                      "padding": [
+                        0,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vK1Pb",
+                          "name": "Focus pane key combination",
+                          "fill": "$text.secondary",
+                          "content": "Ctrl B → h / j / k / l",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "CXrxB",
+                  "name": "Resize mode shortcut row",
+                  "width": "fill_container",
+                  "height": 26,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "j5VB4",
+                      "name": "Resize mode shortcut description",
+                      "fill": "$text.primary",
+                      "content": "Resize Mode",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "x50kSM",
+                      "name": "Resize mode shortcut spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h4uw2",
+                      "name": "Resize mode keycap",
+                      "height": 22,
+                      "fill": "$surface.inset",
+                      "cornerRadius": 5,
+                      "padding": [
+                        0,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "x4kLwT",
+                          "name": "Resize mode key combination",
+                          "fill": "$text.secondary",
+                          "content": "Ctrl B → r",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "B40qP8",
+                  "name": "Zoom pane shortcut row",
+                  "width": "fill_container",
+                  "height": 26,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Fxm3X",
+                      "name": "Zoom pane shortcut description",
+                      "fill": "$text.primary",
+                      "content": "Zoom Pane",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "G8N0R8",
+                      "name": "Zoom pane shortcut spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "X1NdEW",
+                      "name": "Zoom pane keycap",
+                      "height": 22,
+                      "fill": "$surface.inset",
+                      "cornerRadius": 5,
+                      "padding": [
+                        0,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "G1hBF",
+                          "name": "Zoom pane key combination",
+                          "fill": "$text.secondary",
+                          "content": "Ctrl B → z",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qxrVW",
+              "name": "Tabs shortcut section",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rlrsv",
+                  "name": "Tabs shortcut heading",
+                  "fill": "$text.secondary",
+                  "content": "Tabs",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "cNmGr",
+                  "name": "Next Tab shortcut row",
+                  "width": "fill_container",
+                  "height": 26,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "t2jPni",
+                      "name": "Next Tab shortcut description",
+                      "fill": "$text.primary",
+                      "content": "Next Tab",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "U5rer",
+                      "name": "Next Tab shortcut spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tQa1b",
+                      "name": "Next Tab keycap",
+                      "height": 22,
+                      "fill": "$surface.inset",
+                      "cornerRadius": 5,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tlCnH",
+                          "name": "Next Tab key combination",
+                          "fill": "$text.secondary",
+                          "content": "Ctrl B → n",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "U2K1Oi",
+                  "name": "Previous Tab shortcut row",
+                  "width": "fill_container",
+                  "height": 26,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "VueR7",
+                      "name": "Previous Tab shortcut description",
+                      "fill": "$text.primary",
+                      "content": "Previous Tab",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XzNzU",
+                      "name": "Previous Tab shortcut spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "j8l6T",
+                      "name": "Previous Tab keycap",
+                      "height": 22,
+                      "fill": "$surface.inset",
+                      "cornerRadius": 5,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "UvJ4R",
+                          "name": "Previous Tab key combination",
+                          "fill": "$text.secondary",
+                          "content": "Ctrl B → p",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Ji5rk",
+              "name": "Window shortcut section",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HZkO6",
+                  "name": "Window shortcut heading",
+                  "fill": "$text.secondary",
+                  "content": "Window",
+                  "fontFamily": "$font.ui",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "PvFGW",
+                  "name": "Toggle sidebar shortcut row",
+                  "width": "fill_container",
+                  "height": 26,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Bs1la",
+                      "name": "Toggle sidebar shortcut description",
+                      "fill": "$text.primary",
+                      "content": "Toggle Sidebar",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "w1Faf",
+                      "name": "Toggle sidebar shortcut spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "klsqY",
+                      "name": "Toggle sidebar keycap",
+                      "height": 22,
+                      "fill": "$surface.inset",
+                      "cornerRadius": 5,
+                      "padding": [
+                        0,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "m1d1Y",
+                          "name": "Toggle sidebar key combination",
+                          "fill": "$text.secondary",
+                          "content": "Ctrl B → b",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "R0laB",
+                  "name": "Keyboard shortcuts shortcut row",
+                  "width": "fill_container",
+                  "height": 26,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "z3u1n",
+                      "name": "Keyboard shortcuts shortcut description",
+                      "fill": "$text.primary",
+                      "content": "Keyboard Shortcuts",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XRi0m",
+                      "name": "Keyboard shortcuts shortcut spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DJ2UR",
+                      "name": "Keyboard shortcuts keycap",
+                      "height": 22,
+                      "fill": "$surface.inset",
+                      "cornerRadius": 5,
+                      "padding": [
+                        0,
+                        7
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "d1BBTh",
+                          "name": "Keyboard shortcuts key combination",
+                          "fill": "$text.secondary",
+                          "content": "Ctrl B → ?",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "uc31v",
+              "name": "Active pane shortcut context",
+              "fill": "$text.secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Default bindings · Prefix is configurable.",
+              "lineHeight": 1.4,
+              "fontFamily": "$font.ui",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "themes": {
+    "mode": [
+      "light",
+      "dark"
+    ]
+  },
+  "variables": {
+    "window.base": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#EEE7EFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#211D28FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "window.tint.top": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#EAE0EFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#2C2435FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "window.tint.middle": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F3E8E7FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#2C252CFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "window.tint.bottom": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F4EED3FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#302D25FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "sidebar.tint": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#EEE7EF70",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#29232F99",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "sidebar.fallback": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#EEE7EFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#29232FFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "content.background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#211F25FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "content.header": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#211F25FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "surface.elevated": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#302D35FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "surface.inset": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F5F3F7FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#29262FFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "surface.scrim": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#211D2829",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#00000066",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "border.window": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFF66",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#FFFFFF24",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "border.content": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#3026380F",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#FFFFFF12",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "border.separator": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#30263814",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#FFFFFF1A",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "border.control": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#756D80FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#8F859BFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "shadow.content": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#3026380A",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#00000029",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "shadow.floating": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#30263824",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#00000066",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "text.primary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#252329FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#F2EFF5FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "text.secondary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#5D5866FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#C2BBCBFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "text.tertiary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#625D6BFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#B0A7BDFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "text.disabled": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#8C8595FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#776E82FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "icon.default": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#706978FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#B2A9BFFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "icon.active": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#37313FFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#F2EFF5FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "row.hover": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFF52",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#FFFFFF0A",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "row.pressed": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFA3",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#FFFFFF14",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "row.selected": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#40394AFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "row.selected.inactive": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFB8",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#37313FFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "action.accent": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#0057A6FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#78B7FFFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "action.primary.background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#0057A6FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#78B7FFFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "action.primary.hover": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#00529DFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#92C5FFFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "action.primary.pressed": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#004587FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#61A5F1FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "action.primary.foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#14263AFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "focus.ring": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#0057A6FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#78B7FFFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "selection.background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#DCEAF8FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#354B66FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "status.success": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#1E623CFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#83C79BFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "status.warning": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#795000FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#E7BF72FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "status.danger": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#9F2934FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#FF9CA5FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "status.working": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#68448FFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#C4A6EAFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "status.idle": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#5D5866FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#B0A7BDFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "status.success.background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#EDF5EFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#27382EFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "status.warning.background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FAF2DFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#3C3222FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "status.danger.background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FBEFF0FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#3B292FFF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "status.working.background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F2EDF8FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#332B40FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "terminal.background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#211F25FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "terminal.foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#252329FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#F2EFF5FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "terminal.cursor": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#252329FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#F2EFF5FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "terminal.cursor.text": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFFFF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#211F25FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "terminal.selection.background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#DCEAF8FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#354B66FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "terminal.selection.foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#252329FF",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#F2EFF5FF",
+          "theme": {
+            "mode": "dark"
+          }
+        }
+      ]
+    },
+    "font.ui": {
+      "type": "string",
+      "value": "Inter"
+    },
+    "font.mono": {
+      "type": "string",
+      "value": "JetBrains Mono"
+    },
+    "system.close": {
+      "type": "color",
+      "value": "#FF5F57"
+    },
+    "system.minimize": {
+      "type": "color",
+      "value": "#FEBC2E"
+    },
+    "system.zoom": {
+      "type": "color",
+      "value": "#28C840"
+    }
+  },
+  "fileToken": "cf453a6d-181e-48c1-bff5-ffaf2c1dc71d"
+}
