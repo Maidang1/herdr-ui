@@ -139,11 +139,23 @@
               "id": "GDqmp",
               "name": "Workspace list heading",
               "width": "fill_container",
+              "gap": 6,
               "padding": [
                 0,
                 12
               ],
+              "alignItems": "center",
               "children": [
+                {
+                  "type": "icon",
+                  "id": "TW4CW",
+                  "name": "Lucide folders · workspaces",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "folders",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
                 {
                   "type": "text",
                   "id": "EXvGs",
@@ -420,6 +432,367 @@
             },
             {
               "type": "frame",
+              "id": "sC6Nc",
+              "name": "Agents · grouped runtime status",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "padding": [
+                14,
+                0,
+                0,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "cEujQ",
+                  "name": "Agents section heading",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "dUgz8",
+                      "name": "Lucide bot · agents section",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "bot",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "text",
+                      "id": "FU7MQ",
+                      "name": "Agents heading",
+                      "fill": "$text.secondary",
+                      "content": "Agents",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YUkME",
+                      "name": "Agents heading flexible space",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "aHwTR",
+                      "name": "Lucide list-tree · grouped view",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "list-tree",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "text",
+                      "id": "pSnUc",
+                      "name": "Grouped view label",
+                      "fill": "$text.tertiary",
+                      "content": "Grouped",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lwh20",
+                  "name": "Fix login agent · Working",
+                  "metadata": {
+                    "type": "agent-status",
+                    "state": "working",
+                    "workspace": "Fix login"
+                  },
+                  "width": "fill_container",
+                  "fill": "$row.selected",
+                  "cornerRadius": 7,
+                  "layout": "vertical",
+                  "gap": 5,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "lXnAR",
+                      "name": "Agent workspace and count",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "U1j0R",
+                          "name": "Worktree branch · Fix login",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "git-branch",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        },
+                        {
+                          "type": "text",
+                          "id": "JSnGP",
+                          "name": "Agent workspace name",
+                          "fill": "$text.primary",
+                          "content": "Fix login",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "oo0H8",
+                          "name": "Workspace count spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "NmrU3",
+                          "name": "Agent count",
+                          "fill": "$text.tertiary",
+                          "content": "1",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "w7mpvD",
+                      "name": "Agent identity and current state",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "hiyqh",
+                          "name": "Codex · official OpenAI Blossom",
+                          "metadata": {
+                            "type": "agent-brand",
+                            "agent": "codex",
+                            "source": "https://openai.com/brand/",
+                            "accessibleName": "OpenAI Codex"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "assets/openai-blossom.png",
+                            "mode": "contain"
+                          },
+                          "width": 14,
+                          "height": 14
+                        },
+                        {
+                          "type": "text",
+                          "id": "sPSzY",
+                          "name": "Agent name",
+                          "fill": "$text.primary",
+                          "content": "Codex",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "VLCOk",
+                          "name": "Agent status spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "s7dUw8",
+                          "name": "Explicit runtime status",
+                          "fill": "$status.working",
+                          "content": "Working",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "VaC1J",
+                      "name": "Agent terminal and activity",
+                      "fill": "$text.tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Dev · Reading authentication flow",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "L9VRlQ",
+                  "name": "corra agent · Idle",
+                  "metadata": {
+                    "type": "agent-status",
+                    "state": "idle",
+                    "workspace": "corra"
+                  },
+                  "width": "fill_container",
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "layout": "vertical",
+                  "gap": 5,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "bYb8c",
+                      "name": "Agent workspace and count",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "DoMi2",
+                          "name": "Git repository · corra",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "folder-git-2",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        },
+                        {
+                          "type": "text",
+                          "id": "OMtI5",
+                          "name": "Agent workspace name",
+                          "fill": "$text.primary",
+                          "content": "corra",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "i8mms",
+                          "name": "Workspace count spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "wpwk5",
+                          "name": "Agent count",
+                          "fill": "$text.tertiary",
+                          "content": "1",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JGASI",
+                      "name": "Agent identity and current state",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "M07h5i",
+                          "name": "Codex · official OpenAI Blossom",
+                          "metadata": {
+                            "type": "agent-brand",
+                            "agent": "codex",
+                            "source": "https://openai.com/brand/",
+                            "accessibleName": "OpenAI Codex"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "assets/openai-blossom.png",
+                            "mode": "contain"
+                          },
+                          "width": 14,
+                          "height": 14
+                        },
+                        {
+                          "type": "text",
+                          "id": "JkRSH",
+                          "name": "Agent name",
+                          "fill": "$text.primary",
+                          "content": "Codex",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "P000s5",
+                          "name": "Agent status spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "h0LtI",
+                          "name": "Explicit runtime status",
+                          "fill": "$status.idle",
+                          "content": "Idle",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "i0C8zI",
+                      "name": "Agent terminal and activity",
+                      "fill": "$text.tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Dev · Ready for a task",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
               "id": "afNeW",
               "name": "Sidebar flexible space",
               "width": "fill_container",
@@ -550,47 +923,6 @@
                   "fontWeight": "600"
                 },
                 {
-                  "type": "frame",
-                  "id": "ARSJ2",
-                  "name": "Current tab selector",
-                  "metadata": {
-                    "type": "action",
-                    "tooltip": "Switch Tab",
-                    "accessibleName": "Current tab: 1, Dev. Switch tab"
-                  },
-                  "height": 28,
-                  "fill": "$surface.inset",
-                  "cornerRadius": 6,
-                  "gap": 6,
-                  "padding": [
-                    0,
-                    7
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "APJI4",
-                      "name": "Current tab label",
-                      "fill": "$text.primary",
-                      "content": "1 · Dev",
-                      "fontFamily": "$font.ui",
-                      "fontSize": 12,
-                      "fontWeight": "500"
-                    },
-                    {
-                      "type": "icon",
-                      "id": "qMKxq",
-                      "name": "Tab selector disclosure",
-                      "width": 12,
-                      "height": 12,
-                      "icon": "chevron-down",
-                      "library": "lucide",
-                      "fill": "$icon.default"
-                    }
-                  ]
-                },
-                {
                   "type": "text",
                   "id": "hnOCh",
                   "name": "Current checkout path",
@@ -704,6 +1036,114 @@
                   "fontFamily": "$font.mono",
                   "fontSize": 13,
                   "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "R9MRiO",
+              "name": "Compact bottom tab strip · keyboard first",
+              "metadata": {
+                "type": "tabs",
+                "nextShortcut": "Ctrl B → n",
+                "previousShortcut": "Ctrl B → p"
+              },
+              "width": "fill_container",
+              "height": 32,
+              "stroke": "$border.separator",
+              "strokeWidth": {
+                "top": 1
+              },
+              "gap": 4,
+              "padding": [
+                0,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EPNdm",
+                  "name": "Terminal tab 1 · selected",
+                  "height": 26,
+                  "fill": "$surface.inset",
+                  "cornerRadius": 4,
+                  "gap": 7,
+                  "padding": [
+                    0,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "h4lJhx",
+                      "name": "Tab 1 agent status",
+                      "fill": "$status.working",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "d4fg8H",
+                      "name": "Tab number 1",
+                      "fill": "$text.primary",
+                      "content": "1",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Ycqho",
+                      "name": "Close tab 1",
+                      "metadata": {
+                        "type": "action",
+                        "accessibleName": "Close tab 1"
+                      },
+                      "width": 20,
+                      "height": 20,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "KtOaO",
+                          "name": "Close tab icon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "x",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LxJTk",
+                  "name": "New terminal tab",
+                  "metadata": {
+                    "type": "action",
+                    "accessibleName": "New tab"
+                  },
+                  "width": 28,
+                  "height": 26,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "BDApH",
+                      "name": "Add tab icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
                 }
               ]
             }
@@ -849,11 +1289,23 @@
               "id": "e3MLC",
               "name": "Workspace list heading",
               "width": "fill_container",
+              "gap": 6,
               "padding": [
                 0,
                 12
               ],
+              "alignItems": "center",
               "children": [
+                {
+                  "type": "icon",
+                  "id": "D4Oe9",
+                  "name": "Lucide folders · workspaces",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "folders",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
                 {
                   "type": "text",
                   "id": "RfxSz",
@@ -1130,6 +1582,367 @@
             },
             {
               "type": "frame",
+              "id": "q3IuGt",
+              "name": "Agents · grouped runtime status",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "padding": [
+                14,
+                0,
+                0,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EgiHv",
+                  "name": "Agents section heading",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "KP2m6",
+                      "name": "Lucide bot · agents section",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "bot",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "text",
+                      "id": "eMf85",
+                      "name": "Agents heading",
+                      "fill": "$text.secondary",
+                      "content": "Agents",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "q2922g",
+                      "name": "Agents heading flexible space",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "ivKSv",
+                      "name": "Lucide list-tree · grouped view",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "list-tree",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "text",
+                      "id": "iEJw1",
+                      "name": "Grouped view label",
+                      "fill": "$text.tertiary",
+                      "content": "Grouped",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GnZqf",
+                  "name": "Fix login agent · Working",
+                  "metadata": {
+                    "type": "agent-status",
+                    "state": "working",
+                    "workspace": "Fix login"
+                  },
+                  "width": "fill_container",
+                  "fill": "$row.selected",
+                  "cornerRadius": 7,
+                  "layout": "vertical",
+                  "gap": 5,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "P4Ltpv",
+                      "name": "Agent workspace and count",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "HYxRo",
+                          "name": "Worktree branch · Fix login",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "git-branch",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        },
+                        {
+                          "type": "text",
+                          "id": "E0D1wp",
+                          "name": "Agent workspace name",
+                          "fill": "$text.primary",
+                          "content": "Fix login",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XJUt9",
+                          "name": "Workspace count spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "rr7RI",
+                          "name": "Agent count",
+                          "fill": "$text.tertiary",
+                          "content": "1",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "C3sCX",
+                      "name": "Agent identity and current state",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "D0HHox",
+                          "name": "Codex · official OpenAI Blossom",
+                          "metadata": {
+                            "type": "agent-brand",
+                            "agent": "codex",
+                            "source": "https://openai.com/brand/",
+                            "accessibleName": "OpenAI Codex"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "assets/openai-blossom.png",
+                            "mode": "contain"
+                          },
+                          "width": 14,
+                          "height": 14
+                        },
+                        {
+                          "type": "text",
+                          "id": "LyGzw",
+                          "name": "Agent name",
+                          "fill": "$text.primary",
+                          "content": "Codex",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K0t93X",
+                          "name": "Agent status spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "UXI6w",
+                          "name": "Explicit runtime status",
+                          "fill": "$status.working",
+                          "content": "Working",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "D94mz",
+                      "name": "Agent terminal and activity",
+                      "fill": "$text.tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Dev · Reading authentication flow",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gTC3B",
+                  "name": "corra agent · Idle",
+                  "metadata": {
+                    "type": "agent-status",
+                    "state": "idle",
+                    "workspace": "corra"
+                  },
+                  "width": "fill_container",
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "layout": "vertical",
+                  "gap": 5,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "omhve",
+                      "name": "Agent workspace and count",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "tBiBe",
+                          "name": "Git repository · corra",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "folder-git-2",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ByQL6",
+                          "name": "Agent workspace name",
+                          "fill": "$text.primary",
+                          "content": "corra",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XPRbT",
+                          "name": "Workspace count spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "cK83R",
+                          "name": "Agent count",
+                          "fill": "$text.tertiary",
+                          "content": "1",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "C6FaqE",
+                      "name": "Agent identity and current state",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "mPuHa",
+                          "name": "Codex · official OpenAI Blossom",
+                          "metadata": {
+                            "type": "agent-brand",
+                            "agent": "codex",
+                            "source": "https://openai.com/brand/",
+                            "accessibleName": "OpenAI Codex"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "assets/openai-blossom.png",
+                            "mode": "contain"
+                          },
+                          "width": 14,
+                          "height": 14
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZaWI0",
+                          "name": "Agent name",
+                          "fill": "$text.primary",
+                          "content": "Codex",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "MZdKM",
+                          "name": "Agent status spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "abaev",
+                          "name": "Explicit runtime status",
+                          "fill": "$status.idle",
+                          "content": "Idle",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "UXqq9",
+                      "name": "Agent terminal and activity",
+                      "fill": "$text.tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Dev · Ready for a task",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
               "id": "vu1Wk",
               "name": "Sidebar flexible space",
               "width": "fill_container",
@@ -1258,47 +2071,6 @@
                   "fontFamily": "$font.ui",
                   "fontSize": 13,
                   "fontWeight": "600"
-                },
-                {
-                  "type": "frame",
-                  "id": "W8hEpU",
-                  "name": "Current tab selector",
-                  "metadata": {
-                    "type": "action",
-                    "tooltip": "Switch Tab",
-                    "accessibleName": "Current tab: 1, Dev. Switch tab"
-                  },
-                  "height": 28,
-                  "fill": "$surface.inset",
-                  "cornerRadius": 6,
-                  "gap": 6,
-                  "padding": [
-                    0,
-                    7
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "wqf54",
-                      "name": "Current tab label",
-                      "fill": "$text.primary",
-                      "content": "1 · Dev",
-                      "fontFamily": "$font.ui",
-                      "fontSize": 12,
-                      "fontWeight": "500"
-                    },
-                    {
-                      "type": "icon",
-                      "id": "HfO7A",
-                      "name": "Tab selector disclosure",
-                      "width": 12,
-                      "height": 12,
-                      "icon": "chevron-down",
-                      "library": "lucide",
-                      "fill": "$icon.default"
-                    }
-                  ]
                 },
                 {
                   "type": "text",
@@ -1863,6 +2635,114 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "N517F",
+              "name": "Compact bottom tab strip · keyboard first",
+              "metadata": {
+                "type": "tabs",
+                "nextShortcut": "Ctrl B → n",
+                "previousShortcut": "Ctrl B → p"
+              },
+              "width": "fill_container",
+              "height": 32,
+              "stroke": "$border.separator",
+              "strokeWidth": {
+                "top": 1
+              },
+              "gap": 4,
+              "padding": [
+                0,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hMj8W",
+                  "name": "Terminal tab 1 · selected",
+                  "height": 26,
+                  "fill": "$surface.inset",
+                  "cornerRadius": 4,
+                  "gap": 7,
+                  "padding": [
+                    0,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "PTRMx",
+                      "name": "Tab 1 agent status",
+                      "fill": "$status.working",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "X3wZq",
+                      "name": "Tab number 1",
+                      "fill": "$text.primary",
+                      "content": "1",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TsFQo",
+                      "name": "Close tab 1",
+                      "metadata": {
+                        "type": "action",
+                        "accessibleName": "Close tab 1"
+                      },
+                      "width": 20,
+                      "height": 20,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "EiSo4",
+                          "name": "Close tab icon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "x",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "I6ANq",
+                  "name": "New terminal tab",
+                  "metadata": {
+                    "type": "action",
+                    "accessibleName": "New tab"
+                  },
+                  "width": 28,
+                  "height": 26,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "t6a0RQ",
+                      "name": "Add tab icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -2060,7 +2940,7 @@
       "id": "T4zmpS",
       "x": 2600,
       "y": 0,
-      "name": "03 · Switch Tabs — Native Light",
+      "name": "03 · Compact Tabs — Native Light",
       "theme": {
         "mode": "light"
       },
@@ -2193,11 +3073,23 @@
               "id": "yCScH",
               "name": "Workspace list heading",
               "width": "fill_container",
+              "gap": 6,
               "padding": [
                 0,
                 12
               ],
+              "alignItems": "center",
               "children": [
+                {
+                  "type": "icon",
+                  "id": "s8rNQ",
+                  "name": "Lucide folders · workspaces",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "folders",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
                 {
                   "type": "text",
                   "id": "tmeI8",
@@ -2474,6 +3366,367 @@
             },
             {
               "type": "frame",
+              "id": "FA4Ta",
+              "name": "Agents · grouped runtime status",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "padding": [
+                14,
+                0,
+                0,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "IvKy4",
+                  "name": "Agents section heading",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "E90cZy",
+                      "name": "Lucide bot · agents section",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "bot",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Y0uPy2",
+                      "name": "Agents heading",
+                      "fill": "$text.secondary",
+                      "content": "Agents",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ytDpS",
+                      "name": "Agents heading flexible space",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "fgtx7",
+                      "name": "Lucide list-tree · grouped view",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "list-tree",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "text",
+                      "id": "iWMUY",
+                      "name": "Grouped view label",
+                      "fill": "$text.tertiary",
+                      "content": "Grouped",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "X3nrfg",
+                  "name": "Fix login agent · Working",
+                  "metadata": {
+                    "type": "agent-status",
+                    "state": "working",
+                    "workspace": "Fix login"
+                  },
+                  "width": "fill_container",
+                  "fill": "$row.selected",
+                  "cornerRadius": 7,
+                  "layout": "vertical",
+                  "gap": 5,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Z5ff4",
+                      "name": "Agent workspace and count",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "O8HfJ",
+                          "name": "Worktree branch · Fix login",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "git-branch",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        },
+                        {
+                          "type": "text",
+                          "id": "fqBEe",
+                          "name": "Agent workspace name",
+                          "fill": "$text.primary",
+                          "content": "Fix login",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "usZ94",
+                          "name": "Workspace count spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "Ae2w8",
+                          "name": "Agent count",
+                          "fill": "$text.tertiary",
+                          "content": "1",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yMLhz",
+                      "name": "Agent identity and current state",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "aUhZq",
+                          "name": "Codex · official OpenAI Blossom",
+                          "metadata": {
+                            "type": "agent-brand",
+                            "agent": "codex",
+                            "source": "https://openai.com/brand/",
+                            "accessibleName": "OpenAI Codex"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "assets/openai-blossom.png",
+                            "mode": "contain"
+                          },
+                          "width": 14,
+                          "height": 14
+                        },
+                        {
+                          "type": "text",
+                          "id": "caIl7",
+                          "name": "Agent name",
+                          "fill": "$text.primary",
+                          "content": "Codex",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "iPZho",
+                          "name": "Agent status spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "ss7kx",
+                          "name": "Explicit runtime status",
+                          "fill": "$status.working",
+                          "content": "Working",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "TRgPp",
+                      "name": "Agent terminal and activity",
+                      "fill": "$text.tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Dev · Reading authentication flow",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n6Gwf",
+                  "name": "corra agent · Idle",
+                  "metadata": {
+                    "type": "agent-status",
+                    "state": "idle",
+                    "workspace": "corra"
+                  },
+                  "width": "fill_container",
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "layout": "vertical",
+                  "gap": 5,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "DYBug",
+                      "name": "Agent workspace and count",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "nTkK1",
+                          "name": "Git repository · corra",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "folder-git-2",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hsfdp",
+                          "name": "Agent workspace name",
+                          "fill": "$text.primary",
+                          "content": "corra",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Wxacc",
+                          "name": "Workspace count spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "kiOUc",
+                          "name": "Agent count",
+                          "fill": "$text.tertiary",
+                          "content": "1",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "MX7Af",
+                      "name": "Agent identity and current state",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "wHCI0",
+                          "name": "Codex · official OpenAI Blossom",
+                          "metadata": {
+                            "type": "agent-brand",
+                            "agent": "codex",
+                            "source": "https://openai.com/brand/",
+                            "accessibleName": "OpenAI Codex"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "assets/openai-blossom.png",
+                            "mode": "contain"
+                          },
+                          "width": 14,
+                          "height": 14
+                        },
+                        {
+                          "type": "text",
+                          "id": "ay7Z7",
+                          "name": "Agent name",
+                          "fill": "$text.primary",
+                          "content": "Codex",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "D0W4GI",
+                          "name": "Agent status spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "TK9RG",
+                          "name": "Explicit runtime status",
+                          "fill": "$status.idle",
+                          "content": "Idle",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "L9slOK",
+                      "name": "Agent terminal and activity",
+                      "fill": "$text.tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Dev · Ready for a task",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
               "id": "VdgPM",
               "name": "Sidebar flexible space",
               "width": "fill_container",
@@ -2604,47 +3857,6 @@
                   "fontWeight": "600"
                 },
                 {
-                  "type": "frame",
-                  "id": "NZXt2",
-                  "name": "Current tab selector",
-                  "metadata": {
-                    "type": "action",
-                    "tooltip": "Switch Tab",
-                    "accessibleName": "Current tab: 1, Dev. Switch tab"
-                  },
-                  "height": 28,
-                  "fill": "$surface.inset",
-                  "cornerRadius": 6,
-                  "gap": 6,
-                  "padding": [
-                    0,
-                    7
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "cuMaQ",
-                      "name": "Current tab label",
-                      "fill": "$text.primary",
-                      "content": "1 · Dev",
-                      "fontFamily": "$font.ui",
-                      "fontSize": 12,
-                      "fontWeight": "500"
-                    },
-                    {
-                      "type": "icon",
-                      "id": "PEWtk",
-                      "name": "Tab selector disclosure",
-                      "width": 12,
-                      "height": 12,
-                      "icon": "chevron-down",
-                      "library": "lucide",
-                      "fill": "$icon.default"
-                    }
-                  ]
-                },
-                {
                   "type": "text",
                   "id": "QDbJP",
                   "name": "Current checkout path",
@@ -2760,313 +3972,170 @@
                   "fontWeight": "normal"
                 }
               ]
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "QESF5",
-          "layoutPosition": "absolute",
-          "x": 337,
-          "y": 48,
-          "name": "Existing tabs dropdown",
-          "metadata": {
-            "type": "menu",
-            "accessibleName": "Tabs in Fix login",
-            "notes": "Selection changes local viewed tab; restore its saved active pane without creating a tab."
-          },
-          "width": 272,
-          "fill": "$surface.elevated",
-          "cornerRadius": 10,
-          "stroke": "$border.content",
-          "strokeWidth": 1,
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "$shadow.floating",
-            "offset": {
-              "x": 0,
-              "y": 8
-            },
-            "blur": 24
-          },
-          "layout": "vertical",
-          "gap": 2,
-          "padding": 8,
-          "children": [
-            {
-              "type": "frame",
-              "id": "gF8rh",
-              "name": "Tab picker context",
-              "width": "fill_container",
-              "height": 28,
-              "padding": [
-                0,
-                8
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "BCtcF",
-                  "name": "Tab picker workspace context",
-                  "fill": "$text.secondary",
-                  "content": "Fix login · Tabs",
-                  "fontFamily": "$font.ui",
-                  "fontSize": 12,
-                  "fontWeight": "500"
-                }
-              ]
             },
             {
               "type": "frame",
-              "id": "G8IA3",
-              "name": "Dev existing tab option",
+              "id": "g7JeH9",
+              "name": "Compact bottom tab strip · keyboard first",
               "metadata": {
-                "type": "tab",
-                "tabId": "tab-1",
-                "selected": true,
-                "accessibleName": "Dev, 3 panes, selected"
+                "type": "tabs",
+                "nextShortcut": "Ctrl B → n",
+                "previousShortcut": "Ctrl B → p"
               },
               "width": "fill_container",
-              "height": 36,
-              "fill": "$surface.inset",
-              "cornerRadius": 6,
-              "gap": 9,
-              "padding": [
-                0,
-                8
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "j4yXSP",
-                  "name": "Dev tab index",
-                  "fill": "$text.secondary",
-                  "content": "1",
-                  "fontFamily": "$font.mono",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "U7sTWC",
-                  "name": "Dev tab name",
-                  "fill": "$text.primary",
-                  "content": "Dev",
-                  "fontFamily": "$font.ui",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
-                {
-                  "type": "frame",
-                  "id": "C9IH3",
-                  "name": "Dev option spacer",
-                  "width": "fill_container",
-                  "height": 1
-                },
-                {
-                  "type": "icon",
-                  "id": "GHkGG",
-                  "name": "Dev pane count icon",
-                  "width": 13,
-                  "height": 13,
-                  "icon": "panels-top-left",
-                  "library": "lucide",
-                  "fill": "$icon.default"
-                },
-                {
-                  "type": "text",
-                  "id": "tzZtL",
-                  "name": "Dev pane count",
-                  "fill": "$text.secondary",
-                  "content": "1",
-                  "fontFamily": "$font.ui",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "icon",
-                  "id": "y83Uhp",
-                  "name": "Dev selection mark",
-                  "width": 13,
-                  "height": 13,
-                  "icon": "check",
-                  "library": "lucide",
-                  "fill": "$action.accent"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "JJruG",
-              "name": "Server existing tab option",
-              "metadata": {
-                "type": "tab",
-                "tabId": "tab-2",
-                "selected": false,
-                "accessibleName": "Server, 1 panes"
+              "height": 32,
+              "stroke": "$border.separator",
+              "strokeWidth": {
+                "top": 1
               },
-              "width": "fill_container",
-              "height": 36,
-              "fill": "#00000000",
-              "cornerRadius": 6,
-              "gap": 9,
+              "gap": 4,
               "padding": [
                 0,
-                8
+                10
               ],
               "alignItems": "center",
               "children": [
                 {
-                  "type": "text",
-                  "id": "zVcqJ",
-                  "name": "Server tab index",
-                  "fill": "$text.secondary",
-                  "content": "2",
-                  "fontFamily": "$font.mono",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "LF8gs",
-                  "name": "Server tab name",
-                  "fill": "$text.primary",
-                  "content": "Server",
-                  "fontFamily": "$font.ui",
-                  "fontSize": 13,
-                  "fontWeight": "normal"
+                  "type": "frame",
+                  "id": "MgonS",
+                  "name": "Terminal tab 1 · selected",
+                  "height": 26,
+                  "fill": "$surface.inset",
+                  "cornerRadius": 4,
+                  "gap": 7,
+                  "padding": [
+                    0,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "cuXSX",
+                      "name": "Tab 1 agent status",
+                      "fill": "$status.working",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "QNMBH",
+                      "name": "Tab number 1",
+                      "fill": "$text.primary",
+                      "content": "1",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Y6WRj",
+                      "name": "Close tab 1",
+                      "metadata": {
+                        "type": "action",
+                        "accessibleName": "Close tab 1"
+                      },
+                      "width": 20,
+                      "height": 20,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "qxV9p",
+                          "name": "Close tab icon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "x",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "type": "frame",
-                  "id": "t6g0g",
-                  "name": "Server option spacer",
-                  "width": "fill_container",
-                  "height": 1
-                },
-                {
-                  "type": "icon",
-                  "id": "MCu3T",
-                  "name": "Server pane count icon",
-                  "width": 13,
-                  "height": 13,
-                  "icon": "panels-top-left",
-                  "library": "lucide",
-                  "fill": "$icon.default"
-                },
-                {
-                  "type": "text",
-                  "id": "Xkysu",
-                  "name": "Server pane count",
-                  "fill": "$text.secondary",
-                  "content": "1",
-                  "fontFamily": "$font.ui",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "icon",
-                  "id": "dHhYv",
-                  "name": "Server selection mark",
-                  "width": 13,
-                  "height": 13,
-                  "icon": "check",
-                  "library": "lucide",
-                  "fill": "#00000000"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "JjxGy",
-              "name": "Tab shortcuts separator",
-              "width": "fill_container",
-              "height": 1,
-              "fill": "$border.separator"
-            },
-            {
-              "type": "frame",
-              "id": "ZzCMX",
-              "name": "Next Tab tab menu action",
-              "width": "fill_container",
-              "height": 28,
-              "gap": 8,
-              "padding": [
-                0,
-                8
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "m2MoMu",
-                  "name": "Next Tab tab menu label",
-                  "fill": "$text.primary",
-                  "content": "Next Tab",
-                  "fontFamily": "$font.ui",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
+                  "id": "Ij4AR",
+                  "name": "Terminal tab 2",
+                  "height": 26,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 7,
+                  "padding": [
+                    0,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "jPucA",
+                      "name": "Tab 2 agent status",
+                      "fill": "$status.idle",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "lIHl8",
+                      "name": "Tab number 2",
+                      "fill": "$text.primary",
+                      "content": "2",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sBvFe",
+                      "name": "Close tab 2",
+                      "metadata": {
+                        "type": "action",
+                        "accessibleName": "Close tab 2"
+                      },
+                      "width": 20,
+                      "height": 20,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "W3YTS",
+                          "name": "Close tab icon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "x",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "type": "frame",
-                  "id": "awdM5",
-                  "name": "Next Tab tab menu spacer",
-                  "width": "fill_container",
-                  "height": 1
-                },
-                {
-                  "type": "text",
-                  "id": "X30gT0",
-                  "name": "Next Tab tab menu binding",
-                  "fill": "$text.secondary",
-                  "content": "Ctrl B → n",
-                  "fontFamily": "$font.ui",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "Y70qNU",
-              "name": "Previous Tab tab menu action",
-              "width": "fill_container",
-              "height": 28,
-              "gap": 8,
-              "padding": [
-                0,
-                8
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "vNVm9",
-                  "name": "Previous Tab tab menu label",
-                  "fill": "$text.primary",
-                  "content": "Previous Tab",
-                  "fontFamily": "$font.ui",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "gMoE0",
-                  "name": "Previous Tab tab menu spacer",
-                  "width": "fill_container",
-                  "height": 1
-                },
-                {
-                  "type": "text",
-                  "id": "JMewT",
-                  "name": "Previous Tab tab menu binding",
-                  "fill": "$text.secondary",
-                  "content": "Ctrl B → p",
-                  "fontFamily": "$font.ui",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
+                  "id": "bMuw0",
+                  "name": "New terminal tab",
+                  "metadata": {
+                    "type": "action",
+                    "accessibleName": "New tab"
+                  },
+                  "width": 28,
+                  "height": 26,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "ji4mY",
+                      "name": "Add tab icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
                 }
               ]
             }
@@ -3212,11 +4281,23 @@
               "id": "KqiVA",
               "name": "Workspace list heading",
               "width": "fill_container",
+              "gap": 6,
               "padding": [
                 0,
                 12
               ],
+              "alignItems": "center",
               "children": [
+                {
+                  "type": "icon",
+                  "id": "eFCe7",
+                  "name": "Lucide folders · workspaces",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "folders",
+                  "library": "lucide",
+                  "fill": "$icon.default"
+                },
                 {
                   "type": "text",
                   "id": "YIGnu",
@@ -3493,6 +4574,367 @@
             },
             {
               "type": "frame",
+              "id": "Trxgf",
+              "name": "Agents · grouped runtime status",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "padding": [
+                14,
+                0,
+                0,
+                0
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "a0d3Hp",
+                  "name": "Agents section heading",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "wJxLT",
+                      "name": "Lucide bot · agents section",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "bot",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "text",
+                      "id": "aMgFQ",
+                      "name": "Agents heading",
+                      "fill": "$text.secondary",
+                      "content": "Agents",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rEwjX",
+                      "name": "Agents heading flexible space",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "s1BOX",
+                      "name": "Lucide list-tree · grouped view",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "list-tree",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    },
+                    {
+                      "type": "text",
+                      "id": "qiem4",
+                      "name": "Grouped view label",
+                      "fill": "$text.tertiary",
+                      "content": "Grouped",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "p4GMXr",
+                  "name": "Fix login agent · Working",
+                  "metadata": {
+                    "type": "agent-status",
+                    "state": "working",
+                    "workspace": "Fix login"
+                  },
+                  "width": "fill_container",
+                  "fill": "$row.selected",
+                  "cornerRadius": 7,
+                  "layout": "vertical",
+                  "gap": 5,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "P2Yes",
+                      "name": "Agent workspace and count",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "T5ymEc",
+                          "name": "Worktree branch · Fix login",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "git-branch",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Y7yYx",
+                          "name": "Agent workspace name",
+                          "fill": "$text.primary",
+                          "content": "Fix login",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K2R6b",
+                          "name": "Workspace count spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "Rfepo",
+                          "name": "Agent count",
+                          "fill": "$text.tertiary",
+                          "content": "1",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wIe46",
+                      "name": "Agent identity and current state",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "J1q4aA",
+                          "name": "Codex · official OpenAI Blossom",
+                          "metadata": {
+                            "type": "agent-brand",
+                            "agent": "codex",
+                            "source": "https://openai.com/brand/",
+                            "accessibleName": "OpenAI Codex"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "assets/openai-blossom.png",
+                            "mode": "contain"
+                          },
+                          "width": 14,
+                          "height": 14
+                        },
+                        {
+                          "type": "text",
+                          "id": "qlYTe",
+                          "name": "Agent name",
+                          "fill": "$text.primary",
+                          "content": "Codex",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "abEaW",
+                          "name": "Agent status spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "G2cSE",
+                          "name": "Explicit runtime status",
+                          "fill": "$status.working",
+                          "content": "Working",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "yQmMm",
+                      "name": "Agent terminal and activity",
+                      "fill": "$text.tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Dev · Reading authentication flow",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pQ3lO",
+                  "name": "corra agent · Idle",
+                  "metadata": {
+                    "type": "agent-status",
+                    "state": "idle",
+                    "workspace": "corra"
+                  },
+                  "width": "fill_container",
+                  "fill": "#00000000",
+                  "cornerRadius": 7,
+                  "layout": "vertical",
+                  "gap": 5,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "N4t9D",
+                      "name": "Agent workspace and count",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "lviAE",
+                          "name": "Git repository · corra",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "folder-git-2",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        },
+                        {
+                          "type": "text",
+                          "id": "vB0KX",
+                          "name": "Agent workspace name",
+                          "fill": "$text.primary",
+                          "content": "corra",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "eeEYX",
+                          "name": "Workspace count spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "PTQkA",
+                          "name": "Agent count",
+                          "fill": "$text.tertiary",
+                          "content": "1",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hON2D",
+                      "name": "Agent identity and current state",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "hmojF",
+                          "name": "Codex · official OpenAI Blossom",
+                          "metadata": {
+                            "type": "agent-brand",
+                            "agent": "codex",
+                            "source": "https://openai.com/brand/",
+                            "accessibleName": "OpenAI Codex"
+                          },
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "assets/openai-blossom.png",
+                            "mode": "contain"
+                          },
+                          "width": 14,
+                          "height": 14
+                        },
+                        {
+                          "type": "text",
+                          "id": "aB8Kg",
+                          "name": "Agent name",
+                          "fill": "$text.primary",
+                          "content": "Codex",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "BTL7J",
+                          "name": "Agent status spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        },
+                        {
+                          "type": "text",
+                          "id": "bv1O9",
+                          "name": "Explicit runtime status",
+                          "fill": "$status.idle",
+                          "content": "Idle",
+                          "fontFamily": "$font.ui",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "Egos8",
+                      "name": "Agent terminal and activity",
+                      "fill": "$text.tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Dev · Ready for a task",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
               "id": "HRuKr",
               "name": "Sidebar flexible space",
               "width": "fill_container",
@@ -3665,47 +5107,6 @@
                   "fontWeight": "600"
                 },
                 {
-                  "type": "frame",
-                  "id": "V6Oi8",
-                  "name": "Current tab selector",
-                  "metadata": {
-                    "type": "action",
-                    "tooltip": "Switch Tab",
-                    "accessibleName": "Current tab: 1, Dev. Switch tab"
-                  },
-                  "height": 28,
-                  "fill": "$surface.inset",
-                  "cornerRadius": 6,
-                  "gap": 6,
-                  "padding": [
-                    0,
-                    7
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "zSPGj",
-                      "name": "Current tab label",
-                      "fill": "$text.primary",
-                      "content": "1 · Dev",
-                      "fontFamily": "$font.ui",
-                      "fontSize": 12,
-                      "fontWeight": "500"
-                    },
-                    {
-                      "type": "icon",
-                      "id": "j0cdr",
-                      "name": "Tab selector disclosure",
-                      "width": 12,
-                      "height": 12,
-                      "icon": "chevron-down",
-                      "library": "lucide",
-                      "fill": "$icon.default"
-                    }
-                  ]
-                },
-                {
                   "type": "text",
                   "id": "bSgBV",
                   "name": "Current checkout path",
@@ -3819,6 +5220,114 @@
                   "fontFamily": "$font.mono",
                   "fontSize": 13,
                   "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "X5LGKr",
+              "name": "Compact bottom tab strip · keyboard first",
+              "metadata": {
+                "type": "tabs",
+                "nextShortcut": "Ctrl B → n",
+                "previousShortcut": "Ctrl B → p"
+              },
+              "width": "fill_container",
+              "height": 32,
+              "stroke": "$border.separator",
+              "strokeWidth": {
+                "top": 1
+              },
+              "gap": 4,
+              "padding": [
+                0,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "BSl1r",
+                  "name": "Terminal tab 1 · selected",
+                  "height": 26,
+                  "fill": "$surface.inset",
+                  "cornerRadius": 4,
+                  "gap": 7,
+                  "padding": [
+                    0,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "VwOaJ",
+                      "name": "Tab 1 agent status",
+                      "fill": "$status.working",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "b25eyH",
+                      "name": "Tab number 1",
+                      "fill": "$text.primary",
+                      "content": "1",
+                      "fontFamily": "$font.ui",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NEQJt",
+                      "name": "Close tab 1",
+                      "metadata": {
+                        "type": "action",
+                        "accessibleName": "Close tab 1"
+                      },
+                      "width": 20,
+                      "height": 20,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "FdRp6",
+                          "name": "Close tab icon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "x",
+                          "library": "lucide",
+                          "fill": "$icon.default"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QKeVY",
+                  "name": "New terminal tab",
+                  "metadata": {
+                    "type": "action",
+                    "accessibleName": "New tab"
+                  },
+                  "width": 28,
+                  "height": 26,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "PHsB4",
+                      "name": "Add tab icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "$icon.default"
+                    }
+                  ]
                 }
               ]
             }
