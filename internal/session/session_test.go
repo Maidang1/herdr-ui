@@ -22,6 +22,9 @@ type fakeServer struct {
 	calls           int
 	lifecycle       net.Conn
 	agentSubs       []net.Conn
+	scrollSubs      []net.Conn
+	scrollCalls     []uint64
+	scrollBlock     chan struct{}
 	batches         [][]string
 	result          string
 	rejectAgentOnce bool
@@ -47,6 +50,9 @@ func (f *fakeServer) target(t *testing.T) herdr.Target {
 			f.lifecycle.Close()
 		}
 		for _, c := range f.agentSubs {
+			c.Close()
+		}
+		for _, c := range f.scrollSubs {
 			c.Close()
 		}
 		f.mu.Unlock()
@@ -86,13 +92,19 @@ func (f *fakeServer) handle(c net.Conn) {
 			}
 			json.Unmarshal(req.Params, &params)
 			var ids []string
+			isScroll := false
 			for _, sub := range params.Subscriptions {
 				if sub.Type == "pane.agent_status_changed" {
 					ids = append(ids, sub.PaneID)
 				}
+				if sub.Type == "pane.scroll_changed" {
+					isScroll = true
+				}
 			}
 			f.mu.Lock()
-			if len(ids) == 0 {
+			if isScroll {
+				f.scrollSubs = append(f.scrollSubs, c)
+			} else if len(ids) == 0 {
 				f.lifecycle = c
 			} else {
 				f.batches = append(f.batches, ids)
@@ -130,6 +142,21 @@ func (f *fakeServer) handle(c net.Conn) {
 				<-block
 			}
 			fmt.Fprintf(c, "{\"id\":%q,\"result\":%s}\n", req.ID, result)
+		case "pane.scroll":
+			var params struct {
+				PaneID string `json:"pane_id"`
+				Offset uint64 `json:"offset_from_bottom"`
+			}
+			json.Unmarshal(req.Params, &params)
+			f.mu.Lock()
+			f.scrollCalls = append(f.scrollCalls, params.Offset)
+			n := len(f.scrollCalls)
+			block := f.scrollBlock
+			f.mu.Unlock()
+			if n == 1 && block != nil {
+				<-block
+			}
+			fmt.Fprintf(c, "{\"id\":%q,\"result\":{\"type\":\"pane_info\",\"pane\":{\"pane_id\":%q,\"terminal_id\":\"term\",\"scroll\":{\"offset_from_bottom\":%d,\"max_offset_from_bottom\":100,\"viewport_rows\":24}}}}\n", req.ID, params.PaneID, params.Offset)
 		}
 	}
 }

@@ -2,7 +2,7 @@
 
 Herdr 的原生桌面客户端，第一版面向本机 macOS，使用 **Go + mygo 原生 UI与内置终端插件**。展示已有工作区、工作树、代理状态与终端，支持标签、分屏和 Herdr prefix 模式。
 
-目前已实现 M1 事件驱动的只读状态窗口：展示真实工作区、工作树、标签、面板和代理状态，支持窗口本地选择、断线保留旧视图与重连。默认启动该窗口；M0 终端验证入口继续保留。M0 人工待验项见 [M0 验收记录](docs/m0-validation.md)，M1 边界见 [M1 验收记录](docs/m1-validation.md)。
+目前已实现 M2 单终端：在事件驱动的工作区、工作树、标签和代理状态窗口中，显示当前所选 pane 的真实终端。支持窗口本地选择、终端重试、服务端滚动、状态断线保留旧视图与连接。M0 验证入口继续保留；阶段证据见 [M0](docs/m0-validation.md)、[M1](docs/m1-validation.md)、[M2 验收记录](docs/m2-validation.md)。
 
 - [设计与实现方案](docs/implementation.md)：唯一主文档，包含第一版范围、界面、架构、接口、事件同步、终端、快捷键、颜色 token 与验收步骤。
 - [第一版设计稿](docs.pen/new.pen)：Workspaces、Split Panes、Switch Tabs、Shortcuts Reference 四张画板，使用 Pencil 打开。
@@ -20,14 +20,14 @@ Herdr 的原生桌面客户端，第一版面向本机 macOS，使用 **Go + myg
 ```sh
 make test          # 纯 Go 契约测试与 vet，不加载终端动态库
 make build         # CGO_ENABLED=0，输出到 bin/
-make run           # M1 只读状态窗口，不占用终端 owner
+make run           # M2 窗口，连接当前选择的一个终端
 make probe         # 只读检查当前 Herdr、配置与布局，不占用终端
 make window        # 本地 /bin/cat 输入测试窗口，不连接 Herdr
 make integration   # 临时独立服务 + 真实插件 + 原生窗口，结束后清理
 make package       # 固定版本 mygo CLI，输出含原生库的本地签名 .app
 ```
 
-默认窗口按事件同步，不执行修改会话的 RPC，也不启动 attach。可使用 `./bin/herdr-ui -socket /path/to/herdr.sock` 指定目标。
+默认窗口按事件同步，并 attach 当前选择的一个终端。普通工作区/标签/pane 选择保持窗口本地，不修改 Herdr 全局焦点；滚动通过显式目标 `pane.scroll` 更新服务端视口。可使用 `./bin/herdr-ui -socket /path/to/herdr.sock` 指定目标。
 
 M0 验证窗口连接某个已有终端：先运行 `make probe` 取得真实 `terminal_id`，然后执行：
 
@@ -36,7 +36,7 @@ M0 验证窗口连接某个已有终端：先运行 `make probe` 取得真实 `t
 ./bin/herdr-ui -socket /path/to/herdr.sock -terminal '<terminal_id>'
 ```
 
-不会自动 takeover、创建工作区或启动守护进程。已有 owner 时由 attach 拒绝并在终端显示原因；M0 窗口只验证插件，业务 prefix 动作尚未接入。JSON 探针不会周期轮询；集成测试中的短时等待仅用于验收。
+不会自动 takeover、创建工作区或启动守护进程。已有 owner 时 attach 拒绝并保留其诊断画面，提供 Retry；关闭 GUI 只释放本应用的 attach。每次只显示所选 pane 的一个终端，分屏布局和业务 prefix 动作将在 M3 接入。JSON 探针不会周期轮询；集成测试中的短时等待仅用于验收。
 
 开发期 `go run`/`make window` 首次可能下载插件的原生库；`make package` 把校验后的 `libghostty-vt` 放入应用资源，打包应用不在启动时下载。集成测试会在 `/tmp` 创建自己的隔离 Herdr 服务与终端，绝不关闭用户已有会话。
 

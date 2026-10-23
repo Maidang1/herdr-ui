@@ -14,6 +14,7 @@ type View struct {
 	Stale                                           bool
 	Error                                           string
 	Revision                                        uint64
+	TargetID, Epoch                                 uint64
 	Updated                                         time.Time
 	Rows                                            []WorkspaceRow
 	WorkspaceID, WorkspaceName, Path, TabID, PaneID string
@@ -34,9 +35,11 @@ type TabRow struct {
 type PaneRow struct {
 	ID, Title, Agent, Status, TerminalID, CWD string
 	Selected                                  bool
+	Scroll                                    session.ScrollInfo
 }
 
 type App struct {
+	version           uint64
 	publication       session.PublishedSnapshot
 	snapshot          *session.Snapshot
 	workspaceID       string
@@ -52,6 +55,7 @@ func New() *App {
 
 // Update replaces authoritative data while preserving valid local selections.
 func (a *App) Update(p session.PublishedSnapshot) {
+	a.version++
 	if a.tabs == nil {
 		a.tabs = make(map[string]string)
 		a.panes = make(map[string]string)
@@ -176,6 +180,7 @@ func focusedTab(s *session.Snapshot, w session.Workspace, tabs []session.Tab) st
 func (a *App) SelectWorkspace(id string) {
 	if a.snapshot != nil {
 		if _, ok := a.snapshot.Workspace(id); ok {
+			a.version++
 			a.workspaceID = id
 			a.rememberCurrent()
 		}
@@ -184,6 +189,7 @@ func (a *App) SelectWorkspace(id string) {
 func (a *App) SelectTab(id string) {
 	if a.snapshot != nil {
 		if t, ok := a.snapshot.Tab(id); ok && t.WorkspaceID == a.workspaceID {
+			a.version++
 			a.tabs[t.WorkspaceID] = id
 			a.rememberCurrent()
 		}
@@ -192,6 +198,7 @@ func (a *App) SelectTab(id string) {
 func (a *App) SelectPane(id string) {
 	if a.snapshot != nil {
 		if p, ok := a.snapshot.Pane(id); ok {
+			a.version++
 			a.workspaceID = p.WorkspaceID
 			a.tabs[p.WorkspaceID] = p.TabID
 			a.panes[p.TabID] = id
@@ -200,13 +207,17 @@ func (a *App) SelectPane(id string) {
 	}
 }
 
+// Version changes only when the authoritative publication or local selection
+// changes. Terminal-only repaint must not rebuild the workspace projection.
+func (a *App) Version() uint64 { return a.version }
+
 func paneRow(p session.Pane, selected bool) PaneRow {
-	return PaneRow{ID: p.ID, Title: p.Title, Agent: p.Agent, Status: p.Status, TerminalID: p.TerminalID, CWD: p.CWD, Selected: selected}
+	return PaneRow{ID: p.ID, Title: p.Title, Agent: p.Agent, Status: p.Status, TerminalID: p.TerminalID, CWD: p.CWD, Selected: selected, Scroll: p.Scroll}
 }
 
 // View returns independently owned slices, including nested pane rows.
 func (a *App) View() View {
-	v := View{State: a.publication.State, Stale: a.publication.Stale, Error: a.publication.Error, Revision: a.publication.Revision, Updated: a.publication.Updated}
+	v := View{State: a.publication.State, Stale: a.publication.Stale, Error: a.publication.Error, Revision: a.publication.Revision, Updated: a.publication.Updated, TargetID: a.publication.TargetID, Epoch: a.publication.Epoch}
 	if a.snapshot == nil {
 		return v
 	}

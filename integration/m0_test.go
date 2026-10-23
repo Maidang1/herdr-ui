@@ -132,11 +132,14 @@ func TestDirectAttach(t *testing.T) {
 	if err := first.Close(); err != nil {
 		t.Fatal(err)
 	}
+	select {
+	case <-first.Done():
+	case <-time.After(3 * time.Second):
+		t.Fatal("closed local attach process did not exit")
+	}
 	// Closing the plugin must leave the same remote terminal alive and attachable.
-	third := newTerm()
+	third := reattach(t, newTerm, "M0_PROMPT_READY>")
 	defer third.Close()
-	third.Resize(91, 27)
-	waitScreen(t, third, "M0_PROMPT_READY>")
 	third.Send([]byte("printf '\\n\\1150_SURVIVED_CLOSE\\n'\r"))
 	waitScreen(t, third, "M0_SURVIVED_CLOSE")
 	third.Send([]byte("stty raw -echo; printf '\\n\\1150_RAW_READY\\n'; od -An -tx1 -N2; stty sane\r"))
@@ -253,6 +256,41 @@ func waitScreen(t *testing.T, term *terminal.Terminal, marker string) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	t.Fatalf("missing %q; isolated screen=%q", marker, term.Text())
+}
+
+// A server can observe the local process's socket EOF on a later event-loop
+// turn. Only this test probe retries owner rejection after explicit local close;
+// application reconnect remains an explicit Retry and never uses takeover.
+func reattach(t *testing.T, create func() *terminal.Terminal, marker string) *terminal.Terminal {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	var screen string
+	for time.Now().Before(deadline) {
+		term := create()
+		term.Resize(91, 27)
+		for time.Now().Before(deadline) {
+			screen = term.Text()
+			if strings.Contains(screen, marker) {
+				return term
+			}
+			select {
+			case <-term.Done():
+				screen = term.Text()
+				term.Close()
+				if !strings.Contains(screen, "already has an attached client") {
+					t.Fatalf("unexpected reattach failure: %q", screen)
+				}
+				time.Sleep(20 * time.Millisecond)
+				goto retry
+			default:
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+		term.Close()
+	retry:
+	}
+	t.Fatalf("server did not release prior attach owner: %q", screen)
+	return nil
 }
 
 func wait(t *testing.T, timeout time.Duration, ok func() bool) {

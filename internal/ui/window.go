@@ -13,10 +13,14 @@ import (
 )
 
 type Window struct {
-	app      *app.App
-	retry    func()
-	hidden   bool
-	expanded map[string]bool
+	app               *app.App
+	retry             func()
+	hidden            bool
+	expanded          map[string]bool
+	terminal          *terminalPanel
+	projected         app.View
+	projectionVersion uint64
+	projectionValid   bool
 }
 
 func New(a *app.App, retry func()) *Window {
@@ -25,7 +29,12 @@ func New(a *app.App, retry func()) *Window {
 
 func (w *Window) View(c *native.Context) {
 	p := design.Colors(c.Theme().Dark)
-	v := w.app.View()
+	if !w.projectionValid || w.projectionVersion != w.app.Version() {
+		w.projected = w.app.View()
+		w.projectionVersion = w.app.Version()
+		w.projectionValid = true
+	}
+	v := w.projected
 	root := native.Row(c).Fill().Padding(8).Gap(8).AlignItems(native.Stretch).TextColor(p.Text).FontSize(13)
 	root.LinearGradient(native.LinearGradient{Angle: 180, Stops: []native.GradientStop{{Color: p.Top, At: 0}, {Color: p.Middle, At: .52}, {Color: p.Bottom, At: 1}}})
 	root.Children(func() {
@@ -184,6 +193,9 @@ func (w *Window) header(c *native.Context, v app.View, p design.Palette) {
 
 func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 	if len(v.Rows) == 0 {
+		if w.terminal != nil {
+			w.DetachTerminal()
+		}
 		title, detail := "Connecting to Herdr…", "Waiting for the local session."
 		if v.State == session.Ready {
 			title = "No workspaces"
@@ -196,6 +208,10 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 			detail = "Your session will appear when the connection is restored."
 		}
 		native.Column(c).Grow(1).FillWidth().Center().Gap(8).Padding(24).Children(func() { native.Text(c, title).FontSize(16).Bold(); native.Text(c, detail).TextColor(p.Secondary) })
+		return
+	}
+	if w.terminal != nil {
+		w.terminalContent(c, v, p)
 		return
 	}
 	native.Scroll(c).Grow(1).Children(func() {

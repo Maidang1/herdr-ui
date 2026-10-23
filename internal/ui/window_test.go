@@ -80,3 +80,29 @@ func TestWindowRetryAndEmptyStates(t *testing.T) {
 		t.Fatal("Retry did not dispatch")
 	}
 }
+
+func TestProjectionCacheFollowsLocalWorkspaceSelection(t *testing.T) {
+	s, err := session.DecodeSnapshot([]byte(`{"type":"session_snapshot","snapshot":{"version":"test","protocol":22,"workspaces":[{"workspace_id":"a","label":"One"},{"workspace_id":"b","label":"Two"}],"tabs":[{"workspace_id":"a","tab_id":"ta"},{"workspace_id":"b","tab_id":"tb"}],"panes":[{"pane_id":"pa","terminal_id":"a","workspace_id":"a","tab_id":"ta","title":"First pane"},{"pane_id":"pb","terminal_id":"b","workspace_id":"b","tab_id":"tb","title":"Second pane"}],"agents":[],"layouts":[]}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := app.New()
+	a.Update(session.PublishedSnapshot{State: session.Ready, Snapshot: s})
+	w := New(a, nil)
+	tt := native.NewTester(w.View, 1200, 800)
+	if tt.HasText("Second pane") {
+		t.Fatal("unselected workspace rendered pane")
+	}
+	if err := tt.Click("Two · Unknown"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !tt.HasText("Second pane") {
+		t.Fatal("local selection did not invalidate projection")
+	}
+	before := a.Version()
+	tt.Frame()
+	if a.Version() != before {
+		t.Fatal("paint mutated local selection")
+	}
+}

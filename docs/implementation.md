@@ -1,6 +1,6 @@
 # Herdr UI · 第一版设计与实现方案
 
-> 更新：2026-10-23。本文是第一版唯一的设计与实现规格，设计稿为 [docs.pen/new.pen](../docs.pen/new.pen)。M1 只读状态窗口已实现，见 [M1 验收记录](m1-validation.md)。M0 的终端能力验证及尚未通过的人工门槛见 [M0 验收记录](m0-validation.md)。M2–M4 尚未实现。
+> 更新：2026-10-23。本文是第一版唯一的设计与实现规格，设计稿为 [docs.pen/new.pen](../docs.pen/new.pen)。M2 已在 M1 状态窗口上接入当前选择的单终端，见 [M2 验收记录](m2-validation.md)。M0 尚未通过的人工门槛继续保留在 [M0 验收记录](m0-validation.md)。M3–M4 尚未实现。
 
 [范围](#scope) · [界面](#ui) · [架构](#architecture) · [同步](#sync) · [动作与布局](#actions) · [终端](#terminal) · [快捷键](#input) · [生命周期](#lifecycle) · [颜色](#colors) · [实施与验收](#acceptance)
 
@@ -616,7 +616,7 @@ JSON重连保留当前目标仍存活的插件实例；新快照映射不符再�
 
 自动测试集中在协议分帧与超限、订阅确认前后竞态、dirty 刷新合并、旧代次丢弃、选择失效、RPC 结果未知、pane/terminal ID 替换、同名代理的 pane 隔离、缺少分支时的真实路径副行、布局路径、prefix 转义和插件生命周期。终端网格、中文输入法、分屏拖动和原生材质用真实窗口验收。M0 阶段暴露接口不足时先补最小适配；不借机扩展产品功能。
 
-编码从M0开始，用可运行验证结果更新本文。当前 `cmd/herdr-ui` 默认展示 M1 只读状态窗口，显式 `-terminal` / `-local-fixture` 保留 M0 插件验证；`cmd/m0-probe` 为只读协议/绑定探针。Session 已有 Start/Latest/Refresh/Close 与订阅状态机，App 已有本地选择投影；Execute、终端 host 及布局修改留待 M2/M3。M0 原生 IME、鼠标/滚动与完整 resolver 对照仍须通过验收，不据自动测试宣称它们兼容。
+编码从M0开始，用可运行验证结果更新本文。当前 `cmd/herdr-ui` 默认通过 terminalhost 显示当前选择的一个真实终端，显式 `-terminal` / `-local-fixture` 保留 M0 验证；`cmd/m0-probe` 为只读协议/绑定探针。Session 已有 Start/Latest/Refresh/Close、订阅状态机及仅支持 Scroll 的 Execute；App 有本地选择和滚动位置投影。完整分屏布局动作和业务 prefix 留待 M3。M0 原生 IME、程序接管鼠标/滚动与完整 resolver 对照仍须通过验收，不据自动测试宣称它们兼容。
 
 | 测试面 | 主要场景 |
 |---|---|

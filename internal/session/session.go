@@ -47,22 +47,29 @@ type PublishedSnapshot struct {
 var targets atomic.Uint64
 
 type Session struct {
-	target          herdr.Target
-	targetID        uint64
-	mu              sync.RWMutex
-	latest          PublishedSnapshot
-	started, closed bool
-	cancel          context.CancelFunc
-	notify          func()
-	done            chan struct{}
-	refresh         chan struct{}
-	wake            chan struct{}
-	unknown         sync.Map
+	target                       herdr.Target
+	targetID                     uint64
+	mu                           sync.RWMutex
+	latest                       PublishedSnapshot
+	started, closed              bool
+	cancel                       context.CancelFunc
+	notify                       func()
+	done                         chan struct{}
+	refresh                      chan struct{}
+	wake                         chan struct{}
+	unknown                      sync.Map
+	operationMu                  sync.Mutex
+	nextOperation                uint64
+	pendingOperations            map[operationKey]*queuedOperation
+	operationOrder               []operationKey
+	operationWake                chan struct{}
+	visibleMu                    sync.Mutex
+	visiblePane, visibleTerminal string
 }
 
 func New(target herdr.Target) *Session {
 	id := targets.Add(1)
-	return &Session{target: target, targetID: id, latest: PublishedSnapshot{TargetID: id, State: Disconnected, Stale: true}, done: make(chan struct{}), refresh: make(chan struct{}, 1), wake: make(chan struct{}, 1)}
+	return &Session{target: target, targetID: id, latest: PublishedSnapshot{TargetID: id, State: Disconnected, Stale: true}, done: make(chan struct{}), refresh: make(chan struct{}, 1), wake: make(chan struct{}, 1), pendingOperations: make(map[operationKey]*queuedOperation), operationWake: make(chan struct{}, 1)}
 }
 func (s *Session) Start(ctx context.Context, notify func()) {
 	s.mu.Lock()
@@ -127,12 +134,20 @@ func (s *Session) publish(epoch uint64, state State, snapshot *Snapshot, err err
 
 func (s *Session) run(ctx context.Context) {
 	var epoch uint64
-	defer func() { s.publish(epoch, Closed, nil, nil); close(s.done) }()
+	defer func() {
+		s.mu.Lock()
+		s.closed = true
+		s.mu.Unlock()
+		s.finishPending(OperationClosed, "session closed")
+		s.publish(epoch, Closed, nil, nil)
+		close(s.done)
+	}()
 	delay := 250 * time.Millisecond
 	for ctx.Err() == nil {
 		epoch++
 		s.publish(epoch, Connecting, nil, nil)
 		err, wasReady := s.connected(ctx, epoch)
+		s.finishPending(StaleTarget, "connection epoch ended")
 		if ctx.Err() != nil {
 			return
 		}
@@ -219,7 +234,7 @@ var lifecycleTypes = []string{
 }
 
 var knownEvents = func() map[string]bool {
-	names := map[string]bool{"pane.agent_status_changed": true}
+	names := map[string]bool{"pane.agent_status_changed": true, "pane.scroll_changed": true}
 	for _, name := range lifecycleTypes {
 		names[name] = true
 		names[strings.ReplaceAll(name, ".", "_")] = true
@@ -257,18 +272,22 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 	defer lifecycle.close()
 	var agents *watcher
 	defer func() { agents.close() }()
+	var scroll *watcher
+	defer func() { scroll.close() }()
+	scrollPane, scrollTerminal := "", ""
 	var agentIDs []string
 	bound := false
 	needSnapshot := true
 	first := true
 	wasReady := false
+	lastWasOperation := false
 	referenceRetries := 0
 	failedBindings := 0
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err(), wasReady
 		}
-		for _, w := range []*watcher{lifecycle, agents} {
+		for _, w := range []*watcher{lifecycle, agents, scroll} {
 			if w != nil {
 				if failure := w.failed.Load(); failure != nil {
 					return classify(failure.err), wasReady
@@ -280,9 +299,19 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 			needSnapshot = true
 		default:
 		}
-		for _, w := range []*watcher{lifecycle, agents} {
+		for _, w := range []*watcher{lifecycle, agents, scroll} {
 			if w != nil && w.dirty.Load() {
 				needSnapshot = true
+			}
+		}
+		if wasReady && s.Latest().State == Ready && (!needSnapshot || !lastWasOperation) {
+			if q := s.takeOperation(); q != nil {
+				if err := s.execute(ctx, client, q); err != nil {
+					return classify(err), wasReady
+				}
+				needSnapshot = true
+				lastWasOperation = true
+				continue
 			}
 		}
 		if !needSnapshot {
@@ -292,12 +321,13 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 			case <-s.refresh:
 				needSnapshot = true
 			case <-s.wake:
+			case <-s.operationWake:
 			}
 			continue
 		}
 		// Only clear signals observed before the request. Readers can set dirty
 		// again while Call is in flight, and those signals survive installation.
-		for _, w := range []*watcher{lifecycle, agents} {
+		for _, w := range []*watcher{lifecycle, agents, scroll} {
 			if w != nil {
 				w.dirty.Swap(false)
 			}
@@ -323,7 +353,7 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 			return &compatibilityError{err}, wasReady
 		}
 		referenceRetries = 0
-		for _, w := range []*watcher{lifecycle, agents} {
+		for _, w := range []*watcher{lifecycle, agents, scroll} {
 			if w != nil {
 				if failure := w.failed.Load(); failure != nil {
 					return classify(failure.err), wasReady
@@ -371,7 +401,33 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 			needSnapshot = true
 			continue
 		}
+		visiblePane, visibleTerminal := s.visibleScroll()
+		if pane, ok := snapshot.Pane(visiblePane); !ok || pane.TerminalID != visibleTerminal {
+			visiblePane, visibleTerminal = "", ""
+		}
+		if visiblePane != scrollPane || visibleTerminal != scrollTerminal {
+			var next *watcher
+			if visiblePane != "" {
+				next, err = s.watch(ctx, []herdr.Subscription{{Type: "pane.scroll_changed", PaneID: visiblePane}})
+				if err != nil {
+					var remote *herdr.RemoteError
+					if errors.As(err, &remote) && remote.Code == "pane_not_found" {
+						needSnapshot = true
+						continue
+					}
+					return classify(err), wasReady
+				}
+			}
+			old := scroll
+			scroll = next
+			scrollPane, scrollTerminal = visiblePane, visibleTerminal
+			old.close()
+			needSnapshot = true
+			s.publish(epoch, Resyncing, snapshot, nil)
+			continue
+		}
 		wasReady = true
+		lastWasOperation = false
 		s.publish(epoch, Ready, snapshot, nil)
 	}
 }

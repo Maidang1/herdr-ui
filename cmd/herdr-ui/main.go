@@ -1,5 +1,5 @@
-// Herdr UI defaults to the M1 read-only session browser. Explicit terminal or
-// local-fixture flags retain the M0 capability harness. No mutation is issued.
+// Herdr UI shows the selected session pane through the M2 terminal host.
+// Explicit terminal/local-fixture flags retain the M0 capability harness.
 package main
 
 import (
@@ -90,6 +90,7 @@ func main() {
 					if err := old.Close(); err != nil {
 						log.Printf("M0 close: %v", err)
 					}
+					<-old.Done()
 					log.Print("M0 terminal closed")
 				}()
 			}
@@ -141,6 +142,7 @@ func main() {
 				ownerMu.Unlock()
 				if created != nil {
 					created.Close()
+					<-created.Done()
 				}
 				return
 			}

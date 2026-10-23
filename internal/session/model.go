@@ -26,6 +26,13 @@ type Tab struct {
 type Pane struct {
 	ID, TerminalID, WorkspaceID, TabID, CWD, Title, Agent, Status string
 	Focused                                                       bool
+	Scroll                                                        ScrollInfo
+}
+
+// ScrollInfo is server history, not the attach client's local scrollback.
+type ScrollInfo struct {
+	Offset, MaxOffset, Rows uint64
+	Known                   bool
 }
 
 // Snapshot owns all indexes and authoritative ordering. Once decoded, it is
@@ -132,6 +139,11 @@ type paneWire struct {
 	DisplayAgent          string `json:"display_agent"`
 	Status                string `json:"agent_status"`
 	Focused               bool   `json:"focused"`
+	Scroll                *struct {
+		Offset    uint64 `json:"offset_from_bottom"`
+		MaxOffset uint64 `json:"max_offset_from_bottom"`
+		Rows      uint64 `json:"viewport_rows"`
+	} `json:"scroll"`
 }
 type agentWire struct {
 	PaneID       string `json:"pane_id"`
@@ -247,6 +259,12 @@ func DecodeSnapshot(data []byte) (*Snapshot, error) {
 			return nil, fmt.Errorf("pane %q has invalid workspace/tab reference", v.ID)
 		}
 		value := Pane{ID: v.ID, TerminalID: v.TerminalID, WorkspaceID: v.WorkspaceID, TabID: v.TabID, CWD: v.CWD, Title: firstValue(v.Label, v.Title, v.TerminalTitleStripped, v.TerminalTitle, v.ID), Agent: firstValue(v.DisplayAgent, v.Agent), Status: v.Status, Focused: v.Focused}
+		if v.Scroll != nil {
+			if v.Scroll.Offset > v.Scroll.MaxOffset {
+				return nil, fmt.Errorf("pane %q has invalid scroll metrics", v.ID)
+			}
+			value.Scroll = ScrollInfo{v.Scroll.Offset, v.Scroll.MaxOffset, v.Scroll.Rows, true}
+		}
 		s.panes = append(s.panes, value)
 		s.paneIndex[value.ID] = value
 	}

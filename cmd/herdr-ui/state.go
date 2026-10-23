@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/bytedance/herdr-ui/internal/app"
 	"github.com/bytedance/herdr-ui/internal/herdr"
 	"github.com/bytedance/herdr-ui/internal/session"
+	"github.com/bytedance/herdr-ui/internal/terminalhost"
 	view "github.com/bytedance/herdr-ui/internal/ui"
 	"github.com/egoist/mygo"
 	native "github.com/egoist/mygo/ui"
@@ -33,6 +35,13 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 	defer cancel()
 	s := session.New(target)
 	a := app.New()
+	resolvedBinary := binary
+	if path, err := exec.LookPath(binary); err == nil {
+		if absolute, err := filepath.Abs(path); err == nil {
+			resolvedBinary = absolute
+		}
+	}
+	var host *terminalhost.Host
 	var closed, pending, starting, started atomic.Bool
 	var startup sync.WaitGroup
 	mygo.App.WhenReady(func() {
@@ -91,8 +100,19 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			}()
 		}
 		screen := view.New(a, start)
+		post := func(fn func()) {
+			if !closed.Load() {
+				win.Update(func() {
+					if !closed.Load() {
+						fn()
+					}
+				})
+			}
+		}
+		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll})
+		screen.ConnectTerminal(host, s, ctx, post)
 		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Content: native.View(screen.View)})
-		win.OnClosed(func() { closed.Store(true); cancel() })
+		win.OnClosed(func() { screen.DetachTerminal(); closed.Store(true); cancel() })
 		start()
 		if closeAfter > 0 {
 			time.AfterFunc(closeAfter, func() {
@@ -115,6 +135,11 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 	defer stop()
 	if err := s.Close(shutdown); err != nil {
 		log.Printf("session shutdown: %v", err)
+	}
+	if host != nil {
+		if err := host.Close(shutdown); err != nil {
+			log.Printf("terminal shutdown: %v", err)
+		}
 	}
 	finished := make(chan struct{})
 	go func() { startup.Wait(); close(finished) }()
