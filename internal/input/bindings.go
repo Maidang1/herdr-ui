@@ -1,10 +1,12 @@
-// Package input resolves the M0 key contract without initializing a terminal.
+// Package input resolves Herdr key bindings without initializing a terminal.
 package input
 
 import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,157 +16,400 @@ import (
 )
 
 // Defaults transcribed from Herdr 7c34cf2 src/config/model.rs KeysConfig.
-// Navigation/indexed overlays need a separate mode-aware parity pass.
 //
 //go:embed defaults.json
 var defaultsJSON []byte
 
-type Bindings struct {
-	Prefix  string            `json:"prefix"`
-	Source  string            `json:"source"`
-	Actions map[string]string `json:"actions"`
+// Command preserves the execution payload for a custom key binding.
+type Command struct {
+	Command     string `json:"command"`
+	Type        string `json:"type"`
+	Description string `json:"description,omitempty"`
+	Width       any    `json:"width,omitempty"`
+	Height      any    `json:"height,omitempty"`
 }
 
-// Resolve deliberately rejects unimplemented config forms instead of claiming
-// they use defaults. This is the M0 subset, not server-memory configuration.
+type Bindings struct {
+	Diagnostics []string          `json:"diagnostics,omitempty"`
+	Indices     map[string]int    `json:"indices"` // Zero-based target or command index.
+	Navigation  map[string]string `json:"navigation"`
+	Commands    []Command         `json:"commands,omitempty"`
+	Prefix      string            `json:"prefix"`
+	Source      string            `json:"source"`
+	Actions     map[string]string `json:"actions"`
+}
+
+// Resolve disables individual invalid/conflicting bindings with diagnostics.
+// Invalid TOML remains fatal; unrelated valid bindings stay available.
 func Resolve(data []byte, source string) (Bindings, error) {
-	b := Bindings{Prefix: "ctrl+b", Source: source, Actions: map[string]string{}}
+	b := Bindings{Prefix: "ctrl+b", Source: source, Actions: map[string]string{}, Indices: map[string]int{}, Navigation: map[string]string{}}
 	var config struct {
 		Keys map[string]any `toml:"keys"`
 	}
 	if err := toml.Unmarshal(data, &config); err != nil {
 		return b, fmt.Errorf("bindings %s: %w", source, err)
 	}
-	var defaults []struct {
-		Action string
-		Key    string
-	}
+	var defaults []struct{ Action, Key string }
 	if err := json.Unmarshal(defaultsJSON, &defaults); err != nil {
 		return b, err
 	}
-	known := map[string]bool{"prefix": true, "command": true}
+	known := map[string]bool{"prefix": true, "command": true, "indexed": true, "fullscreen": true}
 	for _, d := range defaults {
 		known[d.Action] = true
 	}
+	names := make([]string, 0, len(config.Keys))
 	for k := range config.Keys {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+	for _, k := range names {
 		if !known[k] {
-			return b, fmt.Errorf("bindings: unsupported keys.%s in M0 (no default fallback)", k)
+			b.diagnostic("unknown keys.%s; ignoring field", k)
 		}
 	}
-	if commands, ok := config.Keys["command"]; ok {
-		rows, ok := commands.([]any)
-		if !ok {
-			return b, fmt.Errorf("keys.command must be an array of tables")
-		}
-		for i, raw := range rows {
-			row, ok := raw.(map[string]any)
-			if !ok {
-				return b, fmt.Errorf("keys.command[%d] must be a table", i)
-			}
-			text, ok := row["command"].(string)
-			if !ok || strings.TrimSpace(text) == "" {
-				return b, fmt.Errorf("keys.command[%d] has empty command", i)
-			}
-			if kind, ok := row["type"]; ok && kind != "shell" && kind != "pane" && kind != "popup" && kind != "plugin_action" {
-				return b, fmt.Errorf("keys.command[%d] has unsupported type", i)
-			}
-			action := fmt.Sprintf("command[%d]", i)
-			config.Keys[action] = row["key"]
-			defaults = append(defaults, struct {
-				Action string
-				Key    string
-			}{Action: action})
+	if v, ok := config.Keys["fullscreen"]; ok {
+		if _, exists := config.Keys["zoom"]; exists {
+			b.diagnostic("keys.fullscreen ignored because keys.zoom is also set")
+		} else {
+			config.Keys["zoom"] = v
 		}
 	}
 	if v, ok := config.Keys["prefix"]; ok {
-		s, ok := v.(string)
-		if !ok {
-			return b, fmt.Errorf("keys.prefix must be a string")
+		raw, isString := v.(string)
+		n, err := Normalize(raw)
+		if !isString || err != nil || strings.HasPrefix(n, "prefix+") {
+			b.diagnostic("invalid keys.prefix %q; using ctrl+b", raw)
+		} else if err = nativeBindingError(n); err != nil {
+			b.diagnostic("keys.prefix: %v; using ctrl+b", err)
+		} else {
+			b.Prefix = n
 		}
-		n, err := Normalize(s)
-		if err != nil || strings.HasPrefix(n, "prefix+") {
-			return b, fmt.Errorf("invalid keys.prefix %q", s)
-		}
-		// M0 can safely transmit a literal control prefix through direct attach.
-		if !strings.HasPrefix(n, "ctrl+") || len(n) != 6 || n[5] < 'a' || n[5] > 'z' {
-			return b, fmt.Errorf("M0 requires a ctrl+letter prefix, got %q", s)
-		}
-		b.Prefix = n
 	}
-	// Herdr gives user bindings precedence over defaults. Conflicts among user
-	// bindings are errors here so the probe cannot silently misrepresent them.
-	for _, user := range []bool{true, false} {
-		for _, d := range defaults {
-			v, configured := config.Keys[d.Action]
-			if configured != user {
-				continue
-			}
-			labels := []string{d.Key}
-			if configured {
-				switch v := v.(type) {
-				case string:
-					labels = []string{v}
-				case []any:
-					labels = nil
-					for _, x := range v {
-						s, ok := x.(string)
-						if !ok {
-							return b, fmt.Errorf("keys.%s must contain strings", d.Action)
-						}
-						labels = append(labels, s)
-					}
-				default:
-					return b, fmt.Errorf("keys.%s must be string or string array", d.Action)
-				}
-			}
-			for _, label := range labels {
-				if strings.TrimSpace(label) == "" {
+
+	// Legacy indexed bindings are applied after all explicit builtin actions,
+	// before custom commands. A nonempty legacy entry suppresses modern defaults,
+	// even when the legacy modifier itself is invalid.
+	type legacyBinding struct {
+		action, field string
+		value         any
+	}
+	var legacy []legacyBinding
+	legacySet := map[string]bool{}
+	if v, ok := config.Keys["indexed"]; ok {
+		rows, ok := v.(map[string]any)
+		if !ok {
+			b.diagnostic("keys.indexed must be a table; ignoring field")
+		} else {
+			for _, entry := range []struct{ name, action string }{{"tabs", "switch_tab"}, {"workspaces", "switch_workspace"}, {"agents", "focus_agent"}} {
+				raw, exists := rows[entry.name]
+				if !exists {
 					continue
 				}
-				expanded := []string{label}
-				if strings.Contains(label, "1..9") {
-					if d.Action != "switch_tab" && d.Action != "switch_workspace" && d.Action != "focus_agent" {
-						return b, fmt.Errorf("range not valid for %s", d.Action)
+				field := "keys.indexed." + entry.name
+				mods, ok := raw.(string)
+				if !ok {
+					b.diagnostic("%s must be a string; disabling binding", field)
+					legacySet[entry.action] = true
+					continue
+				}
+				if strings.TrimSpace(mods) == "" {
+					continue
+				}
+				legacySet[entry.action] = true
+				valid := true
+				for _, mod := range strings.Split(mods, "+") {
+					mod = strings.ToLower(strings.TrimSpace(mod))
+					if alias, ok := aliases[mod]; ok {
+						mod = alias
 					}
-					expanded = nil
-					for i := 1; i <= 9; i++ {
-						expanded = append(expanded, strings.ReplaceAll(label, "1..9", strconv.Itoa(i)))
+					if mod != "ctrl" && mod != "alt" && mod != "shift" && mod != "cmd" {
+						b.diagnostic("%s: unsupported native modifier %q; disabling binding", field, mod)
+						valid = false
+						break
 					}
 				}
-				for _, s := range expanded {
-					n, err := Normalize(s)
-					if err != nil {
-						return b, fmt.Errorf("keys.%s: %w", d.Action, err)
-					}
-					if !strings.HasPrefix(n, "prefix+") && !strings.Contains(n, "ctrl+") && !strings.Contains(n, "alt+") && !strings.Contains(n, "cmd+") {
-						key := strings.TrimPrefix(n, "shift+")
-						if utf8.RuneCountInString(key) == 1 || key == "space" {
-							return b, fmt.Errorf("keys.%s: unsafe direct binding %s intercepts typing", d.Action, n)
-						}
-					}
-					if n == b.Prefix || n == "prefix+"+b.Prefix {
-						if !configured {
-							continue
-						}
-						return b, fmt.Errorf("keys.%s conflicts with literal prefix", d.Action)
-					}
-					if previous, ok := b.Actions[n]; ok {
-						if !configured {
-							continue
-						}
-						return b, fmt.Errorf("binding %s conflicts: %s and %s", n, previous, d.Action)
-					}
-					b.Actions[n] = d.Action
+				if valid {
+					legacy = append(legacy, legacyBinding{entry.action, field, mods + "+1..9"})
 				}
+			}
+			var unknown []string
+			for name := range rows {
+				if name != "tabs" && name != "workspaces" && name != "agents" {
+					unknown = append(unknown, name)
+				}
+			}
+			sort.Strings(unknown)
+			for _, name := range unknown {
+				b.diagnostic("unknown keys.indexed.%s; ignoring field", name)
+			}
+
+		}
+	}
+	var commandBindings []legacyBinding
+	if v, ok := config.Keys["command"]; ok {
+		rows, ok := v.([]any)
+		if !ok {
+			b.diagnostic("keys.command must be an array of tables; disabling custom commands")
+		} else {
+			// Keep source indices stable, including disabled command rows.
+			b.Commands = make([]Command, len(rows))
+			for i, raw := range rows {
+				field := fmt.Sprintf("keys.command[%d]", i)
+				row, ok := raw.(map[string]any)
+				if !ok {
+					b.diagnostic("%s must be a table; disabling command", field)
+					continue
+				}
+				command, ok := row["command"].(string)
+				if !ok || strings.TrimSpace(command) == "" {
+					b.diagnostic("%s has empty command; disabling command", field)
+					continue
+				}
+				kind := "shell"
+				if v, exists := row["type"]; exists {
+					kind, ok = v.(string)
+					if !ok || (kind != "shell" && kind != "pane" && kind != "popup" && kind != "plugin_action") {
+						b.diagnostic("%s has unsupported type; disabling command", field)
+						continue
+					}
+				}
+				desc, _ := row["description"].(string)
+				payload := Command{Command: command, Type: kind, Description: desc}
+				invalid := false
+				for _, dimension := range []string{"width", "height"} {
+					if value, exists := row[dimension]; exists {
+						if err := validatePopupSize(value); err != nil {
+							b.diagnostic("%s.%s: %v; disabling command", field, dimension, err)
+							invalid = true
+						}
+					}
+				}
+				if invalid {
+					continue
+				}
+				if kind == "popup" {
+					payload.Width, payload.Height = row["width"], row["height"]
+				} else if row["width"] != nil || row["height"] != nil {
+					b.diagnostic("%s: ignoring popup size on non-popup command", field)
+				}
+				b.Commands[i] = payload
+				key := row["key"]
+				if key == nil {
+					key = ""
+				}
+				commandBindings = append(commandBindings, legacyBinding{fmt.Sprintf("command[%d]", i), field + ".key", key})
+			}
+		}
+	}
+	for _, configured := range []bool{true, false} {
+		for _, d := range defaults {
+			value, user := config.Keys[d.Action]
+			if user != configured {
+				continue
+			}
+			if !user {
+				if legacySet[d.Action] {
+					continue
+				}
+				value = d.Key
+			}
+			b.applyBindings(d.Action, "keys."+d.Action, value, user)
+		}
+		if configured {
+			for _, entry := range legacy {
+				b.applyBindings(entry.action, entry.field, entry.value, true)
+			}
+			for _, entry := range commandBindings {
+				b.applyBindings(entry.action, entry.field, entry.value, true)
 			}
 		}
 	}
 	return b, nil
 }
+func (b *Bindings) diagnostic(format string, args ...any) {
+	b.Diagnostics = append(b.Diagnostics, fmt.Sprintf(format, args...))
+}
+func (b *Bindings) applyBindings(action, field string, value any, configured bool) {
+	var labels []string
+	switch value := value.(type) {
+	case string:
+		labels = []string{value}
+	case []any:
+		if action == "remote_image_paste" {
+			b.diagnostic("%s must be a string; disabling binding", field)
+			return
+		}
+		for _, raw := range value {
+			if label, ok := raw.(string); ok {
+				labels = append(labels, label)
+			} else {
+				b.diagnostic("%s must contain strings; disabling invalid entry", field)
+			}
+		}
+	default:
+		b.diagnostic("%s must be string or string array; disabling binding", field)
+		return
+	}
+	indexed := action == "switch_tab" || action == "switch_workspace" || action == "focus_agent"
+	for _, label := range labels {
+		if strings.TrimSpace(label) == "" {
+			continue
+		}
+		expanded := []string{label}
+		if strings.Contains(label, "1..9") {
+			if !indexed || strings.Count(label, "1..9") != 1 {
+				b.diagnostic("%s: range is only valid for indexed actions; disabling %q", field, label)
+				continue
+			}
+			expanded = nil
+			for i := 1; i <= 9; i++ {
+				expanded = append(expanded, strings.Replace(label, "1..9", strconv.Itoa(i), 1))
+			}
+		}
+		for _, raw := range expanded {
+			b.applyBinding(action, field, raw, indexed, configured)
+		}
+	}
+}
+func (b *Bindings) applyBinding(action, field, raw string, indexed, configured bool) {
+	n, err := Normalize(raw)
+	if err != nil {
+		b.diagnostic("%s: %v; disabling binding", field, err)
+		return
+	}
+	if err := nativeBindingError(n); err != nil {
+		b.diagnostic("%s: %v; disabling binding", field, err)
+		return
+	}
+	index := 0
+	if indexed {
+		digit := ""
+		for _, part := range strings.Split(raw, "+") {
+			part = strings.TrimSpace(part)
+			if len(part) == 1 && part[0] >= '1' && part[0] <= '9' {
+				digit = part
+			}
+		}
+		if digit == "" {
+			b.diagnostic("%s must use digits 1..9; disabling %q", field, raw)
+			return
+		}
+		index = int(digit[0] - '1')
+	}
+	navigation := strings.HasPrefix(action, "navigate_")
+	prefix := strings.HasPrefix(n, "prefix+")
+	mods, code := splitKey(strings.TrimPrefix(n, "prefix+"))
+	if action == "remote_image_paste" && prefix {
+		b.diagnostic("%s must be a direct key; disabling %q", field, raw)
+		return
+	}
+	if n == b.Prefix || n == "prefix+"+b.Prefix {
+		if configured {
+			b.diagnostic("%s: kept keys.prefix, disabled %q", field, raw)
+		}
+		return
+	}
+	if prefix && code == "esc" {
+		b.diagnostic("%s: Escape cancels prefix mode; disabling %q", field, raw)
+		return
+	}
+	if navigation {
+		if prefix || code == "esc" || n == "enter" || n == "tab" || n == "shift+tab" || n == "left" || n == "right" || (len(n) == 1 && n[0] >= '1' && n[0] <= '9') {
+			b.diagnostic("%s uses reserved navigation key %s; disabling binding", field, n)
+			return
+		}
+	} else if action != "remote_image_paste" && !prefix && !mods["ctrl"] && !mods["alt"] && !mods["cmd"] && (utf8.RuneCountInString(code) == 1 || code == "space") {
+		b.diagnostic("%s: unsafe direct key %s intercepts typing; disabling binding", field, n)
+		return
+	}
+	target := b.Actions
+	if navigation {
+		target = b.Navigation
+	}
+	if previous, exists := target[n]; exists {
+		if configured {
+			b.diagnostic("%s: kept %s, disabled %s", n, previous, field)
+		}
+		return
+	}
+	target[n] = action
+	if !navigation {
+		if strings.HasPrefix(action, "command[") {
+			index, _ = strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(action, "command["), "]"))
+		}
+		b.Indices[n] = index
+	}
+}
 
-var aliases = map[string]string{"control": "ctrl", "option": "alt", "meta": "alt", "command": "cmd", "super": "cmd", "escape": "esc", "return": "enter", "bs": "backspace", "minus": "-", "comma": ",", "period": ".", "slash": "/", "backslash": "\\", "quote": "'", "double_quote": "\"", "double-quote": "\"", "semicolon": ";", "colon": ":", "percent": "%", "ampersand": "&", "backtick": "`", "plus": "+"}
+// nativeBindingError prevents advertising chords the pinned native key API
+// cannot produce. In particular Hyper is distinct from Ctrl+Alt+Shift+Super.
+func nativeBindingError(key string) error {
+	_, code := splitKey(strings.TrimPrefix(key, "prefix+"))
+	if strings.HasPrefix(code, "f") {
+		if n, err := strconv.Atoi(code[1:]); err == nil && n > 12 {
+			return fmt.Errorf("%s is unavailable in the native key event API (F1–F12 only)", code)
+		}
+	}
+	if utf8.RuneCountInString(code) == 1 {
+		r := []rune(code)[0]
+		if r < ' ' || r > '~' {
+			return fmt.Errorf("%q is unavailable as a native shortcut key", code)
+		}
+	}
+	return nil
+}
+
+// splitKey accepts normalized literal-plus keys, including cmd++.
+func splitKey(key string) (map[string]bool, string) {
+	if key == "" {
+		return map[string]bool{}, ""
+	}
+	parts := strings.Split(key, "+")
+	code := parts[len(parts)-1]
+	if code == "" {
+		code = "+"
+		parts = parts[:len(parts)-1]
+	}
+	mods := map[string]bool{}
+	for _, part := range parts[:len(parts)-1] {
+		mods[part] = true
+	}
+	return mods, code
+}
+
+func validatePopupSize(value any) error {
+	switch v := value.(type) {
+	case int64:
+		if v >= 0 && v <= 65535 {
+			return nil
+		}
+	case string:
+		if strings.HasSuffix(v, "%") {
+			n, err := strconv.Atoi(strings.TrimSuffix(v, "%"))
+			if err == nil && n > 0 && n <= 100 {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("expected cell count from 0 to 65535 or percentage from 1%% to 100%%")
+}
+
+var aliases = map[string]string{"pgup": "pageup", "pgdn": "pagedown", "del": "delete", "ins": "insert", "backtab": "shift+tab", "control": "ctrl", "option": "alt", "meta": "alt", "command": "cmd", "super": "cmd", "escape": "esc", "return": "enter", "bs": "backspace", "minus": "-", "comma": ",", "period": ".", "slash": "/", "backslash": "\\", "quote": "'", "double_quote": "\"", "double-quote": "\"", "semicolon": ";", "colon": ":", "percent": "%", "ampersand": "&", "backtick": "`", "plus": "+"}
 
 func Normalize(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	tokens := strings.Split(raw, "+")
+	for i, token := range tokens {
+		if strings.EqualFold(strings.TrimSpace(token), "backtab") {
+			tokens[i] = "shift+tab"
+		}
+	}
+	raw = strings.Join(tokens, "+")
+	if raw == "+" {
+		raw = "plus"
+	} else if strings.HasSuffix(raw, "++") {
+		raw = strings.TrimSuffix(raw, "+") + "plus"
+	}
 	parts := strings.Split(raw, "+")
 	mods := map[string]bool{}
 	key := ""
@@ -181,6 +426,8 @@ func Normalize(raw string) (string, error) {
 				return "", fmt.Errorf("duplicate prefix in %q", raw)
 			}
 			pref = true
+		case "hyper":
+			return "", fmt.Errorf("hyper is an independent modifier unavailable in native key events")
 		case "ctrl", "alt", "shift", "cmd":
 			mods[low] = true
 		default:
@@ -191,6 +438,9 @@ func Normalize(raw string) (string, error) {
 				mods["shift"] = true
 			}
 			key = low
+			if utf8.RuneCountInString(p) == 1 && len(p) > 1 {
+				key = p
+			}
 		}
 	}
 	if key == "" {
@@ -198,11 +448,11 @@ func Normalize(raw string) (string, error) {
 	}
 	valid := utf8.RuneCountInString(key) == 1
 	switch key {
-	case "enter", "esc", "tab", "backspace", "left", "right", "up", "down", "space":
+	case "enter", "esc", "tab", "backspace", "left", "right", "up", "down", "space", "home", "end", "delete", "insert", "pageup", "pagedown":
 		valid = true
 	}
 	if strings.HasPrefix(key, "f") {
-		if n, e := strconv.Atoi(key[1:]); e == nil && n >= 1 && n <= 12 {
+		if n, e := strconv.Atoi(key[1:]); e == nil && n >= 1 && n <= 255 {
 			valid = true
 		}
 	}
@@ -215,6 +465,8 @@ func Normalize(raw string) (string, error) {
 		const shifted = "~!@#$%^&*()_+{}|:\"<>?"
 		if i := strings.Index(plain, key); i >= 0 {
 			key = string(shifted[i])
+			delete(mods, "shift")
+		} else if strings.Contains(shifted, key) {
 			delete(mods, "shift")
 		}
 	}
@@ -237,4 +489,31 @@ func (b Bindings) Labels() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// LoadBindings resolves the user config location. Missing configuration uses
+// verified defaults; malformed configuration is an error.
+func LoadBindings(path string) (Bindings, error) {
+	if path == "" {
+		path = os.Getenv("HERDR_CONFIG_PATH")
+	}
+	if path == "" {
+		base := os.Getenv("XDG_CONFIG_HOME")
+		if base == "" {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return Bindings{}, err
+			}
+			base = filepath.Join(home, ".config")
+		}
+		path = filepath.Join(base, "herdr", "config.toml")
+	}
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return Resolve(nil, "defaults (missing "+path+")")
+	}
+	if err != nil {
+		return Bindings{}, fmt.Errorf("bindings %s: %w", path, err)
+	}
+	return Resolve(data, path)
 }

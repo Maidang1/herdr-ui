@@ -1,4 +1,4 @@
-module github.com/bytedance/herdr-ui
+module github.com/Maidang1/herdr-ui
 
 go 1.27.1
 

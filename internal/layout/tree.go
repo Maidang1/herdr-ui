@@ -3,6 +3,9 @@
 package layout
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math"
 )
@@ -37,13 +40,21 @@ func ResolvePath(root *Node, path []bool) (*Node, error) {
 func SplitPaths(root *Node) ([][]bool, error) {
 	var paths [][]bool
 	seen := map[string]bool{}
+	visited := map[*Node]bool{}
 	var walk func(*Node, []bool) error
 	walk = func(n *Node, path []bool) error {
 		if n == nil {
 			return fmt.Errorf("missing layout child")
 		}
+		if visited[n] {
+			return fmt.Errorf("layout contains reused or cyclic node")
+		}
+		visited[n] = true
 		switch n.Type {
 		case "pane":
+			if n.First != nil || n.Second != nil {
+				return fmt.Errorf("pane has layout children")
+			}
 			if n.PaneID == "" || seen[n.PaneID] {
 				return fmt.Errorf("missing or duplicate pane ID %q", n.PaneID)
 			}
@@ -64,4 +75,103 @@ func SplitPaths(root *Node) ([][]bool, error) {
 	}
 	err := walk(root, nil)
 	return paths, err
+}
+
+// Clone returns an independent tree. Sharing/cycles are preserved for malformed
+// inputs so validation can reject them without infinite recursion.
+func Clone(root *Node) *Node {
+	seen := map[*Node]*Node{}
+	var clone func(*Node) *Node
+	clone = func(n *Node) *Node {
+		if n == nil {
+			return nil
+		}
+		if c, ok := seen[n]; ok {
+			return c
+		}
+		c := *n
+		seen[n] = &c
+		c.First = clone(n.First)
+		c.Second = clone(n.Second)
+		return &c
+	}
+	return clone(root)
+}
+
+// Fingerprint identifies pane identities and topology, excluding split ratios.
+func Fingerprint(root *Node) (string, error) {
+	if _, err := SplitPaths(root); err != nil {
+		return "", err
+	}
+	c := Clone(root)
+	var clear func(*Node)
+	clear = func(n *Node) {
+		n.Ratio = 0
+		if n.Type == "pane" {
+			n.Direction = ""
+		} else {
+			n.PaneID = ""
+			clear(n.First)
+			clear(n.Second)
+		}
+	}
+	clear(c)
+	data, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(data)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func FindPath(root *Node, paneID string) ([]bool, error) {
+	if _, err := SplitPaths(root); err != nil {
+		return nil, err
+	}
+	var find func(*Node, []bool) ([]bool, bool)
+	find = func(n *Node, path []bool) ([]bool, bool) {
+		if n.Type == "pane" {
+			return path, n.PaneID == paneID
+		}
+		if p, ok := find(n.First, append(append([]bool{}, path...), false)); ok {
+			return p, true
+		}
+		return find(n.Second, append(append([]bool{}, path...), true))
+	}
+	if path, ok := find(root, []bool{}); ok {
+		return path, nil
+	}
+	return nil, fmt.Errorf("pane %q absent from layout", paneID)
+}
+
+// SplitForPane prefers the requested edge, then falls back to its opposite.
+func SplitForPane(root *Node, paneID, direction string) ([]bool, error) {
+	axis := ""
+	switch direction {
+	case "left", "right":
+		axis = "right"
+	case "up", "down":
+		axis = "down"
+	default:
+		return nil, fmt.Errorf("invalid resize direction %q", direction)
+	}
+	path, err := FindPath(root, paneID)
+	if err != nil {
+		return nil, err
+	}
+	// Prefer the requested edge. Only fall back to the opposite edge when
+	// there is no ancestor split on that side, matching Herdr resize rules.
+	wantSecond := direction == "left" || direction == "up"
+	for _, second := range []bool{wantSecond, !wantSecond} {
+		for depth := len(path) - 1; depth >= 0; depth-- {
+			n, err := ResolvePath(root, path[:depth])
+			if err != nil {
+				return nil, err
+			}
+			if n.Direction == axis && path[depth] == second {
+				return append([]bool{}, path[:depth]...), nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("pane %q has no split on %s axis", paneID, axis)
 }

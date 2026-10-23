@@ -1,0 +1,43 @@
+{
+  "lucide": {
+    "PanelLeft": "panel-left",
+    "Folder": "folder",
+    "GitBranch": "git-branch",
+    "Terminal": "terminal",
+    "Bot": "bot",
+    "Activity": "activity",
+    "Circle": "circle",
+    "MessageCircle": "message-circle",
+    "CircleAlert": "circle-alert",
+    "Check": "check",
+    "CircleHelp": "circle-help",
+    "CircleCheck": "circle-check",
+    "LoaderCircle": "loader-circle",
+    "Unplug": "unplug",
+    "ChevronRight": "chevron-right",
+    "ChevronDown": "chevron-down",
+    "Columns2": "columns-2",
+    "Keyboard": "keyboard",
+    "X": "x",
+    "Globe": "globe",
+    "CircleDot": "circle-dot",
+    "Rows2": "rows-2",
+    "Maximize2": "maximize-2",
+    "Minimize2": "minimize-2",
+    "Ellipsis": "ellipsis",
+    "Plus": "plus",
+    "Search": "search",
+    "Settings": "settings",
+    "RotateCw": "rotate-cw"
+  },
+  "lobe": {
+    "ClaudeCode": "claudecode",
+    "Codex": "codex",
+    "GeminiCLI": "geminicli",
+    "Opencode": "opencode",
+    "GithubCopilot": "githubcopilot",
+    "Cursor": "cursor",
+    "Kimi": "kimi",
+    "RepositoryGithub": "github"
+  }
+}

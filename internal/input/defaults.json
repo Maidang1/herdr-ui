@@ -152,16 +152,16 @@
     "key": "prefix+shift+l"
   },
   {
+    "action": "last_pane",
+    "key": ""
+  },
+  {
     "action": "cycle_pane_next",
     "key": "prefix+tab"
   },
   {
     "action": "cycle_pane_previous",
     "key": "prefix+shift+tab"
-  },
-  {
-    "action": "last_pane",
-    "key": ""
   },
   {
     "action": "split_vertical",
@@ -202,5 +202,33 @@
   {
     "action": "toggle_sidebar",
     "key": "prefix+b"
+  },
+  {
+    "action": "remote_image_paste",
+    "key": "ctrl+v"
+  },
+  {
+    "action": "navigate_workspace_up",
+    "key": "up"
+  },
+  {
+    "action": "navigate_workspace_down",
+    "key": "down"
+  },
+  {
+    "action": "navigate_pane_left",
+    "key": "h"
+  },
+  {
+    "action": "navigate_pane_down",
+    "key": "j"
+  },
+  {
+    "action": "navigate_pane_up",
+    "key": "k"
+  },
+  {
+    "action": "navigate_pane_right",
+    "key": "l"
   }
 ]

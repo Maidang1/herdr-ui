@@ -68,7 +68,7 @@ func readLine(r *bufio.Reader) ([]byte, error) {
 	for {
 		part, err := r.ReadSlice('\n')
 		if len(line)+len(part) > MaxLineBytes {
-			return nil, fmt.Errorf("JSON line exceeds %d bytes", MaxLineBytes)
+			return nil, &ProtocolError{fmt.Sprintf("JSON line exceeds %d bytes", MaxLineBytes)}
 		}
 		line = append(line, part...)
 		if err == bufio.ErrBufferFull {

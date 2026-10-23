@@ -1,5 +1,5 @@
-// Herdr UI's M0 native window. This is an explicit terminal capability harness,
-// not the M1 session browser. No workspace/pane mutation is issued here.
+// Herdr UI shows the selected session pane through the M2 terminal host.
+// Explicit terminal/local-fixture flags retain the M0 capability harness.
 package main
 
 import (
@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bytedance/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
@@ -26,8 +26,8 @@ func main() {
 	closeAfter := flag.Duration("close-after", 0, "close the test window after a duration")
 	flag.Parse()
 	if !*local && *terminalID == "" {
-		fmt.Fprintln(os.Stderr, "M0: use -terminal <terminal_id> or -local-fixture; use cmd/m0-probe to inspect IDs")
-		os.Exit(2)
+		runStateWindow(*socket, *binary, *closeAfter)
+		return
 	}
 	var command, env []string
 	if *local {
@@ -90,6 +90,7 @@ func main() {
 					if err := old.Close(); err != nil {
 						log.Printf("M0 close: %v", err)
 					}
+					<-old.Done()
 					log.Print("M0 terminal closed")
 				}()
 			}
@@ -141,6 +142,7 @@ func main() {
 				ownerMu.Unlock()
 				if created != nil {
 					created.Close()
+					<-created.Done()
 				}
 				return
 			}
