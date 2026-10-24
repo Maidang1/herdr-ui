@@ -81,6 +81,57 @@ func TestVisibleScrollSubscriptionUpdatesWithoutPolling(t *testing.T) {
 	}
 }
 
+func TestOutputBurstRefreshesWithoutDisablingWindow(t *testing.T) {
+	f := &fakeServer{result: populatedSnapshot}
+	s := New(f.target(t))
+	var publicationsMu sync.Mutex
+	var publications []PublishedSnapshot
+	s.Start(context.Background(), func() {
+		publicationsMu.Lock()
+		publications = append(publications, s.Latest())
+		publicationsMu.Unlock()
+	})
+	defer s.Close(context.Background())
+	await(t, func() bool { return s.Latest().State == Ready })
+	s.ObserveScroll("p", "term")
+	await(t, func() bool {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		return len(f.scrollSubs) == 1 && s.Latest().State == Ready
+	})
+	// Wait for the confirming snapshot after installing the subscription.
+	await(t, func() bool { return s.Latest().Revision >= 4 && s.Latest().State == Ready })
+	before := s.Latest()
+	block := make(chan struct{})
+	var release sync.Once
+	defer release.Do(func() { close(block) })
+	f.mu.Lock()
+	f.block, f.blockAt = block, f.calls+1
+	blockedCall := f.blockAt
+	conn := f.scrollSubs[0]
+	f.mu.Unlock()
+	publicationsMu.Lock()
+	publications = nil
+	publicationsMu.Unlock()
+	fmt.Fprintln(conn, `{"event":"pane.scroll_changed","data":{"pane_id":"p"}}`)
+	await(t, func() bool { f.mu.Lock(); defer f.mu.Unlock(); return f.calls >= blockedCall })
+	if p := s.Latest(); p.State != Ready || p.Stale {
+		t.Fatalf("terminal output disabled the window: %s, stale=%v", p.State, p.Stale)
+	}
+	for i := 0; i < 32; i++ {
+		fmt.Fprintln(conn, `{"event":"pane.scroll_changed","data":{"pane_id":"p"}}`)
+	}
+	release.Do(func() { close(block) })
+	await(t, func() bool { return s.Latest().Revision >= before.Revision+2 })
+	publicationsMu.Lock()
+	defer publicationsMu.Unlock()
+	for _, p := range publications {
+		if p.State != Ready || p.Stale {
+			t.Fatalf("output burst published a transient disabled state: %s", p.State)
+		}
+	}
+}
+
 func TestScrollBeforeStartAndAfterClose(t *testing.T) {
 	s := New(herdr.Target{})
 	select {

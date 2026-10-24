@@ -338,9 +338,13 @@ func (s *Session) connected(ctx context.Context, epoch uint64) (error, bool) {
 		needSnapshot = false
 		if !wasReady {
 			s.publish(epoch, Bootstrapping, nil, nil)
-		} else {
-			s.publish(epoch, Resyncing, nil, nil)
 		}
+		// A routine refresh is not a loss of synchronization. Keep the last
+		// confirmed snapshot interactive until its replacement is complete.
+		// Publishing Resyncing here flickers the chrome on every scroll event
+		// and removes the divider that owns an in-progress pointer drag.
+		// Subscription replacement below and connection failures still publish
+		// stale state; queued operations are validated against the new snapshot.
 		var result json.RawMessage
 		if err := client.Call(ctx, "session.snapshot", nil, &result); err != nil {
 			return classify(err), wasReady
