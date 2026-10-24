@@ -284,11 +284,13 @@ func (w *Window) dividers(c *native.Context, projection layout.Projection, sourc
 			continue
 		}
 		divider.Children(func() {
-			line := native.Box(c).Absolute().Background(p.Border)
+			// The hairline is always drawn; a held or hovered divider
+			// thickens it in the accent so the drag target reads.
+			line := native.Box(c).Absolute().Background(p.Focus.Alpha(.6))
 			if s.Direction == "right" {
-				line.Left(3.5).Top(0).Size(1, float32(height))
+				line.Left(3).Top(0).Size(2, float32(height))
 			} else {
-				line.Top(3.5).Left(0).Size(float32(width), 1)
+				line.Top(3).Left(0).Size(float32(width), 2)
 			}
 		})
 	}

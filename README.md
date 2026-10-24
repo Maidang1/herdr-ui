@@ -11,6 +11,8 @@ Herdr 的原生桌面客户端，第一版面向本机 macOS，使用 **Go + myg
 - [API schema](reference/herdr-api-schema.json)：机器可读参考，接入时以目标 Herdr 实际版本为准。
 - [图标素材与授权](assets/icons/NOTICE.md)。
 
+界面按 Apple 的同心圆角原则组织（浮动侧栏、内容面板、分屏卡片、菜单逐层派生半径，见主文档 §9.8）。Herdr 原本只能靠 prefix 键触达的命令都有了鼠标入口：工作区、标签、pane 标题与 agent 行都有右键菜单（重命名、worktree、拷贝路径/在 Finder 中显示、分屏、交换、复制模式、清屏、关闭等）；双击工作区或标签重命名，双击 pane 标题放大/恢复；有 agent 等待回复时 Agents 标题旁出现「N waiting」按钮一键跳转；菜单栏按 Workspace / Tab / Pane / Go / View 分组，标题旁以 ⌃B 等符号标出 Herdr 键位，⌘P 打开 Go To 调色板。
+
 侧栏按 Herdr 的 spaces / agents 信息分区：工作区显示真实分支、ahead/behind 与监听端口，代理单独按工作区分组，不展开普通 shell 标题。API 未导出的本地 Git/进程信息由后台有界采集，细节与验证见 [侧栏修正记录](docs/sidebar-validation.md)。
 
 终端直接使用 `github.com/egoist/mygo/plugins/terminal`，通过 `herdr terminal attach <terminal_id>` 连接已有会话；状态从第一版起使用 `events.subscribe`，由事件触发权威快照更新，不定时轮询。

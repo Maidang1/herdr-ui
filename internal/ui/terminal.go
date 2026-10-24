@@ -143,7 +143,8 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			previewDrag = w.controller.drag
 			geometry.Panes, geometry.Splits = preview(previewDrag.root, geometry.Area)
 		}
-		projection, err := layout.Project(geometry.Area, geometry.Panes, geometry.Splits, layout.Rect{W: float64(bounds.W), H: float64(bounds.H)})
+		viewport := layout.Rect{W: float64(bounds.W), H: float64(bounds.H)}
+		projection, err := layout.Project(geometry.Area, geometry.Panes, geometry.Splits, viewport)
 		if err != nil {
 			w.DetachTerminal()
 			native.Text(c, "Layout unavailable: "+err.Error()).TextColor(p.Danger)
@@ -151,13 +152,7 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 		}
 		multi := len(projection.Panes) > 1
 		cards := make([]layout.PaneRect, len(projection.Panes))
-		viewport := layout.Rect{W: float64(bounds.W), H: float64(bounds.H)}
-		for i, pane := range projection.Panes {
-			cards[i] = pane
-			if multi {
-				cards[i].Rect = cardBounds(pane.Rect, viewport)
-			}
-		}
+		copy(cards, projection.Panes)
 		latest := t.session.Latest()
 		valid := latest.State == session.Ready && !latest.Stale && latest.TargetID == v.TargetID && latest.Snapshot != nil
 		specs := []terminalhost.Spec{}
@@ -222,6 +217,9 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			w.paneCard(c, r, pane, v, pane.ID == v.PaneID, multi, p, func() {
 				w.drawTerminal(c, v, p, child, pane, valid, requestFocus)
 			})
+		}
+		if multi {
+			splitHairlines(c, projection.Splits, p)
 		}
 		// A bar whose pane left the screen goes away, its search with it,
 		// giving the terminal the keyboard it may hold.

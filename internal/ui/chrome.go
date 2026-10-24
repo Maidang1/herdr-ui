@@ -5,23 +5,14 @@ import (
 	native "github.com/egoist/mygo/ui"
 )
 
-const referenceWidth float32 = 344
-const minimumTerminalWidth float32 = 400
-
 type chromeDimensions struct {
 	sidebarVisible bool
 	terminalWidth  float32
 }
 
-func chromeLayout(width, sidebar float32, hidden, reference bool) chromeDimensions {
+func chromeLayout(width, sidebar float32, hidden bool) chromeDimensions {
 	available := width - 16 - 2
-	if reference {
-		available -= referenceWidth + 8
-	}
 	visible := !hidden
-	if visible && reference && available-sidebar-8 < minimumTerminalWidth {
-		visible = false
-	}
 	if visible {
 		available -= sidebar + 8
 	}
@@ -39,11 +30,18 @@ func (w *Window) controlState(button native.Element, p design.Palette) {
 	}
 }
 func (w *Window) iconButton(c *native.Context, key string, icon *native.SVG, label string, p design.Palette) native.Element {
-	button := native.ButtonBase(c.Key(key)).Size(28, 28).Shrink(0).Radius(6).Center().Label(label).Tooltip(label)
+	button := native.ButtonBase(c.Key(key)).Size(28, 28).Shrink(0).Radius(14).Center().Label(label)
 	w.controlState(button, p)
 	button.Children(func() { native.Icon(c, icon).Size(16, 16).TextColor(p.Secondary) })
 	return button
 }
+
+// popoverPanel styles a popover's panel: its items sit MenuPadding in,
+// rounded concentrically with it (shape.MenuItem).
+func (w *Window) popoverPanel(panel native.Element, p design.Palette) {
+	panel.MinWidth(200).Background(p.Elevated).Border(1, p.Border).Radius(w.shape.Popover).Shadow(0, 8, 24, 0, p.ContentShadow).Padding(design.MenuPadding)
+}
+
 func (w *Window) sidebarResizeHandle(c *native.Context) {
 	handle := native.Box(c.Key("sidebar-resize")).Absolute().Top(0).Left(w.sidebarWidth - 4).Width(8).FillHeight().KeepFocus().Cursor(native.CursorResizeEW).Label("Resize sidebar")
 	handle.HandleInput(func(ev native.InputEvent) bool {

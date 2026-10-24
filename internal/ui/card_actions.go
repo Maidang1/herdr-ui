@@ -74,7 +74,7 @@ func cardControlItems(zoomed bool) []cardControl {
 func (w *Window) cardControls(c *native.Context, pane app.PaneRow, frame app.View, width float64, p design.Palette) {
 	items := cardControlItems(frame.Layout.Zoomed)
 	if width < 180 {
-		more := native.ButtonBase(c.Key(cardControlKey("menu", pane, frame))).Grow(1).MinWidth(0).Height(24).Center().Radius(4).Label("Pane actions").Tooltip("Pane actions").KeepFocus()
+		more := native.ButtonBase(c.Key(cardControlKey("menu", pane, frame))).Grow(1).MinWidth(0).Height(24).Center().Radius(12).Label("Pane actions").KeepFocus()
 		w.controlState(more, p)
 		more.Children(func() { native.Icon(c, icons.Ellipsis).Size(14, 14).TextColor(p.Secondary) })
 		more.Menu(func(m *native.Menu) {
@@ -89,14 +89,7 @@ func (w *Window) cardControls(c *native.Context, pane app.PaneRow, frame app.Vie
 	}
 	for _, item := range items {
 		_, enabled := w.cardActionOperation(item.action, pane, frame)
-		tooltip := item.label
-		if item.action == "close_pane" {
-			tooltip = "Close pane and end its terminal session"
-		}
-		if binding := w.BindingLabel(item.action); binding != "" {
-			tooltip += " · " + binding
-		}
-		button := native.ButtonBase(c.Key(cardControlKey(item.action, pane, frame))).Size(24, 24).Shrink(0).Center().Radius(4).Label(item.label).Tooltip(tooltip).KeepFocus().Disabled(!enabled)
+		button := native.ButtonBase(c.Key(cardControlKey(item.action, pane, frame))).Size(24, 24).Shrink(0).Center().Radius(12).Label(item.label).KeepFocus().Disabled(!enabled)
 		w.controlState(button, p)
 		color := p.Secondary
 		if !enabled {

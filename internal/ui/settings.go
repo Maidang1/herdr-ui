@@ -94,10 +94,10 @@ func weightIndexOf(weight int) int {
 // length with their value beside them, and captions under the rows they
 // explain — never mixed into them.
 const (
-	settingsLabelWidth  = 120
-	settingsSliderWidth = 200
+	settingsLabelWidth  = 96
+	settingsSliderWidth = 172
 	settingsValueWidth  = 52
-	settingsRowHeight   = 26
+	settingsRowHeight   = 28
 )
 
 // SettingsView renders the settings window: a page list on the left, the
@@ -107,22 +107,22 @@ func (w *Window) SettingsView(c *native.Context) {
 	p := w.appearancePalette(c)
 	s := &w.settings
 	s.resetMirrors()
-	root := native.Row(c.Key("settings-root")).Fill().Background(p.Shell).TextColor(p.Text).FontSize(13)
+	root := native.Row(c.Key("settings-root")).Fill().AlignItems(native.Stretch).Background(p.Inset).TextColor(p.Text).FontSize(13)
 	root.Children(func() {
-		native.Column(c.Key("settings-nav")).Width(204).Shrink(0).FillHeight().Padding(14, 10).Gap(1).Background(p.Sidebar).Children(func() {
-			native.Text(c, "Settings").FontSize(11).FontWeight(700).TextColor(c.Theme().TextMuted).Padding(6, 8).PaddingY(10)
+		native.Column(c.Key("settings-nav")).Width(180).Shrink(0).FillHeight().Padding(18, 10).Gap(4).Background(p.Sidebar).Children(func() {
+			native.Text(c, "Settings").FontSize(11).FontWeight(700).TextColor(p.Tertiary).Padding(0, 10, 10, 10)
 			for i, name := range settingsPages {
 				page := i
-				button := native.ButtonBase(c.Key("settings-page:"+name)).FillWidth().Radius(6).Padding(5, 8).Label(name)
+				button := native.ButtonBase(c.Key("settings-page:"+name)).FillWidth().Height(34).Justify(native.Start).Radius(7).Padding(0, 10).Label(name).Selected(s.page == page)
 				if s.page == page {
-					button.Background(p.Selected)
+					button.Background(p.Accent.Alpha(.12))
 				} else {
 					w.controlState(button, p)
 				}
 				button.Children(func() {
-					native.Row(c).Gap(9).AlignItems(native.Center).Children(func() {
+					native.Row(c).FillWidth().Gap(9).AlignItems(native.Center).Children(func() {
 						native.Icon(c, settingsPageIcons[page]).Size(15, 15).TextColor(p.Secondary)
-						text := native.Text(c, name).FontSize(13)
+						text := native.Text(c, name).FontSize(13).TextColor(p.Text)
 						if s.page == page {
 							text.FontWeight(600)
 						}
@@ -134,9 +134,13 @@ func (w *Window) SettingsView(c *native.Context) {
 			}
 		})
 		native.Box(c).Width(1).FillHeight().Shrink(0).Background(p.Border)
-		native.Scroll(c.Key("settings-content")).Grow(1).MinWidth(0).Children(func() {
-			native.Column(c).Padding(22, 26).Gap(18).FillWidth().MaxWidth(620).Children(func() {
-				native.Text(c, settingsPages[s.page]).FontSize(20).FontWeight(700)
+		native.Scroll(c.Key("settings-content")).Grow(1).FillHeight().MinWidth(0).AlignItems(native.Stretch).Children(func() {
+			native.Column(c).Padding(24).Gap(16).FillWidth().MaxWidth(680).Shrink(0).AlignItems(native.Stretch).Children(func() {
+				native.Column(c).Gap(6).Children(func() {
+					native.Text(c, settingsPages[s.page]).FontSize(22).FontWeight(700)
+					descriptions := []string{"Make Herdr feel at home.", "Fine-tune your terminal experience.", "Choose when Herdr gets your attention.", "Keep your workflow close at hand."}
+					native.Text(c, descriptions[s.page]).FontSize(12).TextColor(p.Secondary)
+				})
 				switch s.page {
 				case 0:
 					w.settingsAppearance(c, p, s)
@@ -155,7 +159,7 @@ func (w *Window) SettingsView(c *native.Context) {
 // settingsCard is one grouped card: a semibold caption, then rows on a
 // single rhythm.
 func (w *Window) settingsCard(c *native.Context, key, title string, p design.Palette, body func()) {
-	native.Column(c.Key(key)).FillWidth().Gap(2).Padding(16).Radius(10).Background(p.Inset).Border(1, p.Border).Children(func() {
+	native.Column(c.Key(key)).FillWidth().Shrink(0).Gap(4).Padding(12).Radius(10).Background(p.Elevated).Border(1, p.Border).Children(func() {
 		native.Text(c, title).FontSize(13).FontWeight(600).PaddingY(4)
 		body()
 	})
@@ -173,7 +177,7 @@ func settingsRow(c *native.Context, label string, control func()) {
 // settingsCaption explains the row above it, in the smaller muted voice
 // every caption shares.
 func settingsCaption(c *native.Context, p design.Palette, text string) {
-	native.Text(c, text).FontSize(11).TextColor(p.Tertiary).Padding(2, 0, 4, settingsLabelWidth+10)
+	native.Text(c, text).FontSize(11).TextColor(p.Tertiary).FillWidth().Padding(2, 0, 4, 0)
 }
 
 // settingsSlider lays a slider and its value with unit on the shared grid.
@@ -185,16 +189,62 @@ func settingsSlider(c *native.Context, key string, value *float64, lo, hi float6
 
 func (w *Window) settingsAppearance(c *native.Context, p design.Palette, s *settingsUI) {
 	w.settingsCard(c, "settings-theme", "Theme", p, func() {
-		settingsRow(c, "Appearance", func() {
-			segment := native.Segmented(c.Key("settings-theme-choice"), &s.themeIndex, "System", "Light", "Dark").Shrink(0)
-			if segment.Changed() {
-				s.snapshot.Theme = themeFromIndex(s.themeIndex)
-				if w.hooks.Theme != nil {
-					w.hooks.Theme(s.snapshot.Theme)
+		native.Row(c).FillWidth().Gap(12).Children(func() {
+			for i, name := range []string{"System", "Light", "Dark"} {
+				selected := s.themeIndex == i
+				button := native.ButtonBase(c.Key("settings-theme:" + name)).Grow(1).Basis(0).MinWidth(0).Padding(6).Radius(8).Label(name).Selected(selected)
+				button.Border(1, p.Border)
+				w.controlState(button, p)
+				if selected {
+					button.Border(2, p.Accent).Background(p.Accent.Alpha(.06))
+				}
+				button.Children(func() {
+					native.Column(c).FillWidth().Gap(8).Children(func() {
+						settingsThemePreview(c, i, p)
+						native.Text(c, name).FontSize(12).FontWeight(600).TextColor(p.Text)
+					})
+				})
+				if button.Clicked() {
+					s.themeIndex = i
+					s.snapshot.Theme = themeFromIndex(i)
+					if w.hooks.Theme != nil {
+						w.hooks.Theme(s.snapshot.Theme)
+					}
 				}
 			}
 		})
-		settingsCaption(c, p, "Light or dark chrome, or follow the system.")
+		settingsCaption(c, p, "System follows your Mac’s light or dark appearance.")
+	})
+}
+
+// Miniature windows make the appearance options recognizable before selection.
+func settingsThemePreview(c *native.Context, mode int, p design.Palette) {
+	light, dark := design.Colors(false), design.Colors(true)
+	base := light
+	if mode == 2 {
+		base = dark
+	}
+	native.Column(c).FillWidth().Height(72).Radius(5).Clip().Background(base.Content).Border(1, p.Border).Children(func() {
+		native.Row(c).FillWidth().Height(14).PaddingX(5).Gap(3).AlignItems(native.Center).Background(base.Sidebar).Children(func() {
+			for range 3 {
+				native.Box(c).Size(3, 3).Radius(2).Background(base.Tertiary.Alpha(.5))
+			}
+		})
+		native.Row(c).FillWidth().Grow(1).AlignItems(native.Stretch).Children(func() {
+			native.Column(c).Width(24).Padding(4).Gap(4).Background(base.Sidebar).Children(func() {
+				native.Box(c).FillWidth().Height(4).Radius(2).Background(base.Accent.Alpha(.35))
+				native.Box(c).FillWidth().Height(3).Radius(2).Background(base.Border)
+			})
+			panel := base
+			if mode == 0 {
+				panel = dark
+			}
+			native.Column(c).Grow(1).Padding(8).Gap(5).Background(panel.Content).Children(func() {
+				native.Box(c).Width(28).Height(3).Radius(2).Background(panel.Accent)
+				native.Box(c).FillWidth().Height(3).Radius(2).Background(panel.Secondary.Alpha(.35))
+				native.Box(c).Width(20).Height(3).Radius(2).Background(panel.Secondary.Alpha(.2))
+			})
+		})
 	})
 }
 
@@ -296,7 +346,7 @@ func (w *Window) settingsShortcuts(c *native.Context, p design.Palette) {
 	})
 	w.settingsCard(c, "settings-actions", "Actions", p, func() {
 		for _, action := range Actions {
-			label := w.BindingLabel(action.ID)
+			label := keyGlyphs(w.BindingLabel(action.ID))
 			if label == "" {
 				label = "—"
 			}

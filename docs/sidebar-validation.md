@@ -4,7 +4,7 @@
 
 ## 最终展示
 
-spaces依服务端工作区顺序展示名称、真实分支、非零ahead/behind计数、来源图标及监听端口。路径只在tooltip/内容头部展示，普通shell提示符不再展开到侧栏。GitHub使用真实origin对应品牌图标，其它Git来源使用通用图标，非Git目录使用文件夹；不伪造分支或来源。
+spaces依服务端工作区顺序展示名称、真实分支、非零ahead/behind计数及监听端口。每行固定两行：名称与需要关注的agent状态点在上，分支、ahead/behind与端口在下；端口紧凑显示为首个端口加剩余数量（如`:8080 +2`），完整列表在无障碍标签中（界面不使用悬停 tooltip）。路径不在侧栏展示，可经右键菜单复制或在 Finder 中显示，普通shell提示符不再展开到侧栏。行内不显示来源图标；不伪造分支或来源。
 
 agents独立按工作区分组，包含实际报告agent的pane，显示工作区名、agent及状态；不把普通shell加入，不按同名合并。点击按PaneID切换本窗口选择，保留workspace/tab/pane记忆和其它可见attach。工作区状态来自API的聚合状态，不能被所选普通shell的unknown覆盖。UI统一兼容状态字符串大小写。
 

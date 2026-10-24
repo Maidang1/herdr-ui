@@ -17,41 +17,7 @@ func (w *Window) shortcutPanel(c *native.Context, p design.Palette) {
 	}
 	a := &w.controller.shortcut
 	w.applyShortcutFocus(w.app.Publication(), time.Now())
-	if prompt := a.prompt; prompt != nil {
-		panel := native.Column(c.Key("shortcut-prompt")).FillWidth().Padding(16).Gap(8).Background(p.Elevated)
-		panel.Children(func() {
-			submitted := false
-			native.Text(c, prompt.title).Bold()
-			if !prompt.confirm {
-				field := native.TextInput(c.Key("shortcut-value"), &prompt.value).Label(prompt.title).FillWidth()
-				submitted = field.Submitted()
-				if prompt.focus {
-					field.Focus()
-					prompt.focus = false
-				}
-			}
-			native.Row(c).Gap(8).Children(func() {
-				accept := native.Button(c, "Confirm").Label("Confirm action")
-				if prompt.confirm && prompt.focus {
-					accept.Focus()
-					prompt.focus = false
-				}
-				submit := submitted || accept.Clicked() || (panel.FocusWithin() && panel.Shortcut(0, native.KeyEnter))
-				cancel := native.Button(c, "Cancel").Clicked() || (panel.FocusWithin() && panel.Shortcut(0, native.KeyEscape))
-				if cancel {
-					a.prompt = nil
-					if a.copy != nil {
-						a.copy.focus = true
-					}
-					w.BlurInput()
-				} else if submit {
-					a.prompt = nil
-					prompt.submit(prompt.value)
-					w.BlurInput()
-				}
-			})
-		})
-	}
+
 	if a.navigate {
 		native.Column(c.Key("navigator")).FillWidth().Padding(12).Gap(4).Background(p.Elevated).Children(func() {
 			native.Text(c, "Navigate · ↑ ↓ workspace · h j k l pane · 1–9 workspace · Enter to open · Esc to cancel").FontSize(12)
@@ -148,8 +114,60 @@ func (w *Window) shortcutPanel(c *native.Context, p design.Palette) {
 	}
 }
 
+func (w *Window) shortcutDialog(c *native.Context, p design.Palette) {
+	if w.controller == nil {
+		return
+	}
+	a := &w.controller.shortcut
+	if prompt := a.prompt; prompt != nil {
+		open := true
+		width, _ := c.Size()
+		native.DialogBase(c.Key("shortcut-prompt"), &open, func(backdrop, panel native.Element) {
+			backdrop.Background(native.RGBA(0, 0, 0, .28))
+			panel.Label("Action confirmation dialog").Width(min(400, max(0, width-48))).Padding(24).Gap(16).Background(p.Elevated).Border(1, p.Border).Radius(w.shape.Dialog).Shadow(0, 12, 36, 0, p.ContentShadow)
+			submitted := false
+			native.Text(c, prompt.title).Bold()
+			if !prompt.confirm {
+				field := native.TextInput(c.Key("shortcut-value"), &prompt.value).Label(prompt.title).FillWidth()
+				submitted = field.Submitted()
+				if prompt.focus {
+					field.Focus()
+					prompt.focus = false
+				}
+			}
+			native.Row(c).Gap(8).Children(func() {
+				accept := native.Button(c, "Confirm").Label("Confirm action")
+				if prompt.confirm && prompt.focus {
+					accept.Focus()
+					prompt.focus = false
+				}
+				submit := submitted || accept.Clicked() || (panel.FocusWithin() && panel.Shortcut(0, native.KeyEnter))
+				cancel := native.Button(c, "Cancel").Clicked() || (panel.FocusWithin() && panel.Shortcut(0, native.KeyEscape))
+				if cancel {
+					a.prompt = nil
+					if a.copy != nil {
+						a.copy.focus = true
+					}
+					w.BlurInput()
+				} else if submit {
+					a.prompt = nil
+					prompt.submit(prompt.value)
+					w.BlurInput()
+				}
+			})
+		})
+		if !open && a.prompt == prompt {
+			a.prompt = nil
+			if a.copy != nil {
+				a.copy.focus = true
+			}
+			w.BlurInput()
+		}
+	}
+}
+
 func (w *Window) modalOpen() bool {
-	return w.controller != nil && (w.controller.shortcut.prompt != nil || w.controller.shortcut.copy != nil || w.controller.shortcut.navigator || w.commandSurfaceState != nil)
+	return w.referenceOpen() || w.controller != nil && (w.controller.shortcut.prompt != nil || w.controller.shortcut.copy != nil || w.controller.shortcut.navigator || w.commandSurfaceState != nil)
 }
 
 // Navigation highlights a workspace without changing selection until Enter.

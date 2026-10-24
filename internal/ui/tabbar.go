@@ -9,46 +9,100 @@ import (
 	native "github.com/egoist/mygo/ui"
 )
 
-// tabBar is the selected workspace's tab strip at the top of the content
-// area, level with the sidebar header: pills sit directly on the shell, each
-// showing its agent state and close control, with a control to open one
-// more and the tab-actions menu on the right. With the sidebar hidden the
-// strip lives in the title line beside the traffic lights instead.
-func (w *Window) tabBar(c *native.Context, v app.View, p design.Palette) {
-	if !w.sidebarVisible {
+// toolbarHeight keeps the toolbar's controls centered on the traffic
+// lights' own line (measured center y=26) when the toolbar holds them.
+const toolbarHeight float32 = 36
+
+// toolbar is the top bar of the content panel, on the panel's own white:
+// the selected workspace's tabs and a control to open one more on the
+// left; on the right the single pane's caption and layout controls, the
+// prefix key tag while a chord is awaited, and the tab-actions menu. With
+// the sidebar hidden it also makes room for the traffic lights and offers
+// the sidebar back, naming the workspace the sidebar no longer shows. Zen
+// mode draws no toolbar: the lights float over the terminal, as Herdr's
+// zen does.
+func (w *Window) toolbar(c *native.Context, v app.View, p design.Palette) {
+	if w.zen {
 		return
 	}
-	native.Row(c.Key("tab-bar")).Label("Tab bar").FillWidth().Height(36).Shrink(0).Padding(0, 4, 0, 4).AlignItems(native.Center).Gap(2).Children(func() {
-		w.tabStripControls(c, v, p, false)
-	})
-}
-
-// tabStripControls lays out the shared strip content: pills and a new-tab
-// control on the left; on the right the workspace context (only in the
-// title line, where no sidebar names the workspace), the prefix key tag
-// while a chord is awaited, and the tab-actions menu.
-func (w *Window) tabStripControls(c *native.Context, v app.View, p design.Palette, inTitleBar bool) {
-	for i, tab := range v.Tabs {
-		if i > 0 && !tab.Selected && !v.Tabs[i-1].Selected {
-			native.Box(c).Width(1).Height(16).Shrink(0).MarginX(2).Background(p.Border)
-		}
-		w.tabPill(c, tab, p)
+	hidden := !w.sidebarVisible
+	if len(v.Tabs) == 0 && !hidden {
+		return
 	}
+	bar := native.Row(c.Key("tab-bar")).FillWidth().Height(toolbarHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(2).AlignItems(native.Center).DragWindow()
 	if len(v.Tabs) > 0 {
-		native.Box(c).Width(1).Height(16).Shrink(0).MarginX(2).Background(p.Border)
+		bar.Label("Tab bar")
 	}
-	w.tabOpenControl(c, p)
-	native.Box(c).Grow(1).MinWidth(0).DragWindow()
-	if inTitleBar {
-		if context := tabStripContext(v); context != "" {
-			name := native.Text(c, context).FontSize(12).TextColor(p.Secondary).SingleLine().MinWidth(0).MaxWidth(320).Shrink(1)
-			if v.Path != "" {
-				name.Tooltip(v.Path)
+	bar.Children(func() {
+		if hidden {
+			// The panel starts one gap in from the window's edge, where
+			// the title bar's inset is measured from.
+			native.Box(c).Width(max(0, c.TitleBar().Left-w.shape.Gap-10)).Shrink(0)
+			if w.iconButton(c, "show-sidebar", icons.PanelLeft, "Show sidebar", p).Clicked() {
+				w.Dispatch("toggle_sidebar")
+			}
+			native.Box(c).Width(4).Shrink(0)
+		}
+		for i, tab := range v.Tabs {
+			if i > 0 && !tab.Selected && !v.Tabs[i-1].Selected {
+				native.Box(c).Width(1).Height(14).Shrink(0).MarginX(2).Background(p.Border)
+			}
+			w.tabPill(c, tab, p)
+		}
+		if len(v.Tabs) > 0 {
+			w.tabOpenControl(c, p)
+		}
+		native.Box(c).Grow(1).MinWidth(0).DragWindow()
+		if hidden {
+			if context := tabStripContext(v); context != "" {
+				native.Text(c, context).FontSize(12).TextColor(p.Secondary).SingleLine().MinWidth(0).MaxWidth(320).Shrink(1).Padding(0, 6)
 			}
 		}
+		w.prefixChip(c, p)
+		w.singlePaneControls(c, v, p)
+		if len(v.Tabs) > 0 {
+			w.tabActionsMenu(c, p)
+		}
+	})
+	native.Box(c).Height(1).Shrink(0).FillWidth().Background(p.Border)
+}
+
+// singlePane reports whether the tab shows one terminal, alone or zoomed:
+// it then has no card of its own, and its controls join the toolbar.
+func (w *Window) singlePane(v app.View) bool {
+	return w.terminal != nil && v.HasLayout && (len(v.Layout.Panes) <= 1 || v.Layout.Zoomed)
+}
+
+// singlePaneControls names the single pane's agent and offers its layout
+// controls at the toolbar's trailing edge, where a split tab's cards carry
+// their own.
+func (w *Window) singlePaneControls(c *native.Context, v app.View, p design.Palette) {
+	if !w.singlePane(v) {
+		return
 	}
-	w.prefixChip(c, p)
-	w.tabActionsMenu(c, p)
+	for _, pane := range v.Panes {
+		if pane.ID == v.PaneID {
+			w.paneToolbarControls(c, pane, v, p)
+			return
+		}
+	}
+}
+
+func (w *Window) paneToolbarControls(c *native.Context, pane app.PaneRow, v app.View, p design.Palette) {
+	caption := pane.Label
+	if caption == "" {
+		caption = pane.Agent
+	}
+	if caption != "" {
+		native.Row(c.Key("toolbar-pane-caption")).Shrink(1).MinWidth(0).Gap(6).Padding(0, 8).AlignItems(native.Center).Label("Pane " + caption).Children(func() {
+			native.Icon(c, icons.Agent(pane.Agent)).Size(13, 13).Shrink(0).TextColor(p.Secondary)
+			native.Text(c, caption).FontSize(12).SingleLine().MinWidth(0).TextColor(p.Secondary)
+		})
+	}
+	native.Row(c.Key("toolbar-pane-controls")).Shrink(0).Gap(2).AlignItems(native.Center).Children(func() {
+		w.cardControls(c, pane, v, 1000, p)
+	})
+	native.Box(c).Width(1).Height(14).Shrink(0).MarginX(4).Background(p.Border)
 }
 
 // prefixChip marks an awaited prefix chord with its own key, so the strip
@@ -59,8 +113,8 @@ func (w *Window) prefixChip(c *native.Context, p design.Palette) {
 		return
 	}
 	label := prefixKeyLabel(a.machine.Bindings.Prefix)
-	chip := native.Row(c.Key("prefix-chip")).Shrink(0).Height(20).Radius(6).Padding(0, 7).Gap(5).AlignItems(native.Center).Background(p.Warning.Alpha(.18))
-	chip.Label("Prefix " + label + " · press an action key").Tooltip("Prefix " + label + " · press an action key")
+	chip := native.Row(c.Key("prefix-chip")).Shrink(0).Height(20).Radius(10).Padding(0, 7).Gap(5).AlignItems(native.Center).Background(p.Warning.Alpha(.18))
+	chip.Label("Prefix " + label + " · press an action key")
 	chip.Children(func() {
 		native.Icon(c, icons.Keyboard).Size(11, 11).TextColor(p.Warning)
 		native.Text(c, label).FontSize(11).TextColor(p.Warning)
@@ -93,7 +147,7 @@ func tabStripContext(v app.View) string {
 // the innermost element takes the click.
 func (w *Window) tabPill(c *native.Context, tab app.TabRow, p design.Palette) {
 	label := "Tab " + tab.Name
-	pill := native.ButtonBase(c.Key("tab:"+tab.ID)).Shrink(0).Height(26).Radius(7).Padding(0, 4, 0, 8).Label(label).Tooltip(label).Selected(tab.Selected)
+	pill := native.ButtonBase(c.Key("tab:"+tab.ID)).Shrink(0).Height(26).Radius(13).Padding(0, 4, 0, 10).Label(label).Selected(tab.Selected)
 	if tab.Selected {
 		pill.Background(p.Selected)
 	} else {
@@ -102,14 +156,14 @@ func (w *Window) tabPill(c *native.Context, tab app.TabRow, p design.Palette) {
 	pill.Children(func() {
 		native.Row(c).Gap(6).AlignItems(native.Center).Children(func() {
 			if tab.Status != "" {
-				_, color, stateLabel := status(tab.Status, c.Theme().Dark)
-				native.Icon(c, tabStatusIcon(tab.Status)).Size(10, 10).TextColor(color).Label(tab.Name + " · " + stateLabel).Tooltip(stateLabel)
+				_, _, stateLabel := status(tab.Status, c.Theme().Dark)
+				statusMark(c, "tab:"+tab.ID, tab.Status, 10, p).Label(tab.Name + " · " + stateLabel)
 			}
 			name := native.Text(c, tab.Name).FontSize(13).SingleLine().MaxWidth(180).TextColor(p.Secondary)
 			if tab.Selected {
 				name.TextColor(p.Text).FontWeight(500)
 			}
-			close := native.ButtonBase(c.Key("close-tab:"+tab.ID)).Size(18, 18).Shrink(0).Radius(5).Center().Label("Close tab " + tab.Name).Tooltip("Close tab " + tab.Name)
+			close := native.ButtonBase(c.Key("close-tab:"+tab.ID)).Size(18, 18).Shrink(0).Radius(9).Center().Label("Close tab " + tab.Name)
 			w.controlState(close, p)
 			close.Children(func() { native.Icon(c, icons.X).Size(11, 11).TextColor(p.Secondary) })
 			if close.Clicked() {
@@ -120,24 +174,19 @@ func (w *Window) tabPill(c *native.Context, tab app.TabRow, p design.Palette) {
 			}
 		})
 	})
-	if pill.Clicked() {
+	pill.ContextMenu(func(m *native.Menu) { w.tabMenu(m, tab) })
+	if pill.DoubleClicked() {
+		w.app.SelectTab(tab.ID)
+		w.Dispatch("rename_tab")
+	} else if pill.Clicked() {
 		w.app.SelectTab(tab.ID)
 		w.BlurInput()
 	}
 }
 
-// tabStatusIcon keeps the pill's mark a compact ring-like glyph, as Herdr's
-// tab state does; only active work earns the filled ring.
-func tabStatusIcon(value string) *native.SVG {
-	if value == "working" {
-		return icons.CircleDot
-	}
-	return icons.Circle
-}
-
 func (w *Window) tabOpenControl(c *native.Context, p design.Palette) {
 	can := w.Can("new_tab")
-	plus := native.ButtonBase(c.Key("new-tab")).Size(26, 26).Shrink(0).Radius(7).Center().Label("New tab").Tooltip("New tab")
+	plus := native.ButtonBase(c.Key("new-tab")).Size(26, 26).Shrink(0).Radius(13).Center().Label("New tab")
 	if can {
 		w.controlState(plus, p)
 	} else {
@@ -152,14 +201,14 @@ func (w *Window) tabOpenControl(c *native.Context, p design.Palette) {
 // tabActionsMenu gathers the tab's commands behind Herdr's quiet "···"
 // control at the strip's right edge.
 func (w *Window) tabActionsMenu(c *native.Context, p design.Palette) {
-	more := native.ButtonBase(c.Key("tab-actions")).Size(26, 26).Shrink(0).Radius(7).Center().Label("Tab actions").Tooltip("Tab actions")
+	more := native.ButtonBase(c.Key("tab-actions")).Size(26, 26).Shrink(0).Radius(13).Center().Label("Tab actions")
 	w.controlState(more, p)
 	more.Children(func() { native.Icon(c, icons.Ellipsis).Size(15, 15).TextColor(p.Secondary) })
 	if more.Clicked() {
 		w.tabMenuOpen = !w.tabMenuOpen
 	}
 	native.PopoverBase(c, more, &w.tabMenuOpen, func(panel native.Element) {
-		panel.MinWidth(190).Background(p.Elevated).Border(1, p.Border).Radius(10).Shadow(0, 4, 16, 0, p.ContentShadow).Padding(4)
+		w.popoverPanel(panel, p)
 		panel.Children(func() {
 			w.tabMenuItem(c, p, "tab-menu-new", icons.Plus, "New tab", "new_tab")
 			w.tabMenuItem(c, p, "tab-menu-rename", icons.GitBranch, "Rename tab", "rename_tab")
@@ -172,7 +221,7 @@ func (w *Window) tabActionsMenu(c *native.Context, p design.Palette) {
 
 func (w *Window) tabMenuItem(c *native.Context, p design.Palette, key string, icon *native.SVG, label, action string) {
 	can := w.Can(action)
-	item := native.ButtonBase(c.Key(key)).FillWidth().Radius(6).Padding(6, 8).Label(label)
+	item := native.ButtonBase(c.Key(key)).FillWidth().Radius(w.shape.MenuItem).Padding(6, 8).Label(label)
 	if can {
 		w.controlState(item, p)
 	} else {

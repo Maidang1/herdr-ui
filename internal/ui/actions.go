@@ -8,6 +8,7 @@ import (
 	"github.com/Maidang1/herdr-ui/internal/layout"
 	"github.com/Maidang1/herdr-ui/internal/session"
 	"github.com/Maidang1/herdr-ui/internal/terminalhost"
+	"github.com/egoist/mygo/transfer"
 	native "github.com/egoist/mygo/ui"
 )
 
@@ -217,10 +218,6 @@ func (w *Window) DispatchIndex(action string, index int) {
 			w.hidden = true
 		} else {
 			w.hidden = false
-			if a.help && !chromeLayout(w.viewportWidth, w.sidebarWidth, false, true).sidebarVisible {
-				a.help = false
-				w.helpFocusPending = false
-			}
 		}
 		return
 	case "help":
@@ -412,4 +409,31 @@ func (w *Window) ActionLabel(id string) string {
 		}
 	}
 	return id
+}
+
+// Paste routes native clipboard images through Herdr's image transport. Text
+// falls through to the terminal plugin, including its bracketed paste handling.
+func (w *Window) Paste(binding terminalhost.Binding, data transfer.Data) bool {
+	var published session.PublishedSnapshot
+	if w.terminal != nil && w.terminal.session != nil {
+		published = w.terminal.session.Latest()
+	}
+	return w.pastePublished(binding, data, published)
+}
+
+func (w *Window) pastePublished(binding terminalhost.Binding, data transfer.Data, published session.PublishedSnapshot) bool {
+	image, err := data.Read(transfer.PNG)
+	if err != nil || len(image) == 0 {
+		return false
+	}
+	panel := w.paneForBinding(binding)
+	// Consume stale image pastes so they cannot reach a replacement terminal.
+	if panel == nil || !bindingMatchesPublication(binding, panel.spec, published) {
+		return true
+	}
+	if w.hooks.PasteImage == nil {
+		return false
+	}
+	w.shortcutError(w.hooks.PasteImage(panel.spec.PaneID, image))
+	return true
 }
