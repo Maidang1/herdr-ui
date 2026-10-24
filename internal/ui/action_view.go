@@ -8,6 +8,7 @@ import (
 	native "github.com/egoist/mygo/ui"
 	"sort"
 	"strings"
+	"time"
 )
 
 // actionBar appears only for transient input modes or actionable errors.
@@ -40,31 +41,107 @@ func (w *Window) actionBar(c *native.Context, v app.View, p design.Palette) {
 	}
 }
 
+// tickNotifications takes Herdr's new notices into the queue and advances
+// it, handing system notifications out as they become ready. It returns the
+// in-app toast to show and how soon the queue needs another tick.
+func (w *Window) tickNotifications(now time.Time) (app.Toast, bool, time.Duration) {
+	if w.hooks.Notices != nil {
+		for _, n := range w.hooks.Notices() {
+			w.toasts.Receive(n)
+		}
+	}
+	settings := w.settings.snapshot.Toast
+	toast, ok, system, wake := w.toasts.Tick(now, app.ToastContext{
+		Snapshot:      w.app.Publication().Snapshot,
+		SelectedTabID: w.currentView().TabID,
+		Active:        w.appearance.active,
+		Delivery:      settings.Delivery,
+		Delay:         time.Duration(settings.DelaySeconds) * time.Second,
+	})
+	if w.hooks.PostNotification != nil {
+		for _, n := range system {
+			w.hooks.PostNotification(n)
+		}
+	}
+	return toast, ok, wake
+}
+
+// PumpNotifications advances notifications outside a frame, so system
+// notifications go out while the window is hidden and draws nothing. It
+// returns how soon to pump again, zero when nothing is waiting.
+func (w *Window) PumpNotifications() time.Duration {
+	_, _, wake := w.tickNotifications(time.Now())
+	return wake
+}
+
 // notificationToast floats above the workspace without taking terminal focus
 // or contributing to its layout. Modal dialogs are rendered above it.
 func (w *Window) notificationToast(c *native.Context, p design.Palette) {
-	if w.controller == nil || w.hooks.NotificationText == nil {
+	if w.controller == nil {
 		return
 	}
-	title, remaining := w.hooks.NotificationText()
-	if title == "" {
+	toast, ok, wake := w.tickNotifications(c.Now())
+	if wake > 0 {
+		c.After(wake)
+	}
+	if !ok {
 		return
 	}
-	if remaining > 0 {
-		c.After(remaining)
+	dot := p.Accent
+	if toast.Kind == "NeedsAttention" {
+		dot = p.Danger
+	}
+	position := toast.Position
+	if position == "" {
+		position = w.settings.snapshot.Toast.Position
 	}
 	width, _ := c.Size()
 	native.Overlay(c.Key("notification-overlay"), func() {
-		native.Column(c.Key("notification-toast")).Label("Notification toast").Absolute().Top(56).Right(16).Width(min(360, max(0, width-32))).Padding(16).Gap(12).Radius(w.shape.Panel).Background(p.Elevated).Border(1, p.Border).Shadow(0, 6, 24, 0, p.ContentShadow).TextColor(p.Text).FontSize(13).Children(func() {
-			native.Text(c, title).FillWidth()
-			native.Row(c).FillWidth().Children(func() {
-				native.Box(c).Grow(1)
-				if native.Button(c, "Open notification").KeepFocus().Clicked() {
-					w.Dispatch("open_notification_target")
+		card := native.Column(c.Key("notification-toast")).Label("Notification toast").Absolute().Width(min(360, max(0, width-32))).Padding(12, 12, 12, 16).Gap(10).Radius(w.shape.Panel).Background(p.Elevated).Border(1, p.Border).Shadow(0, 6, 24, 0, p.ContentShadow).TextColor(p.Text).FontSize(13)
+		switch position {
+		case "top-left":
+			card.Top(56).Left(16)
+		case "top-right":
+			card.Top(56).Right(16)
+		case "bottom-left":
+			card.Bottom(16).Left(16)
+		default:
+			card.Bottom(16).Right(16)
+		}
+		card.Children(func() {
+			native.Row(c).FillWidth().Gap(10).AlignItems(native.Center).Children(func() {
+				native.Box(c).Size(7, 7).Shrink(0).Radius(3.5).Background(dot)
+				native.Text(c, toast.Title).Bold().Grow(1).MinWidth(0)
+				if w.iconButton(c, "dismiss-notification", icons.X, "Dismiss notification", p).KeepFocus().Clicked() {
+					w.toasts.Dismiss()
 				}
 			})
+			if toast.Body != "" {
+				native.Text(c, toast.Body).FontSize(12).TextColor(p.Secondary).FillWidth().PaddingX(17)
+			}
+			if toast.PaneID != "" || toast.TabID != "" || toast.WorkspaceID != "" {
+				native.Row(c).FillWidth().Children(func() {
+					native.Box(c).Grow(1)
+					if native.Button(c, "Open").Label("Open notification").KeepFocus().Clicked() {
+						w.Dispatch("open_notification_target")
+					}
+				})
+			}
 		})
 	})
+}
+
+// OpenNotice selects the most specific place a notice names, as opening
+// its toast or system notification does.
+func (w *Window) OpenNotice(n app.Notice) {
+	switch {
+	case n.PaneID != "":
+		w.selectShortcutPane(n.PaneID)
+	case n.TabID != "":
+		w.app.SelectTab(n.TabID)
+	case n.WorkspaceID != "":
+		w.app.SelectWorkspace(n.WorkspaceID)
+	}
 }
 
 func (w *Window) referencePanel(c *native.Context, p design.Palette) {

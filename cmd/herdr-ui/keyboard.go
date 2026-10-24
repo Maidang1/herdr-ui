@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/endpoint"
 	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/Maidang1/herdr-ui/internal/input"
@@ -149,8 +150,7 @@ func keyboardHooks(ctx context.Context, s *session.Session, k *keyboardEndpoint,
 				})
 			}()
 		},
-		NotificationText:   func() (string, time.Duration) { n, d := k.notification(false); return n.Title, d },
-		NotificationTarget: func() string { n, _ := k.notification(true); return n.PaneID },
+		Notices: k.notices,
 	}
 }
 func configPath() string {
@@ -225,40 +225,27 @@ func matchCommand(state endpoint.State, b input.Bindings, index int) (string, er
 	return id, nil
 }
 
-func (k *keyboardEndpoint) notification(consume bool) (endpoint.Notification, time.Duration) {
+// notices returns the notifications received since the last call. A new
+// connection starts its own sequence, so its whole backlog is new.
+func (k *keyboardEndpoint) notices() []app.Notice {
 	client := k.current()
 	if client == nil {
-		return endpoint.Notification{}, 0
+		return nil
 	}
 	state := client.Latest()
-	if !state.Connected {
-		return endpoint.Notification{}, 0
-	}
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if k.notificationClient != client {
 		k.notificationClient = client
 		k.consumedNotification = 0
 	}
+	var fresh []app.Notice
 	for _, n := range state.Notifications {
 		if n.ID <= k.consumedNotification {
 			continue
 		}
-		duration := 5 * time.Second
-		if n.Kind == "NeedsAttention" {
-			duration = 8 * time.Second
-		}
-		if n.Kind == "UpdateInstalled" {
-			duration = 3 * time.Second
-		}
-		remaining := duration - time.Since(n.ReceivedAt)
-		if remaining <= 0 {
-			continue
-		}
-		if consume {
-			k.consumedNotification = n.ID
-		}
-		return n, remaining
+		k.consumedNotification = n.ID
+		fresh = append(fresh, app.Notice{Kind: n.Kind, Title: n.Title, Body: n.Body, WorkspaceID: n.WorkspaceID, TabID: n.TabID, PaneID: n.PaneID, Position: n.Position, Received: n.ReceivedAt})
 	}
-	return endpoint.Notification{}, 0
+	return fresh
 }

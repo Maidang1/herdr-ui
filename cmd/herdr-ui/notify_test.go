@@ -3,18 +3,19 @@ package main
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
+	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/session"
 )
 
 // fake collects the platform actions a test replaces, and answers clicks.
 type fake struct {
-	active   bool
 	disabled bool
 	shown    []shownNotification
 	badges   []int
 	cleared  int
-	jumps    [][2]string
+	opened   []app.Notice
 }
 
 type shownNotification struct {
@@ -23,7 +24,7 @@ type shownNotification struct {
 }
 
 func (f *fake) notifier() *notifier {
-	n := newNotifier(func() bool { return f.active }, func(workspaceID, paneID string) { f.jumps = append(f.jumps, [2]string{workspaceID, paneID}) })
+	n := newNotifier(func(notice app.Notice) { f.opened = append(f.opened, notice) })
 	n.supported = func() bool { return !f.disabled }
 	n.show = func(group, title, body string, click func()) {
 		f.shown = append(f.shown, shownNotification{group, title, body, click})
@@ -55,117 +56,58 @@ func agentPanes(status string) string {
 	return `[{"pane_id":"p1","terminal_id":"t1","workspace_id":"w1","tab_id":"a","agent":"codex","agent_status":"` + status + `"}]`
 }
 
-func TestFirstSightAndUnchangedStatusStayQuiet(t *testing.T) {
+func TestBadgeCountsBlockedAgents(t *testing.T) {
 	f := &fake{}
 	n := f.notifier()
 	n.Step(agentSnapshot(t, agentPanes("working")))
-	n.Step(agentSnapshot(t, agentPanes("working")))
-	if len(f.shown) != 0 {
-		t.Fatal("first sight or an unchanged status notified", f.shown)
-	}
-	if len(f.badges) != 2 || f.badges[1] != 0 {
+	n.Step(agentSnapshot(t, agentPanes("Blocked")))
+	n.Step(session.PublishedSnapshot{})
+	if len(f.badges) != 3 || f.badges[0] != 0 || f.badges[1] != 1 || f.badges[2] != 0 {
 		t.Fatal("badge did not follow the blocked count", f.badges)
 	}
+	if len(f.shown) != 0 {
+		t.Fatal("a status change posted on its own; posting is the queue's call", f.shown)
+	}
 }
 
-func TestBlockedNeedsTheUser(t *testing.T) {
+func TestPostShowsOneSlotPerPaneAndOpensItsTarget(t *testing.T) {
 	f := &fake{}
 	n := f.notifier()
-	n.Step(agentSnapshot(t, agentPanes("working")))
-	n.Step(agentSnapshot(t, agentPanes("blocked")))
-	if len(f.shown) != 1 || f.shown[0].group != "p1" || f.shown[0].title != "codex needs you" || f.shown[0].body != "Website" {
-		t.Fatal("wrong needs-you notification", f.shown)
+	notice := app.Notice{Kind: "NeedsAttention", Title: "codex needs attention", Body: "Website · 1", WorkspaceID: "w1", PaneID: "w1:p1", Received: time.Unix(1, 0)}
+	n.Post(notice)
+	n.Post(app.Notice{Kind: "Custom", Title: "hello", Received: time.Unix(2, 0)})
+	if len(f.shown) != 2 || f.shown[0].group != "w1:p1" || f.shown[0].title != "codex needs attention" || f.shown[0].body != "Website · 1" || f.shown[1].group != "notice/2000000000" {
+		t.Fatal("wrong system notifications", f.shown)
 	}
 	f.shown[0].click()
-	if len(f.jumps) != 1 || f.jumps[0] != [2]string{"w1", "p1"} {
-		t.Fatal("a click did not jump to the agent", f.jumps)
-	}
-	if len(f.badges) != 2 || f.badges[1] != 1 {
-		t.Fatal("badge did not count the blocked agent", f.badges)
+	if len(f.opened) != 1 || f.opened[0] != notice {
+		t.Fatal("a click did not open the notice's target", f.opened)
 	}
 }
 
-func TestDoneAfterWorkingFinishes(t *testing.T) {
-	f := &fake{}
-	n := f.notifier()
-	n.Step(agentSnapshot(t, agentPanes("working")))
-	n.Step(agentSnapshot(t, agentPanes("done")))
-	if len(f.shown) != 1 || f.shown[0].title != "codex finished" {
-		t.Fatal("working to done did not finish", f.shown)
-	}
-	if len(f.badges) != 2 || f.badges[1] != 0 {
-		t.Fatal("done left a badge", f.badges)
-	}
-}
-
-func TestDoneWithoutWorkingStaysQuiet(t *testing.T) {
-	f := &fake{}
-	n := f.notifier()
-	n.Step(agentSnapshot(t, agentPanes("idle")))
-	n.Step(agentSnapshot(t, agentPanes("done")))
-	if len(f.shown) != 0 {
-		t.Fatal("done without working notified", f.shown)
-	}
-}
-
-func TestBlockedToDoneStaysQuiet(t *testing.T) {
+func TestOffMutesPostsAndBadge(t *testing.T) {
 	f := &fake{}
 	n := f.notifier()
 	n.Step(agentSnapshot(t, agentPanes("blocked")))
-	n.Step(agentSnapshot(t, agentPanes("done")))
-	if len(f.shown) != 0 {
-		t.Fatal("blocked to done notified", f.shown)
-	}
-}
-
-func TestQuietWhileActiveStillBadges(t *testing.T) {
-	f := &fake{active: true}
-	n := f.notifier()
-	n.Step(agentSnapshot(t, agentPanes("working")))
+	n.SetEnabled(false)
+	n.Post(app.Notice{Title: "muted"})
 	n.Step(agentSnapshot(t, agentPanes("blocked")))
-	if len(f.shown) != 0 {
-		t.Fatal("an active window was notified", f.shown)
+	if len(f.shown) != 0 || f.cleared != 1 || f.badges[len(f.badges)-1] != 0 || len(f.badges) != 2 {
+		t.Fatal("off did not mute everything", f.shown, f.cleared, f.badges)
 	}
-	if len(f.badges) != 2 || f.badges[1] != 1 {
-		t.Fatal("an active window lost the badge", f.badges)
+	n.SetEnabled(true)
+	if f.badges[len(f.badges)-1] != 1 {
+		t.Fatal("turning back on did not restore the badge", f.badges)
 	}
 }
 
 func TestUnsupportedDesktopKeepsOnlyTheBadge(t *testing.T) {
 	f := &fake{disabled: true}
 	n := f.notifier()
-	n.Step(agentSnapshot(t, agentPanes("working")))
 	n.Step(agentSnapshot(t, agentPanes("blocked")))
-	if len(f.shown) != 0 {
-		t.Fatal("an unsupported desktop was notified", f.shown)
-	}
-	if len(f.badges) != 2 || f.badges[1] != 1 {
-		t.Fatal("an unsupported desktop lost the badge", f.badges)
-	}
-}
-
-func TestVanishedAgentIsForgotten(t *testing.T) {
-	f := &fake{}
-	n := f.notifier()
-	n.Step(agentSnapshot(t, agentPanes("working")))
-	n.Step(agentSnapshot(t, `[]`))
-	n.Step(agentSnapshot(t, agentPanes("blocked")))
-	if len(f.shown) != 0 {
-		t.Fatal("a returning agent was not a first sight again", f.shown)
-	}
-	if f.badges[len(f.badges)-1] != 1 {
-		t.Fatal("a returning blocked agent did not badge", f.badges)
-	}
-}
-
-func TestPublicationWithoutSnapshotForgetsAgents(t *testing.T) {
-	f := &fake{}
-	n := f.notifier()
-	n.Step(agentSnapshot(t, agentPanes("working")))
-	n.Step(session.PublishedSnapshot{})
-	n.Step(agentSnapshot(t, agentPanes("blocked")))
-	if len(f.shown) != 0 {
-		t.Fatal("an agent behind a snapshotless publication notified", f.shown)
+	n.Post(app.Notice{Title: "nowhere"})
+	if len(f.shown) != 0 || f.badges[len(f.badges)-1] != 1 {
+		t.Fatal("an unsupported desktop was notified or lost the badge", f.shown, f.badges)
 	}
 }
 
@@ -179,22 +121,5 @@ func TestClearRecountsTheBadge(t *testing.T) {
 	}
 	if f.badges[len(f.badges)-1] != 2 {
 		t.Fatal("clear zeroed a badge that still counts", f.badges)
-	}
-}
-
-func TestStatusCaseDoesNotMatter(t *testing.T) {
-	f := &fake{}
-	n := f.notifier()
-	n.Step(agentSnapshot(t, agentPanes("Working")))
-	n.Step(agentSnapshot(t, agentPanes("DONE")))
-	if len(f.shown) != 1 || f.shown[0].title != "codex finished" {
-		t.Fatal("a case change hid the finish", f.shown)
-	}
-	n.Step(agentSnapshot(t, agentPanes("Blocked")))
-	if len(f.shown) != 2 || f.shown[1].title != "codex needs you" {
-		t.Fatal("a case change hid the need", f.shown)
-	}
-	if f.badges[len(f.badges)-1] != 1 {
-		t.Fatal("a case change hid the badge", f.badges)
 	}
 }

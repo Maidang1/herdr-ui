@@ -39,6 +39,9 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 	if prefsErr != nil {
 		log.Printf("prefs: %v", prefsErr)
 	}
+	// Notification delivery starts from Herdr's own [ui.toast], as the
+	// terminal client would deliver them, until chosen in Settings.
+	settings.InheritToast(prefs.HerdrToast(configPath()))
 	// The saved appearance applies before the first window exists, as the
 	// framework's SetSource contract expects.
 	mygo.Theme.SetSource(mygo.ThemeSource(settings.Settings().WindowTheme))
@@ -129,9 +132,22 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				})
 			}
 		}
-		notifier = newNotifier(screen.WindowActive, func(workspaceID, paneID string) { post(func() { screen.JumpTo(workspaceID, paneID) }) })
+		notifier = newNotifier(func(n app.Notice) { post(func() { screen.OpenNotice(n) }) })
 		persisted := settings.Settings()
-		notifier.SetEnabled(persisted.Notifications)
+		notifier.SetEnabled(persisted.Toast.Delivery != "off")
+		// pumpNotifications delivers Herdr's notices outside frames too, so
+		// system notifications reach a hidden window's user on time.
+		var pumpTimer *time.Timer
+		var pumpNotifications func()
+		pumpNotifications = func() {
+			if pumpTimer != nil {
+				pumpTimer.Stop()
+				pumpTimer = nil
+			}
+			if wake := screen.PumpNotifications(); wake > 0 {
+				pumpTimer = time.AfterFunc(wake, func() { post(pumpNotifications) })
+			}
+		}
 		font := terminal.Font{Size: persisted.FontSize, Weight: persisted.FontWeight, LineHeight: persisted.LineHeight}
 		copyOnSelect := terminal.CopyOnSelectNone
 		if persisted.CopyOnSelect {
@@ -140,7 +156,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		sidebar = sidebarinfo.New(target, func(p sidebarinfo.Publication) { post(func() { a.UpdateSidebar(p) }) })
 		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: font, CopyOnSelect: copyOnSelect, MinimumContrast: persisted.MinimumContrast, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key, OnPaste: screen.Paste})
 		screen.ConnectTerminal(host, s, ctx, post)
-		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, Notifications: persisted.Notifications})
+		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, Toast: view.ToastSettings{Delivery: persisted.Toast.Delivery, Position: persisted.Toast.Position, DelaySeconds: persisted.Toast.DelaySeconds}})
 		preferences := mygo.Theme.Preferences()
 		screen.SetReducedTransparency(preferences.ReduceTransparency)
 		material := mygo.VibrancySidebar
@@ -187,12 +203,17 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			host.SetMinimumContrast(ratio)
 			persist(func(v *prefs.Settings) { v.MinimumContrast = ratio })
 		}
-		hooks.Notifications = func(enabled bool) {
-			notifier.SetEnabled(enabled)
-			persist(func(v *prefs.Settings) { v.Notifications = enabled })
+		hooks.Notifications = func(t view.ToastSettings) {
+			notifier.SetEnabled(t.Delivery != "off")
+			persist(func(v *prefs.Settings) {
+				v.Toast = prefs.Toast{Delivery: t.Delivery, Position: t.Position, DelaySeconds: t.DelaySeconds}
+			})
+			// The main window's toast and queue follow the change now.
+			post(pumpNotifications)
 		}
+		hooks.PostNotification = notifier.Post
 		screen.SetActionHooks(hooks)
-		go keyboard.run(ctx, target.Socket, func() { post(func() {}) })
+		go keyboard.run(ctx, target.Socket, func() { post(pumpNotifications) })
 		win.OnBlur(func() { post(func() { screen.SetWindowActive(false) }) })
 		win.OnFocus(func() { post(func() { screen.SetWindowActive(true); notifier.Clear() }) })
 		themeItems := map[mygo.ThemeSource]*mygo.MenuItem{}
