@@ -1,7 +1,7 @@
 {
   "name": "Herdr UI",
   "identifier": "dev.herdr.ui",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "icon": "assets/app/icon.png",
   "main": "./cmd/herdr-ui",
   "out": "dist",
