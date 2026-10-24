@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Maidang1/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/shellenv"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
@@ -25,6 +27,11 @@ func main() {
 	local := flag.Bool("local-fixture", false, "run /bin/cat for local IME/copy/paste verification; does not connect to Herdr")
 	closeAfter := flag.Duration("close-after", 0, "close the test window after a duration")
 	flag.Parse()
+	// Opened from Finder or the Dock, the app has launchd's PATH, without
+	// the directory herdr is installed in.
+	if err := shellenv.Apply(context.Background(), *binary); err != nil {
+		log.Printf("PATH: %v", err)
+	}
 	if !*local && *terminalID == "" {
 		runStateWindow(*socket, *binary, *closeAfter)
 		return
