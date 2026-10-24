@@ -22,69 +22,48 @@ func referenceWindow(t *testing.T) *Window {
 	w.ConfigureBindings(bindings, nil)
 	return w
 }
-func TestReferencePanelIsRightHand344AndPreservesSidebarPreference(t *testing.T) {
+func TestReferenceDialogPreservesLayoutAndDismisses(t *testing.T) {
 	w := referenceWindow(t)
-	w.Dispatch("help")
 	tester := native.NewTester(w.View, 820, 560)
+	before, _ := tester.Find("Terminal content")
+	w.Dispatch("help")
+	tester.Frame()
 	panel, ok := tester.Find("Keyboard reference panel")
-	if !ok {
-		t.Fatal("missing nonmodal right reference panel")
+	if !ok || panel.X != (820-panel.W)/2 || panel.Y != (560-panel.H)/2 {
+		t.Fatalf("dialog is not centered: %+v", panel)
 	}
-	if panel.W != 344 || panel.X+panel.W > 813 {
-		t.Fatalf("reference bounds=%+v", panel)
+	after, _ := tester.Find("Terminal content")
+	if before != after || !w.sidebarVisible || w.hidden {
+		t.Fatal("dialog changed terminal/sidebar layout", before, after)
 	}
-	terminal, ok := tester.Find("Terminal content")
-	if !ok || terminal.W < 400 {
-		t.Fatalf("terminal width=%+v present=%v", terminal, ok)
+	if !tester.Focused("Close") || !w.modalOpen() {
+		t.Fatal("dialog did not take focus")
+	}
+	// Background sidebar control must not receive the click.
+	if err := tester.Click("Hide sidebar"); err != nil {
+		t.Fatal(err)
 	}
 	if w.hidden {
-		t.Fatal("temporary compact sidebar overwrote manual preference")
+		t.Fatal("dialog allowed background interaction")
 	}
-	if _, ok := tester.Find("Workspace sidebar"); ok {
-		t.Fatal("sidebar should temporarily collapse")
+	if !w.referenceOpen() {
+		w.Dispatch("help")
+		tester.Frame()
 	}
+	tester.Key(0, native.KeyEscape)
+	if w.referenceOpen() {
+		t.Fatal("Escape did not close dialog")
+	}
+	w.Dispatch("help")
+	tester.Frame()
 	if err := tester.Click("Close"); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := tester.Find("Workspace sidebar"); !ok {
-		t.Fatal("closing reference failed to restore sidebar")
+	if w.referenceOpen() {
+		t.Fatal("close button did not close dialog")
 	}
 }
 
-func TestReferenceDoesNotCloseOnTerminalEscape(t *testing.T) {
-	w := referenceWindow(t)
-	w.Dispatch("help")
-	terminalEscape := false
-	tester := native.NewTester(func(c *native.Context) {
-		native.Row(c).Fill().Children(func() {
-			term := native.Button(c, "Terminal focus").Grow(1)
-			if term.Shortcut(0, native.KeyEscape) {
-				terminalEscape = true
-			}
-			if w.referenceOpen() {
-				w.referencePanel(c, w.appearancePalette(c))
-			}
-		})
-	}, 820, 560)
-	if !tester.Focused("Close") {
-		t.Fatal("reference close did not get focus on open")
-	}
-	if err := tester.Click("Terminal focus"); err != nil {
-		t.Fatal(err)
-	}
-	tester.Key(0, native.KeyEscape)
-	if !w.referenceOpen() || !terminalEscape {
-		t.Fatal("reference intercepted terminal Escape")
-	}
-	// Reopening focuses the panel once; Escape inside the panel closes it.
-	w.Dispatch("help")
-	w.Dispatch("help")
-	tester.Frame()
-	tester.Key(0, native.KeyEscape)
-	if w.referenceOpen() {
-		t.Fatal("panel Escape did not close reference")
-	}
-}
 func TestSidebarDragClampsWidthAndReferenceResizeRestoresIt(t *testing.T) {
 	w := referenceWindow(t)
 	tester := native.NewTester(w.View, 1200, 800)
@@ -113,7 +92,7 @@ func TestSidebarDragClampsWidthAndReferenceResizeRestoresIt(t *testing.T) {
 	w.Dispatch("help")
 	tester.SetSize(820, 560)
 	tester.Frame()
-	if w.sidebarVisible || w.hidden {
+	if !w.sidebarVisible || w.hidden {
 		t.Fatal("compact reference changed sidebar preference")
 	}
 	tester.SetSize(1200, 800)
@@ -125,13 +104,13 @@ func TestSidebarDragClampsWidthAndReferenceResizeRestoresIt(t *testing.T) {
 func TestChromeDimensionsRetainMinimumTerminalAndManualHidden(t *testing.T) {
 	for _, width := range []float32{820, 900, 1200} {
 		for _, sidebar := range []float32{220, 248, 320} {
-			dimensions := chromeLayout(width, sidebar, false, true)
+			dimensions := chromeLayout(width, sidebar, false)
 			if dimensions.terminalWidth < 400 {
 				t.Fatal(width, sidebar, dimensions)
 			}
 		}
 	}
-	if chromeLayout(1200, 248, true, false).sidebarVisible {
+	if chromeLayout(1200, 248, true).sidebarVisible {
 		t.Fatal("manual hidden sidebar restored")
 	}
 }
@@ -148,7 +127,7 @@ func populatedChromeWindow(t *testing.T) *Window {
 }
 func TestMinimalControlsReserveTrafficLightsWithoutInformationHeader(t *testing.T) {
 	w := populatedChromeWindow(t)
-	w.Dispatch("help")
+	w.hidden = true
 	tester := native.NewTester(w.View, 820, 560)
 	tester.SetTitleBar(native.TitleBar{Left: 80, Height: 44})
 	tester.Frame()
@@ -173,24 +152,6 @@ func TestMinimalControlsReserveTrafficLightsWithoutInformationHeader(t *testing.
 		t.Fatal("tab switching action no longer available")
 	}
 }
-func TestShowTemporarilyCollapsedSidebarRestoresIt(t *testing.T) {
-	w := referenceWindow(t)
-	w.Dispatch("help")
-	tester := native.NewTester(w.View, 820, 560)
-	if w.ActionLabel("toggle_sidebar") != "Show sidebar" {
-		t.Fatal("wrong dynamic sidebar menu label")
-	}
-	if err := tester.Click("Show sidebar"); err != nil {
-		t.Fatal(err)
-	}
-	if !w.sidebarVisible || w.hidden || w.referenceOpen() {
-		t.Fatal("show sidebar did not reveal sidebar")
-	}
-	if w.ActionLabel("toggle_sidebar") != "Hide sidebar" {
-		t.Fatal("sidebar menu label not updated")
-	}
-}
-
 func TestM4ChromeRenderArtifacts(t *testing.T) {
 	dir := os.Getenv("HERDR_UI_RENDER_DIR")
 	if dir == "" {
@@ -234,7 +195,6 @@ func TestShowManuallyHiddenSidebarRevealsItOnFirstClick(t *testing.T) {
 		t.Run(fmt.Sprint(width), func(t *testing.T) {
 			w := referenceWindow(t)
 			w.hidden = true
-			w.Dispatch("help")
 			tester := native.NewTester(w.View, width, 560)
 			if err := tester.Click("Show sidebar"); err != nil {
 				t.Fatal(err)
@@ -242,8 +202,47 @@ func TestShowManuallyHiddenSidebarRevealsItOnFirstClick(t *testing.T) {
 			if !w.sidebarVisible || w.hidden {
 				t.Fatal("Show sidebar required a second click")
 			}
-			if w.referenceOpen() != (width == 1200) {
-				t.Fatal("reference should close only when it prevents sidebar fitting")
+		})
+	}
+}
+
+func TestShortcutDialogPreservesLayoutAndConfirmation(t *testing.T) {
+	for _, action := range []string{"Confirm action", "Cancel", "Escape", "Backdrop"} {
+		t.Run(action, func(t *testing.T) {
+			w := referenceWindow(t)
+			tester := native.NewTester(w.View, 820, 560)
+			before, _ := tester.Find("Terminal content")
+			submits := 0
+			w.controller.shortcut.prompt = &shortcutPrompt{title: "Close tab?", confirm: true, focus: true, submit: func(string) { submits++ }}
+			tester.Frame()
+			panel, ok := tester.Find("Action confirmation dialog")
+			if !ok || panel.X != (820-panel.W)/2 || panel.Y != (560-panel.H)/2 {
+				t.Fatal("confirmation is not centered", panel)
+			}
+			after, _ := tester.Find("Terminal content")
+			if before != after {
+				t.Fatal("confirmation resized terminal", before, after)
+			}
+			switch action {
+			case "Escape":
+				tester.Key(0, native.KeyEscape)
+			case "Backdrop":
+				tester.Press(10, 550)
+				tester.Release(10, 550)
+			default:
+				if err := tester.Click(action); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if w.controller.shortcut.prompt != nil {
+				t.Fatal("dialog stayed open")
+			}
+			want := 0
+			if action == "Confirm action" {
+				want = 1
+			}
+			if submits != want {
+				t.Fatalf("submits=%d want=%d", submits, want)
 			}
 		})
 	}

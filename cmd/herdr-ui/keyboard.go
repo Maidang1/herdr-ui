@@ -72,6 +72,7 @@ func keyboardHooks(ctx context.Context, s *session.Session, k *keyboardEndpoint,
 		// Shortcuts page.
 		Settings:       func() error { return editHerdrConfigWith(binary, target, screen, env) },
 		WriteClipboard: func(text string) error { return mygo.Clipboard.Write(transfer.TextData(text)) },
+		RevealPath:     func(path string) { mygo.Shell.ShowItemInFolder(path) },
 		ReadImage:      func() []byte { return mygo.Clipboard.ReadImage() },
 		EditText: func(text string) error {
 			file, err := os.CreateTemp("", "herdr-history-*.txt")

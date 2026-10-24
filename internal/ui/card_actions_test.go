@@ -3,7 +3,6 @@ package ui
 import (
 	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/design"
-	"github.com/Maidang1/herdr-ui/internal/layout"
 	"github.com/Maidang1/herdr-ui/internal/session"
 	native "github.com/egoist/mygo/ui"
 	"testing"
@@ -31,7 +30,7 @@ func TestCardControlsRemainVisibleWhenZoomedToOnePane(t *testing.T) {
 	w := New(app.New(), nil)
 	frame := app.View{Layout: session.PaneLayout{Zoomed: true}}
 	tester := native.NewTester(func(c *native.Context) {
-		w.paneCard(c, layout.Rect{W: 300, H: 200}, app.PaneRow{ID: "pane"}, frame, true, false, design.Colors(false), func() { native.Box(c).Grow(1).FillWidth() })
+		native.Row(c).FillWidth().Children(func() { w.paneToolbarControls(c, app.PaneRow{ID: "pane"}, frame, design.Colors(false)) })
 	}, 300, 200)
 	for _, label := range []string{"Split right", "Split down", "Restore pane", "Close pane"} {
 		if _, ok := tester.Find(label); !ok {

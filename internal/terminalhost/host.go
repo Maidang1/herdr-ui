@@ -11,6 +11,7 @@ import (
 	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
+	"github.com/egoist/mygo/transfer"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -46,6 +47,7 @@ type KeyResult struct {
 }
 
 type Config struct {
+	OnPaste  func(Binding, transfer.Data) bool
 	Binary   string
 	Target   herdr.Target
 	Env      []string
@@ -491,6 +493,15 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 			h.post(e, func() {
 				e.status = Status{State: Failed, Message: fmt.Sprintf("Attach exited (%d). Retry to reconnect.", code), ExitCode: code}
 			})
+		},
+		OnPaste: func(data transfer.Data) bool {
+			h.mu.Lock()
+			valid := h.valid(e) && e.installed && e.status.State == Attached
+			h.mu.Unlock()
+			if !valid {
+				return true
+			}
+			return h.cfg.OnPaste != nil && h.cfg.OnPaste(e.binding, data)
 		},
 		OnKey: func(mods ui.Modifiers, k ui.Key) bool {
 			h.mu.Lock()

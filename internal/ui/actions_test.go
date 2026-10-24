@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"bytes"
 	"errors"
 	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/input"
 	"github.com/Maidang1/herdr-ui/internal/session"
 	"github.com/Maidang1/herdr-ui/internal/terminalhost"
+	"github.com/egoist/mygo/transfer"
 	native "github.com/egoist/mygo/ui"
 	"testing"
 )
@@ -146,5 +148,32 @@ func TestFinalRatioFailureVisibleUntilNewerResizeGeneration(t *testing.T) {
 	w.completeRatio(failed, ended, true, 3)
 	if w.controller.message != "" {
 		t.Fatal("previous ended drag overwrote newer ended drag result")
+	}
+}
+
+func TestNativeImagePasteRoutesToBoundPane(t *testing.T) {
+	w, binding := keyWindow(t)
+	payload := []byte("clipboard png")
+	data := transfer.New(transfer.NewItem(transfer.Bytes(transfer.PNG, payload)))
+	calls := 0
+	w.hooks.PasteImage = func(pane string, got []byte) error {
+		calls++
+		if pane != "pane" || !bytes.Equal(got, payload) {
+			t.Fatalf("wrong image destination: %q %q", pane, got)
+		}
+		return nil
+	}
+	if !w.pastePublished(binding, data, keyPublication(t, "terminal")) || calls != 1 {
+		t.Fatal("image not uploaded")
+	}
+	if w.pastePublished(binding, transfer.TextData("hello"), keyPublication(t, "terminal")) || calls != 1 {
+		t.Fatal("text paste intercepted")
+	}
+	if !w.pastePublished(binding, data, keyPublication(t, "replacement")) || calls != 1 {
+		t.Fatal("stale paste uploaded")
+	}
+	w.hooks.PasteImage = func(string, []byte) error { return errors.New("image endpoint disconnected") }
+	if !w.pastePublished(binding, data, keyPublication(t, "terminal")) || w.controller.message != "image endpoint disconnected" {
+		t.Fatal("upload error not reported", w.controller.message)
 	}
 }

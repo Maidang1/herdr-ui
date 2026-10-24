@@ -12,16 +12,22 @@ import (
 	"testing"
 )
 
-func TestSplitCardsInsetOnlySharedEdges(t *testing.T) {
-	viewport := layout.Rect{W: 1000, H: 600}
-	left := cardBounds(layout.Rect{W: 500, H: 600}, viewport)
-	top := cardBounds(layout.Rect{X: 500, W: 500, H: 300}, viewport)
-	bottom := cardBounds(layout.Rect{X: 500, Y: 300, W: 500, H: 300}, viewport)
-	if left.X != 0 || left.Y != 0 || left.H != 600 || top.X-left.X-left.W != 8 || bottom.Y-top.Y-top.H != 8 || bottom.X+bottom.W != 1000 || bottom.Y+bottom.H != 600 {
-		t.Fatal("card edges/gaps drifted", left, top, bottom)
+func TestSplitPanesAreFlushAndSeparatedByHairlines(t *testing.T) {
+	p := design.Colors(false)
+	splits := []layout.SplitRect{{ID: "root", Direction: "right", Ratio: .5, Rect: layout.Rect{W: 1000, H: 600}}, {ID: "right", Direction: "down", Ratio: .5, Rect: layout.Rect{X: 500, W: 500, H: 600}}}
+	tester := native.NewTester(func(c *native.Context) {
+		native.Box(c).Fill().Background(p.Content).Children(func() { splitHairlines(c, splits, p) })
+	}, 1000, 600)
+	img := tester.Image()
+	lum := func(x, y int) uint32 { r, g, b, _ := img.At(x, y).RGBA(); return r + g + b }
+	if lum(500, 100) >= lum(490, 100) {
+		t.Fatal("vertical split has no hairline at its divider center")
 	}
-	if single := cardBounds(viewport, viewport); single != viewport {
-		t.Fatal("outer card gained empty margins", single)
+	if lum(750, 300) >= lum(750, 290) {
+		t.Fatal("horizontal split has no hairline at its divider center")
+	}
+	if lum(250, 300) != lum(250, 290) || lum(495, 100) != lum(490, 100) {
+		t.Fatal("hairlines spill beyond their split or leave a gap")
 	}
 }
 func TestCardHeaderOmitsSyntheticTitlesAndUsesRealAgentBadge(t *testing.T) {
@@ -36,8 +42,8 @@ func TestCardHeaderOmitsSyntheticTitlesAndUsesRealAgentBadge(t *testing.T) {
 		if pane.Agent != "" && !tester.HasText(pane.Agent) {
 			t.Fatal("real agent badge missing")
 		}
-		if pane.Agent == "" && !tester.HasText("Terminal") {
-			t.Fatal("ordinary terminal has no generic caption")
+		if _, visible := tester.Find("Terminal"); pane.Agent == "" && visible {
+			t.Fatal("ordinary terminal shows redundant caption")
 		}
 		body, ok := tester.Find("Terminal viewport")
 		if !ok || body.H < 160 {
@@ -46,14 +52,14 @@ func TestCardHeaderOmitsSyntheticTitlesAndUsesRealAgentBadge(t *testing.T) {
 	}
 }
 
-func TestCardContentAccountsForHeaderAndBorders(t *testing.T) {
-	if hasCardContent(layout.Rect{W: 34, H: 80}, true) || hasCardContent(layout.Rect{W: 100, H: 58}, true) {
+func TestCardContentAccountsForHeader(t *testing.T) {
+	if hasCardContent(layout.Rect{W: 32, H: 80}, true) || hasCardContent(layout.Rect{W: 100, H: 56}, true) {
 		t.Fatal("card allows zero terminal content")
 	}
-	if !hasCardContent(layout.Rect{W: 35, H: 59}, true) {
+	if !hasCardContent(layout.Rect{W: 33, H: 57}, true) {
 		t.Fatal("card hides positive terminal content")
 	}
-	if !hasCardContent(layout.Rect{W: 33, H: 57}, false) {
+	if !hasCardContent(layout.Rect{W: 33, H: 25}, false) {
 		t.Fatal("single terminal has no positive content after controls")
 	}
 }
@@ -72,15 +78,16 @@ func TestSplitCardRenderArtifacts(t *testing.T) {
 			root := native.Column(c).Fill().Padding(8)
 			w.styleShell(c, root, p)
 			root.Children(func() {
-				area := native.Box(c).Grow(1).FillWidth()
+				area := native.Box(c).Grow(1).FillWidth().Radius(w.shape.Panel).Background(p.Content).Border(1, p.Border).Clip()
 				area.Children(func() {
 					b := area.Bounds()
 					viewport := layout.Rect{W: float64(b.W), H: float64(b.H)}
 					panes := []app.PaneRow{{ID: "left-top", Title: "w13:p8"}, {ID: "left-bottom", Agent: "claude"}, {ID: "right", Agent: "codex"}}
 					bounds := []layout.Rect{{W: viewport.W * .45, H: viewport.H * .55}, {Y: viewport.H * .55, W: viewport.W * .45, H: viewport.H * .45}, {X: viewport.W * .45, W: viewport.W * .55, H: viewport.H}}
 					for i, pane := range panes {
-						w.paneCard(c, cardBounds(bounds[i], viewport), pane, app.View{}, i == 2, true, p, func() { native.Box(c).Grow(1).FillWidth() })
+						w.paneCard(c, bounds[i], pane, app.View{}, i == 2, true, p, func() { native.Box(c).Grow(1).FillWidth() })
 					}
+					splitHairlines(c, []layout.SplitRect{{ID: "root", Direction: "right", Ratio: .45, Rect: viewport}, {ID: "left", Direction: "down", Ratio: .55, Rect: layout.Rect{W: viewport.W * .45, H: viewport.H}}}, p)
 				})
 			})
 		}, 1000, 700)

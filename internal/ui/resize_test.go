@@ -45,6 +45,19 @@ func TestPreviewResizesOnlySelectedNestedSplit(t *testing.T) {
 	}
 }
 
+func TestDragPreviewProjectsThroughoutPointerTravel(t *testing.T) {
+	for _, area := range []layout.Rect{{W: 81, H: 53}, {W: 137, H: 79}} {
+		root := nestedTree()
+		for i := 100; i <= 900; i++ {
+			root.Ratio = float64(i) / 1000
+			panes, splits := preview(root, area)
+			if _, err := layout.Project(area, panes, splits, layout.Rect{W: 1200, H: 800}); err != nil {
+				t.Fatalf("drag stopped at ratio %g in %+v: %v; panes=%+v", root.Ratio, area, err, panes)
+			}
+		}
+	}
+}
+
 func TestGridDividerTracksSharedPaneEdgeBeforeProjection(t *testing.T) {
 	source := []layout.SplitRect{{ID: "opaque", Direction: "right", Ratio: .5, Rect: layout.Rect{W: 81, H: 24}}}
 	splits := gridDividers(source)

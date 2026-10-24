@@ -42,3 +42,18 @@ func TestShellTintDoesNotFadeContentTokens(t *testing.T) {
 		}
 	}
 }
+
+func TestShapesAreConcentric(t *testing.T) {
+	for _, window := range []float32{10, 26} {
+		s := Shapes(window)
+		if window == 26 && (s.Panel != window-s.Gap || s.Row != s.Panel-s.Gap) {
+			t.Fatalf("nested radii are not concentric: %+v", s)
+		}
+		if s.MenuItem != s.Popover-MenuPadding {
+			t.Fatalf("menu items not concentric with their popover: %+v", s)
+		}
+		if s.Row <= 0 || s.Panel < s.Row || s.Card <= 0 {
+			t.Fatalf("degenerate radii: %+v", s)
+		}
+	}
+}

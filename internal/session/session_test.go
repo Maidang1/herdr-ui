@@ -38,6 +38,7 @@ type fakeServer struct {
 	result                             string
 	rejectAgentOnce                    bool
 	block                              chan struct{}
+	blockAt                            int
 	snapshots                          chan int
 }
 
@@ -139,6 +140,10 @@ func (f *fakeServer) handle(c net.Conn) {
 			f.calls++
 			n := f.calls
 			block := f.block
+			blockAt := f.blockAt
+			if blockAt == 0 {
+				blockAt = 3
+			}
 			result := f.result
 			if result == "" {
 				result = emptySnapshot
@@ -150,7 +155,7 @@ func (f *fakeServer) handle(c net.Conn) {
 				default:
 				}
 			}
-			if n == 3 && block != nil {
+			if n == blockAt && block != nil {
 				<-block
 			}
 			fmt.Fprintf(c, "{\"id\":%q,\"result\":%s}\n", req.ID, result)
@@ -265,6 +270,23 @@ func TestEventDuringSnapshotIsNotLost(t *testing.T) {
 	f.event()
 	close(f.block)
 	await(t, func() bool { f.mu.Lock(); defer f.mu.Unlock(); return f.calls >= 4 })
+}
+
+// Routine output events must not turn a healthy window stale while fetching
+// fresh metadata: doing so removes its dividers and disables its controls.
+func TestRoutineRefreshKeepsReadyWhileSnapshotInFlight(t *testing.T) {
+	f := &fakeServer{block: make(chan struct{})}
+	s := New(f.target(t))
+	s.Start(context.Background(), nil)
+	defer s.Close(context.Background())
+	defer close(f.block)
+	await(t, func() bool { return s.Latest().State == Ready })
+	before := s.Latest()
+	f.event()
+	await(t, func() bool { f.mu.Lock(); defer f.mu.Unlock(); return f.calls == 3 })
+	if p := s.Latest(); p.State != Ready || p.Stale || p.Snapshot != before.Snapshot || p.Revision != before.Revision {
+		t.Fatalf("routine refresh disrupted the displayed snapshot: state=%s stale=%v revision=%d", p.State, p.Stale, p.Revision)
+	}
 }
 
 func TestSubscriptionEOFReconnectsWithoutClearingSnapshot(t *testing.T) {

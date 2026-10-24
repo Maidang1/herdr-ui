@@ -114,7 +114,7 @@ func (w *Window) findBar(c *native.Context, r layout.Rect, p design.Palette) {
 	anchor := native.Row(c.Key("find-anchor:"+w.find.pane)).Absolute().Left(float32(r.X)).Top(float32(r.Y)).Size(float32(r.W), float32(r.H)).Justify(native.End).AlignItems(native.Start).PassThrough()
 	anchor.Label("Find in terminal")
 	anchor.Children(func() {
-		bar := native.Row(c.Key("find-bar")).Shrink(1).Height(32).MaxWidth(float32(r.W)-16).Padding(0, 4, 0, 10).Gap(4).AlignItems(native.Center).Radius(8).Background(p.Elevated).Border(1, p.Border).Shadow(0, 4, 16, 0, p.ContentShadow)
+		bar := native.Row(c.Key("find-bar")).Shrink(1).Height(32).MaxWidth(float32(r.W)-16).Padding(0, 5, 0, 12).Gap(4).AlignItems(native.Center).Radius(16).Background(p.Elevated).Border(1, p.Border).Shadow(0, 4, 16, 0, p.ContentShadow)
 		bar.Children(func() {
 			native.Icon(c, icons.Search).Size(13, 13).Shrink(0).TextColor(p.Tertiary)
 			input := native.TextInput(c.Key("find-query"), &w.find.query).Width(150).FontSize(13).Placeholder("Find").TextColor(p.Text)
@@ -154,7 +154,7 @@ func (w *Window) findBar(c *native.Context, r layout.Rect, p design.Palette) {
 // findButton is one of the bar's quiet square controls; degrees turns its
 // glyph, as a down chevron turned 180 points up.
 func (w *Window) findButton(c *native.Context, key string, icon *native.SVG, label string, p design.Palette, degrees float32) native.Element {
-	button := native.ButtonBase(c.Key(key)).Size(22, 22).Shrink(0).Radius(5).Center().Label(label).Tooltip(label).KeepFocus()
+	button := native.ButtonBase(c.Key(key)).Size(22, 22).Shrink(0).Radius(11).Center().Label(label).KeepFocus()
 	w.controlState(button, p)
 	button.Children(func() {
 		glyph := native.Icon(c, icon).Size(13, 13).TextColor(p.Secondary)

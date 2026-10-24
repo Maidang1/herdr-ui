@@ -138,7 +138,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			copyOnSelect = terminal.CopyOnSelectClipboard
 		}
 		sidebar = sidebarinfo.New(target, func(p sidebarinfo.Publication) { post(func() { a.UpdateSidebar(p) }) })
-		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: font, CopyOnSelect: copyOnSelect, MinimumContrast: persisted.MinimumContrast, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key})
+		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: font, CopyOnSelect: copyOnSelect, MinimumContrast: persisted.MinimumContrast, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key, OnPaste: screen.Paste})
 		screen.ConnectTerminal(host, s, ctx, post)
 		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, Notifications: persisted.Notifications})
 		preferences := mygo.Theme.Preferences()
@@ -211,36 +211,36 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			win.SetVibrancy(material)
 			post(func() { screen.SetReducedTransparency(preferences.ReduceTransparency) })
 		})
-		viewItems := []*mygo.MenuItem{}
-		terminalItems := []*mygo.MenuItem{}
-		helpItems := []*mygo.MenuItem{}
 		menuItems := map[string]*mygo.MenuItem{}
 		menuEnabled := map[string]bool{}
 		menuLabels := map[string]string{}
 		// Window-level commands keep their direct key equivalents, as Herdr
-		// and Kero do; the prefix chords remain Herdr's own layer beneath.
-		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J", "find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G", "clear_pane": "CmdOrCtrl+K", "zen": "Ctrl+Cmd+Z", "settings": "CmdOrCtrl+,"}
-		for _, action := range view.Actions {
-			action := action
-			label := screen.ActionLabel(action.ID)
-			if binding := screen.BindingLabel(action.ID); binding != "" {
-				label += " · " + binding
-			}
-			item := &mygo.MenuItem{Label: label, Accelerator: accelerators[action.ID], Disabled: !screen.Can(action.ID), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.Dispatch(action.ID) }) }}
-			switch action.ID {
-			case "toggle_sidebar", "previous_tab", "next_tab", "zoom_in", "zoom_out", "zoom_reset", "zen":
-				viewItems = append(viewItems, item)
-			case "attention":
-				terminalItems = append([]*mygo.MenuItem{item}, terminalItems...)
-			case "help":
-				helpItems = append(helpItems, item)
-			default:
-				terminalItems = append(terminalItems, item)
-			}
-			menuItems[action.ID] = item
-			menuEnabled[action.ID] = !item.Disabled
-			menuLabels[action.ID] = label
+		// and Kero do; the prefix chords remain Herdr's own layer beneath,
+		// shown after each title.
+		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J", "find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G", "clear_pane": "CmdOrCtrl+K", "zen": "Ctrl+Cmd+Z", "settings": "CmdOrCtrl+,", "goto": "CmdOrCtrl+P"}
+		commandItem := func(id string) *mygo.MenuItem {
+			label := screen.MenuLabel(id)
+			item := &mygo.MenuItem{Label: label, Accelerator: accelerators[id], Disabled: !screen.Can(id), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.Dispatch(id) }) }}
+			menuItems[id] = item
+			menuEnabled[id] = !item.Disabled
+			menuLabels[id] = label
+			return item
 		}
+		sections := map[string][]*mygo.MenuItem{}
+		for _, section := range view.MenuBar {
+			var items []*mygo.MenuItem
+			for i, group := range section.Groups {
+				if i > 0 {
+					items = append(items, &mygo.MenuItem{Type: mygo.MenuItemSeparator})
+				}
+				for _, id := range group {
+					items = append(items, commandItem(id))
+				}
+			}
+			sections[section.Title] = items
+		}
+		helpItems := []*mygo.MenuItem{commandItem("help")}
+		appItems := []*mygo.MenuItem{{Role: mygo.RoleAbout}, {Type: mygo.MenuItemSeparator}, commandItem("settings"), {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleServices}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleHide}, {Role: mygo.RoleHideOthers}, {Role: mygo.RoleUnhide}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleQuit}}
 		appearanceItems := []*mygo.MenuItem{}
 		for _, choice := range []struct {
 			label  string
@@ -258,22 +258,23 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			themeItems[source] = item
 			appearanceItems = append(appearanceItems, item)
 		}
-		viewItems = append(viewItems, &mygo.MenuItem{Type: mygo.MenuItemSeparator}, &mygo.MenuItem{Label: "Appearance", Submenu: appearanceItems})
+		sections["View"] = append(sections["View"], &mygo.MenuItem{Type: mygo.MenuItemSeparator}, &mygo.MenuItem{Label: "Appearance", Submenu: appearanceItems})
 		screen.SetActionStateChanged(func(id string, enabled bool) {
-			label := screen.ActionLabel(id)
-			if binding := screen.BindingLabel(id); binding != "" {
-				label += " · " + binding
+			item, ok := menuItems[id]
+			if !ok {
+				return
 			}
+			label := screen.MenuLabel(id)
 			if menuLabels[id] != label {
 				menuLabels[id] = label
-				menuItems[id].SetLabel(label)
+				item.SetLabel(label)
 			}
 			if menuEnabled[id] != enabled {
 				menuEnabled[id] = enabled
-				menuItems[id].SetEnabled(enabled)
+				item.SetEnabled(enabled)
 			}
 		})
-		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Role: mygo.RoleAppMenu}, {Role: mygo.RoleEditMenu}, {Label: "View", Submenu: viewItems}, {Label: "Terminal", Submenu: terminalItems}, {Label: "Help", Submenu: helpItems}, {Role: mygo.RoleWindowMenu}}))
+		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Label: "Herdr", Submenu: appItems}, {Role: mygo.RoleEditMenu}, {Label: "Workspace", Submenu: sections["Workspace"]}, {Label: "Tab", Submenu: sections["Tab"]}, {Label: "Pane", Submenu: sections["Pane"]}, {Label: "Go", Submenu: sections["Go"]}, {Label: "View", Submenu: sections["View"]}, {Role: mygo.RoleWindowMenu}, {Label: "Help", Submenu: helpItems}}))
 		win.OnClosed(func() {
 			offAppearance()
 			screen.CloseCommandSurface()

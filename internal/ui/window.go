@@ -42,10 +42,11 @@ type Window struct {
 	navigatorUses       []navigatorUse
 	navigatorSessions   int
 	settings            settingsUI
+	shape               design.Shape
 }
 
 func New(a *app.App, retry func()) *Window {
-	return &Window{app: a, retry: retry, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, agentsGrouped: true, appearance: windowAppearance{active: true}}
+	return &Window{app: a, retry: retry, shape: design.SystemShapes(), sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, agentsGrouped: true, appearance: windowAppearance{active: true}}
 }
 
 // SetInitialSettings applies the persisted settings before the first
@@ -121,7 +122,7 @@ func (w *Window) View(c *native.Context) {
 	w.syncInput()
 	width, _ := c.Size()
 	w.viewportWidth = width
-	w.sidebarVisible = chromeLayout(width, w.sidebarWidth, w.hidden || w.zen, w.referenceOpen() && !w.zen).sidebarVisible
+	w.sidebarVisible = chromeLayout(width, w.sidebarWidth, w.hidden || w.zen).sidebarVisible
 	if w.actionState != nil {
 		for _, action := range Actions {
 			w.actionState(action.ID, w.Can(action.ID))
@@ -129,7 +130,7 @@ func (w *Window) View(c *native.Context) {
 	}
 	p := w.appearancePalette(c)
 	v := w.currentView()
-	root := native.Row(c).Fill().Padding(8).Gap(8).AlignItems(native.Stretch).TextColor(p.Text).FontSize(13)
+	root := native.Row(c).Fill().Padding(w.shape.Gap).Gap(w.shape.Gap).AlignItems(native.Stretch).TextColor(p.Text).FontSize(13)
 	if v.PaneID == "" && !w.modalOpen() && !w.referenceOpen() && !root.FocusWithin() {
 		root.Focus()
 	}
@@ -152,19 +153,14 @@ func (w *Window) View(c *native.Context) {
 		if w.sidebarVisible {
 			w.sidebar(c, v, p)
 		}
-		main := native.Column(c.Key("main-area")).Grow(1).MinWidth(0).AlignItems(native.Stretch).Gap(8)
+		main := native.Column(c.Key("main-area")).Grow(1).MinWidth(0).AlignItems(native.Stretch)
 		main.Children(func() {
-			if len(v.Tabs) > 0 && w.sidebarVisible {
-				w.tabBar(c, v, p)
-			}
+			// One white panel holds the toolbar and the terminals, as a Mac
+			// window's toolbar and content share one surface.
 			content := native.Column(c.Key("terminal-content")).Label("Terminal content").Grow(1).MinWidth(0).AlignItems(native.Stretch)
-			if w.terminal != nil && v.HasLayout && len(v.Layout.Panes) > 1 {
-				content.Background(native.Transparent)
-			} else {
-				content.Radius(16).Background(p.Content).Border(1, p.Border).Shadow(0, 1, 5, 0, p.ContentShadow).Clip()
-			}
+			content.Radius(w.shape.Panel).Background(p.Content).Border(1, p.Border).Shadow(0, 1, 5, 0, p.ContentShadow).Clip()
 			content.Children(func() {
-				w.windowControls(c, v, p)
+				w.toolbar(c, v, p)
 				w.actionBar(c, v, p)
 				w.shortcutPanel(c, p)
 				if v.Stale && v.Error != "" {
@@ -186,35 +182,12 @@ func (w *Window) View(c *native.Context) {
 				}
 			})
 		})
-		if w.referenceOpen() && !w.zen {
-			w.referencePanel(c, p)
-		}
 	})
-}
-
-// Reserve native traffic lights only when the sidebar no longer holds them.
-// The strip stays at 36pt so its controls' centers land on the lights' own
-// line (measured center y=26), and carries the tab strip inline — as the
-// reference apps do — so no empty bar sits between the lights and content.
-// Zen mode draws nothing here: the lights float over the terminal, as
-// Herdr's zen does.
-func (w *Window) windowControls(c *native.Context, v app.View, p design.Palette) {
-	if w.sidebarVisible || w.zen {
-		return
+	w.notificationToast(c, p)
+	if w.referenceOpen() && !w.zen {
+		w.referencePanel(c, p)
 	}
-	bar := c.TitleBar()
-	native.Row(c).Height(36).Shrink(0).FillWidth().Padding(0, 4, 0, 0).AlignItems(native.Center).DragWindow().Children(func() {
-		native.Box(c).Width(bar.Left).Shrink(0)
-		if w.iconButton(c, "show-sidebar", icons.PanelLeft, "Show sidebar", p).Clicked() {
-			w.Dispatch("toggle_sidebar")
-		}
-		native.Box(c).Width(4).Shrink(0)
-		if len(v.Tabs) > 0 {
-			w.tabStripControls(c, v, p, true)
-		} else {
-			native.Box(c).Grow(1)
-		}
-	})
+	w.shortcutDialog(c, p)
 }
 
 func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
@@ -246,7 +219,7 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 				native.Text(c, "No panes in this tab").TextColor(p.Secondary)
 			}
 			for _, pane := range v.Panes {
-				row := native.ButtonBase(c.Key("detail:" + pane.ID)).FillWidth().Radius(10).Padding(14).Label(paneDescription(pane))
+				row := native.ButtonBase(c.Key("detail:" + pane.ID)).FillWidth().Radius(w.shape.Row).Padding(14).Label(paneDescription(pane))
 				if pane.Selected {
 					row.Background(p.Inset)
 				} else if row.Hovered() {
@@ -254,14 +227,14 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 				}
 				row.Children(func() {
 					native.Row(c).FillWidth().Gap(12).AlignItems(native.Center).Children(func() {
-						native.Icon(c, icons.Agent(pane.Agent)).Size(18, 18).TextColor(p.Secondary).Tooltip(pane.Agent)
+						native.Icon(c, icons.Agent(pane.Agent)).Size(18, 18).TextColor(p.Secondary)
 						native.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
 							native.Text(c, pane.Title).FontSize(13).SingleLine()
 							if pane.Agent != "" {
 								native.Text(c, pane.Agent).FontSize(12).TextColor(p.Secondary)
 							}
 							if pane.CWD != "" {
-								native.Text(c, pane.CWD).FontSize(12).TextColor(p.Secondary).Selectable().SingleLine().Tooltip(pane.CWD)
+								native.Text(c, pane.CWD).FontSize(12).TextColor(p.Secondary).Selectable().SingleLine()
 							}
 						})
 						w.stateIcon(c, pane.Title, pane.Status)
@@ -278,7 +251,7 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 
 func (w *Window) stateIcon(c *native.Context, name, value string) {
 	icon, color, label := status(value, c.Theme().Dark)
-	native.Icon(c, icon).Size(14, 14).TextColor(color).Tooltip(label).Label(name + " · " + label)
+	native.Icon(c, icon).Size(14, 14).TextColor(color).Label(name + " · " + label)
 }
 func statusLabel(value string) string {
 	switch strings.ToLower(value) {

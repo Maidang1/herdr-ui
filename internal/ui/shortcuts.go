@@ -36,6 +36,8 @@ type ActionHooks struct {
 	Notifications func(enabled bool)
 	// EditConfig opens Herdr's own configuration for editing.
 	EditConfig func() error
+	// RevealPath shows a workspace's directory in Finder.
+	RevealPath func(path string)
 }
 
 func (w *Window) SetActionHooks(h ActionHooks) { w.hooks = h }

@@ -28,12 +28,12 @@ Herdr UI 是本机已运行的 Herdr 守护进程的原生客户端：展示工�
 
 默认 1200 × 800 逻辑像素，最小 820 × 560。侧栏默认 248px，可拖到 220–320px；隐藏侧栏后主面板占据剩余区域。窗口全屏与交通灯使用系统行为。
 
-示意与画稿中的名称、分支、状态均为示例。当前 Herdr 会话快照没有分支字段；按§2.3的用户修正，侧栏由后台只读本地Git补充分支，路径仅在tooltip展示。无代理时不显示代理名称。
+示意与画稿中的名称、分支、状态均为示例。当前 Herdr 会话快照没有分支字段；按§2.3的用户修正，侧栏由后台只读本地Git补充分支，路径不在侧栏展示，可经右键菜单「Copy Path / Reveal in Finder」取得。无代理时不显示代理名称。
 
 ### 2.2 窗口外壳
 
 - 左上为系统交通灯；右侧仅放隐藏侧栏按钮，不提供打开或创建工作树的入口。
-- 磨砂与淡紫到奶油渐变使用本文 §9；右侧主面板距窗口顶部、右侧、底部各 8px，圆角 16px，与侧栏间隔 8px。设计外框圆角 24px，与内面板构成 8px 同心留白；运行时窗口外框使用系统行为。
+- 磨砂与淡紫到奶油渐变使用本文 §9；右侧主面板距窗口顶部、右侧、底部各 8px，与侧栏间隔 8px。主面板圆角取系统窗口圆角减 8px（`shape.panel`，§9.8），构成同心留白。
 - 侧栏分区间距为 6px，Workspaces 标题不加额外上下内边距；顶部按钮命中框保留 28px。
 - 不显示旧稿的六入口活动栏。第一版只连接本机，连接路径可由启动参数提供，不做设备管理页。
 - 实现中的 UI 字体用 macOS 系统 UI 字体；Pencil 不支持 SF Pro Text，设计稿 `font.ui` 使用 Inter 作为预览替代。正文 13px、辅助行 12px、分组标题 12px；终端默认等宽字体 13px，分屏时不自动缩小字号。保留系统字体回退。
@@ -42,8 +42,8 @@ Herdr UI 是本机已运行的 Herdr 守护进程的原生客户端：展示工�
 
 按用户2026-10-23提供的Herdr侧栏截图修正信息模型；此节替代早期“路径副行和展开shell列表”的决定，保留原生界面风格。
 
-- spaces按服务端工作区顺序显示真实名称、仓库来源图标、当前分支和非零ahead/behind计数。分支从明确的工作区checkout路径或权威pane顺序中第一个有效cwd对应的本地Git仓库读取；缺失不补造main。路径保留在tooltip，侧栏不展开终端提示符/主机名。
-- 名称13px、分支12px，工作区主体42px，已确认监听端口单独22px一行展示。长分支/端口截断并提供完整tooltip，选中背景保持中性、焦点环独立。
+- spaces按服务端工作区顺序显示真实名称、当前分支和非零ahead/behind计数。分支从明确的工作区checkout路径或权威pane顺序中第一个有效cwd对应的本地Git仓库读取；缺失不补造main。路径不在侧栏展开（右键菜单可复制或在 Finder 中显示），侧栏不展开终端提示符/主机名。
+- 名称13px、分支12px，工作区主体42px，已确认监听端口单独22px一行展示。长分支/端口截断，完整内容在无障碍名称中；界面不使用悬停 tooltip。选中背景取外壳淡紫色相（`row.selected`），焦点环独立。
 - 仓库来源图标只使用真实origin类别：GitHub品牌、其它Git来源的通用图标，非Git路径使用目录。工作树仅在明确归属数据存在时缩进，不按名称猜组。
 - 监听端口以真实pane shell进程后代为优先归属；独立启动的服务可按实际进程cwd在唯一规范化checkout路径内归属，使用路径边界、symlink规范化与进程出生标识防止误配。不能确认归属的端口不列入；端口仅显示，不新增启动服务或打开端口动作。
 - agents是独立分区，按所属工作区分组，仅展示实际报告agent的pane：工作区名称、agent标识/名称、真实状态。普通shell不出现在agents；同名agent按pane ID区分，点击仍是窗口本地workspace/tab/pane选择。
@@ -70,7 +70,7 @@ Herdr UI 是本机已运行的 Herdr 守护进程的原生客户端：展示工�
 
 ### 2.6 分屏与参考面板
 
-按2026-10-24最新分屏参考图，多pane展示为独立圆角卡片：12px圆角、8px间距，间隙显示窗口外壳。32px轻量标识栏只使用明确的自定义pane label，普通shell使用通用Terminal标识；右侧徽标使用实际agent名称。没有可靠来源的模型/版本不生成徽标，不恢复工作区/路径/标签信息，也不使用pane ID或terminal title回退。每张卡片右上角提供右分屏、下分屏、放大/恢复、关闭四个按钮；单pane及放大状态也保留32px标识栏，便于首次分屏和恢复。窄于180px时收为操作菜单。点击卡片标识或终端、方向快捷键切换焦点。分隔拖动命中区至少8px，线条仅在hover/drag时显示。布局动作及权威数据规则见 §5。
+按2026-10-24最新分屏参考图，多pane在内容面板内无缝铺满：不留间隙、不做圆角卡片，相邻 pane 之间以 1px 发丝线分隔（位于权威分隔线中心），外缘由内容面板的圆角裁切。32px轻量标识栏只使用明确的自定义pane label，普通shell使用通用Terminal标识；agent pane 在图标旁显示实际agent名称（只出现一次）。标题右键打开 pane 菜单，双击放大/恢复。没有可靠来源的模型/版本不生成徽标，不恢复工作区/路径/标签信息，也不使用pane ID或terminal title回退。每个 pane 标识栏右侧提供右分屏、下分屏、放大/恢复、关闭四个按钮。单pane及放大状态不再有单独的标识栏：标签、agent 名称与这四个按钮合并为内容面板顶部的一条白色工具栏（36px，与交通灯同一中线；侧栏隐藏时还容纳交通灯留白与显示侧栏按钮）。窄于180px时收为操作菜单。点击卡片标识或终端、方向快捷键切换焦点。分隔拖动命中区至少8px；发丝线常显，hover/drag时加粗为2px强调色。布局动作及权威数据规则见 §5。
 
 卡片按钮作用于所在pane，按帧内target/epoch/workspace/tab/terminal身份验证，控件身份也包含target/epoch/terminal以丢弃旧卡片的按压状态。关闭显式发送一次`pane.close`，结束该终端会话；关闭最后一个pane可能移除对应工作区。远端`confirmation_required`保持拒绝，不自动强制；响应不确定时不重放。成功响应后等待权威快照确认移除，不抢占当前本地选择。关闭GUI仍只释放本地连接。
 
@@ -208,7 +208,7 @@ lucide-static / @lobehub/icons-static-svg
 - `scripts/icons.mjs` 读取清单，只导出实际使用的图标到 `internal/icons/svg/`，生成 `internal/icons/icons_gen.go` 的具名变量。清单、脚本和生成结果均入库；普通 Go 构建只使用生成文件，不要求本机先安装 Node/npm。
 - 生成器通过 `go:embed` 嵌入 SVG，使用 `ui.MustParseSVG` 在初始化时解析一次；渲染过程中复用 `*ui.SVG`，不逐帧读取或解析文件。Go 调用形式为 `ui.Icon(c, icons.PanelLeft)`。
 - 图标颜色由 `TextColor` 读取本文 token，尺寸由 `Size` 或 `FontSize` 控制。保留原 SVG 的 viewBox、描边宽度和端点风格；工具栏命中框仍至少28px，不能把图标视觉尺寸当作点击区域。
-- 状态图标为12–14px，常规工具栏图标为16px；图标与其 tooltip、按钮 Label、原生辅助名称共同定义，纯装饰图标不重复朗读。
+- 状态图标为12–14px，常规工具栏图标为16px；图标与按钮 Label、原生辅助名称共同定义（界面不使用悬停 tooltip），纯装饰图标不重复朗读。
 - 脚本对缺失名称、重复 Go 标识符或无效 SVG 明确失败，不回退为其他图标。生成结果应确定且可重复，验证覆盖清单完整性、所有导出图标可被 mygo 解析，以及重新生成无差异。
 - 当前 `assets/icons/` 是设计稿素材，保留其来源及授权；应用资源以锁定的 npm 版本生成。生成资源随包保留所用 Lucide 版本的许可证/版权声明。现有 `github.svg` 来自 Simple Icons，保留独立授权，不能将其标为 Lucide 来源；第一版未使用的品牌图标不自动打包。
 
@@ -230,7 +230,7 @@ lucide-static / @lobehub/icons-static-svg
 - 在 `internal/icons` 维护显式 agent 标识映射，按 Herdr 返回的已识别 agent 类型选图；显示名、终端标题和所用模型名不作为模糊匹配依据。别名只接受清单中明确列出的值。
 - 单色品牌图标使用 `ui.Icon`，跟随 `icon.default` / `icon.active`；彩色版本使用 `ui.Image` 保留自身颜色，不强制染为 UI 状态色。首版侧栏优先采用单色版本，并验证亮暗背景下的辨识度。
 - 品牌图标用于身份，状态仍使用独立的 Lucide 图标。例如品牌标识在名称前，working/blocked/done 图标在行尾；不以改变品牌颜色替代状态提示，不增加常驻状态文字。
-- agent 图标默认16px，保留42px紧凑两行布局；tooltip/辅助名称包含真实 agent 名称。未知或无对应素材的 agent 使用 Lucide `bot`，普通无代理终端使用 `terminal`，不冒充相似品牌。
+- agent 图标默认16px，保留42px紧凑两行布局；辅助名称包含真实 agent 名称。未知或无对应素材的 agent 使用 Lucide `bot`，普通无代理终端使用 `terminal`，不冒充相似品牌。
 - 品牌资源与通用图标共用生成脚本和嵌入流程，但导出清单记录各自的包、版本、原始文件和显示方式，避免同名覆盖。缺失已配置文件属于生成错误；未知运行时 agent 才走通用回退。
 - 导出并保留 Lobe Icons 的 [MIT 许可证和版权声明](https://github.com/lobehub/lobe-icons/blob/master/LICENSE)，与 Lucide、现有 Simple Icons 的来源分别记录。品牌展示使用对应标识，不暗示产品背书。
 - 验证覆盖已配置 agent 映射、未知 agent 回退、彩色/单色渲染、亮暗对比和独立状态图标。SVG 需通过 mygo 实际解析；若使用其不支持的效果，先选兼容的静态版本，不引入浏览器渲染依赖。
@@ -525,8 +525,9 @@ JSON重连保留当前目标仍存活的插件实例；新快照映射不符再�
 | `text.disabled` | `#8C8595FF` | `#776E82FF` | 明确不可用的操作；不用于正常时间或状态 |
 | `icon.default` | `#706978FF` | `#B2A9BFFF` | 工具栏和侧栏普通图标 |
 | `icon.active` | `#37313FFF` | `#F2EFF5FF` | 当前项图标 |
-| `row.hover` | `#FFFFFF52` | `#FFFFFF0A` | 未选中行 hover，叠在侧栏底上 |
-| `row.pressed` | `#FFFFFFA3` | `#FFFFFF14` | 未选中行按下 |
+| `row.hover` | `#3026380B` | `#FFFFFF0A` | 未选中行与控件 hover，侧栏和白色面板上都可见 |
+| `row.pressed` | `#30263817` | `#FFFFFF14` | 未选中行与控件按下 |
+| `row.selected` | `#7A55A82B` | `#C4A6EA2E` | 侧栏选中行（窗口激活时），取外壳的淡紫色相而非操作蓝；窗口失焦时退回中性 `selected` |
 | `row.selected` | `#FFFFFFFF` | `#40394AFF` | 选中工作区，无蓝色大底 |
 | `row.selected.inactive` | `#FFFFFFB8` | `#37313FFF` | 窗口失焦时的选中项 |
 | `action.accent` | `#0057A6FF` | `#78B7FFFF` | 链接、可操作项与强调图标 |
@@ -576,10 +577,29 @@ JSON重连保留当前目标仍存活的插件实例；新快照映射不符再�
 
 1. **窗口外壳**：使用 macOS 原生背景材质，在材质之上叠加外壳渐变。渐变图层整体 opacity 为亮色 0.96、暗色 0.96；渐变 token 自身仍为不透明色。窗口圆角、交通灯和窗口外阴影交给系统。
 2. **侧栏**：共享窗口背景材质，不另放大块实底；需要染色时仅叠加 `sidebar.tint`。真实背景模糊由原生材质提供，不能把 tint 当作 blur。避免在同一区域重复叠两层模糊。`new.pen` 静态稿让侧栏透明地直接显示连续窗口渐变，不对侧栏矩形单独施加 background blur，以免产生与画布底色混合的暗边和接缝。
-3. **主面板**：`content.background` 不透明，圆角 16px，描边 1px `border.content`；阴影 offset (0, 1px)、blur 5px、spread 0、颜色 `shadow.content`。面板顶部使用 `content.header`，与主体连续。
-4. **浮层**：`surface.elevated` 实底，圆角 10px，1px `border.content`；阴影 offset (0, 8px)、blur 24px、spread 0、颜色 `shadow.floating`。内容可读性优先。
+3. **主面板**：`content.background` 不透明，圆角取同心半径 `shape.panel`（见 §9.8），描边 1px `border.content`；阴影 offset (0, 1px)、blur 5px、spread 0、颜色 `shadow.content`。面板顶部使用 `content.header`，与主体连续。
+4. **浮层**：`surface.elevated` 实底，圆角 `shape.popover`（12px），菜单项内缩 4px、圆角 8px，1px `border.content`；阴影 offset (0, 8px)、blur 24px、spread 0、颜色 `shadow.floating`。内容可读性优先。
 5. **减少透明度 / 材质不可用**：关闭模糊和透明渐变层；外壳直接绘制三 stop 不透明渐变，侧栏改用 `sidebar.fallback`。控件、内容与文字颜色不变。
 6. **增加对比度**：装饰分隔线和必要边界使用 `border.control`，关闭侧栏透明 tint，使用 `sidebar.fallback`；正常文字不使用 `text.disabled`。实际系统偏好检测和原生材质接入需在 mygo 实现阶段验证，本文不表示已经接入。
+
+### 9.8 同心圆角（2026-10-24）
+
+所有嵌套表面按 Apple 的同心原则派生圆角：内层半径 = 外层半径 − 两者间距，不再出现圆角窗口里的直角面板。实现位于 `internal/design/shape.go`。
+
+| token | macOS 26 | 更早系统 | 用途 |
+| --- | --- | --- | --- |
+| `shape.window` | 26 | 10 | 系统窗口圆角（带 toolbar 的隐藏标题栏窗口） |
+| `shape.gap` | 8 | 8 | 窗口边缘到面板、面板之间的间距 |
+| `shape.panel` | 18 | 10 | 主内容面板（顶部工具栏与终端同在其中） |
+| `shape.row` | 10 | 6 | 面板内缩 8px 的列表行 |
+| `shape.popover` / `menuItem` | 12 / 8 | 12 / 8 | 弹出菜单及其内缩 4px 的菜单项 |
+| `shape.dialog` | 18 | 16 | 模态面板、Go To 调色板 |
+
+工具条类控件（搜索框、标签、图标按钮、查找条）使用胶囊或正圆，与 macOS 26 工具栏一致。侧栏不绘制自己的底色、描边或圆角，直接坐在窗口背景上，交通灯位于其顶部；只有右侧内容区是面板。
+
+### 9.9 状态标记（2026-10-24）
+
+侧栏工作区行、agent 行与标签胶囊统一使用 Herdr 的 dots 状态标记（`internal/ui/status_mark.go`）：working 为淡色圆环上一段转动的弧（1 秒一圈）；blocked（等待回复）为实心点外加缓慢扩散淡出的光晕（1.6 秒）；done 为实心绿点；idle 为空心圆环；unknown 为小点。动画只触发重绘、不重建视图；系统开启"减少动态效果"时标记静止。工作区行只标记需要关注的状态（working / blocked / done），idle 与未知不画。
 
 ### 9.7 对比度与验收
 

@@ -3,6 +3,7 @@ package terminalhost
 import (
 	"context"
 	"github.com/Maidang1/herdr-ui/internal/herdr"
+	"github.com/egoist/mygo/transfer"
 	"sync"
 	"testing"
 	"time"
@@ -687,4 +688,37 @@ func TestOnSearchPostedWithBindingAndDroppedWhenRetired(t *testing.T) {
 	}
 	finish(t, x)
 	_ = b
+}
+
+func TestNativePasteHasApplicationHandler(t *testing.T) {
+	x := setup()
+	calls := 0
+	var gotBinding Binding
+	x.h.cfg.OnPaste = func(binding Binding, data transfer.Data) bool {
+		calls++
+		gotBinding = binding
+		image, _ := data.Read(transfer.PNG)
+		return len(image) > 0
+	}
+	binding := reconcile(t, x)
+	o := receive(t, x.options)
+	x.release <- struct{}{}
+	receive(t, x.posts)()
+	defer finish(t, x)
+	if o.OnPaste == nil {
+		t.Fatal("native paste bypasses application image upload")
+	}
+	data := transfer.New(transfer.NewItem(transfer.Bytes(transfer.PNG, []byte("png"))))
+	if !o.OnPaste(data) || calls != 1 || gotBinding != binding {
+		t.Fatal("image not routed to owning binding")
+	}
+	if o.OnPaste(transfer.TextData("text")) || calls != 2 {
+		t.Fatal("text fallback lost")
+	}
+	if _, err := x.h.Reconcile(nil); err != nil {
+		t.Fatal(err)
+	}
+	if !o.OnPaste(data) || calls != 2 {
+		t.Fatal("stale terminal dispatched paste")
+	}
 }
