@@ -51,3 +51,5 @@ M0 验证窗口连接某个已有终端：先运行 `make probe` 取得真实 `t
 开发期 `./scripts/go.sh run ./cmd/herdr-ui -local-fixture`/`make window` 首次可能下载插件的原生库；`make package` 把校验后的 `libghostty-vt` 放入应用资源，打包应用不在启动时下载。集成测试会在 `/tmp` 创建自己的隔离 Herdr 服务与终端，绝不关闭用户已有会话。
 
 应用图标是已提交的生成文件，普通 Go 构建不需要 Node。更新图标时执行 `npm ci && npm run icons`；清单与确切来源位于 `scripts/icons.json` 和 `internal/icons/SOURCES.txt`，许可证随打包资源保留。
+
+App 图标的源文件是 `assets/app/icon.svg`（同心圆角的分屏窗格，配 Herdr 的 working 弧与 waiting 光晕）。改动后执行 `resvg -w 1024 -h 1024 assets/app/icon.svg assets/app/icon.png` 重新导出；`make package` 读取 `mygo.json` 的 `icon` 生成 `.icns`。

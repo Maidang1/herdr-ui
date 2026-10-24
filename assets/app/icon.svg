@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Herdr UI app icon. macOS grid: 824pt body at 100pt inset, radius 185.
+       Panes are concentric with the body (185 - 72 = 113) and split like the
+       app's content panel; their marks are Herdr's dots: a turning arc while
+       an agent works, a dot with a halo while it waits for you. -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C9B0EE"/>
+      <stop offset="1" stop-color="#6A4B9C"/>
+    </linearGradient>
+    <linearGradient id="pane" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#252029"/>
+      <stop offset="1" stop-color="#1E1B23"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".45"/>
+      <stop offset=".5" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".28"/>
+    </filter>
+    <filter id="lift" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#2A1A45" flood-opacity=".35"/>
+    </filter>
+    <clipPath id="panel">
+      <rect x="172" y="172" width="680" height="680" rx="113"/>
+    </clipPath>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#body)" filter="url(#shadow)"/>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="183.5" fill="none" stroke="url(#sheen)" stroke-width="3"/>
+
+  <g filter="url(#lift)">
+    <g clip-path="url(#panel)" fill="url(#pane)">
+      <rect x="172" y="172" width="392" height="680" rx="30"/>
+      <rect x="580" y="172" width="272" height="332" rx="30"/>
+      <rect x="580" y="520" width="272" height="332" rx="30"/>
+    </g>
+  </g>
+
+  <!-- Prompt -->
+  <polyline points="262,424 350,512 262,600" fill="none" stroke="#F2EFF5" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="390" y="578" width="104" height="44" rx="22" fill="#C4A6EA"/>
+
+  <!-- Working: a turning arc on a faint ring -->
+  <circle cx="716" cy="338" r="62" fill="none" stroke="#C4A6EA" stroke-opacity=".22" stroke-width="22"/>
+  <path d="M716 276 A62 62 0 0 1 769.7 369" fill="none" stroke="#C4A6EA" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- Waiting: a dot with its halo -->
+  <circle cx="716" cy="686" r="70" fill="#E7BF72" fill-opacity=".18"/>
+  <circle cx="716" cy="686" r="34" fill="#E7BF72"/>
+</svg>

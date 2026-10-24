@@ -2,6 +2,7 @@
   "name": "Herdr UI",
   "identifier": "dev.herdr.ui",
   "version": "0.0.1",
+  "icon": "assets/app/icon.png",
   "main": "./cmd/herdr-ui",
   "out": "dist",
   "resources": ["internal/icons/LICENSE-lucide", "internal/icons/LICENSE-lobe", "assets/icons/NOTICE.md"]
