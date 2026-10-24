@@ -47,6 +47,7 @@ var (
 	Search           = load("lucide-search")
 	Settings         = load("lucide-settings")
 	RotateCw         = load("lucide-rotate-cw")
+	Palette          = load("lucide-palette")
 	ClaudeCode       = load("lobe-claudecode")
 	Codex            = load("lobe-codex")
 	GeminiCLI        = load("lobe-geminicli")

@@ -63,7 +63,7 @@ func TestSettingsCopyOnSelectTogglesHook(t *testing.T) {
 	if err := tester.Click("Terminal"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tester.Click("Copy on select"); err != nil {
+	if err := tester.Click("Copy a selection to the clipboard as it ends"); err != nil {
 		t.Fatal(err)
 	}
 	if !w.settings.snapshot.CopyOnSelect || !enabled {

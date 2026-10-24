@@ -37,7 +37,7 @@ type settingsUI struct {
 
 var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts"}
 
-var settingsPageIcons = []*native.SVG{icons.Circle, icons.Terminal, icons.MessageCircle, icons.Keyboard}
+var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.MessageCircle, icons.Keyboard}
 
 // install seeds the working copy from the persisted values.
 func (s *settingsUI) install(snapshot SettingsSnapshot) {
@@ -89,6 +89,17 @@ func weightIndexOf(weight int) int {
 	return len(fontWeights) - 1
 }
 
+// The settings window keeps one rhythm, as System Settings does: a fixed
+// label column, every control starting at the same line, sliders of one
+// length with their value beside them, and captions under the rows they
+// explain — never mixed into them.
+const (
+	settingsLabelWidth  = 120
+	settingsSliderWidth = 200
+	settingsValueWidth  = 52
+	settingsRowHeight   = 26
+)
+
 // SettingsView renders the settings window: a page list on the left, the
 // page's cards on the right, in the System Settings shape Kero and Herdr
 // use. Every change applies immediately through the hooks, which persist.
@@ -96,20 +107,20 @@ func (w *Window) SettingsView(c *native.Context) {
 	p := w.appearancePalette(c)
 	s := &w.settings
 	s.resetMirrors()
-	root := native.Row(c.Key("settings-root")).Fill().Gap(0).Background(p.Shell).TextColor(p.Text).FontSize(13)
+	root := native.Row(c.Key("settings-root")).Fill().Background(p.Shell).TextColor(p.Text).FontSize(13)
 	root.Children(func() {
-		native.Column(c.Key("settings-nav")).Width(196).Shrink(0).FillHeight().Padding(12, 8).Gap(2).Background(p.Sidebar).Children(func() {
-			native.Text(c, "Settings").FontSize(13).FontWeight(700).Padding(6, 8)
+		native.Column(c.Key("settings-nav")).Width(204).Shrink(0).FillHeight().Padding(14, 10).Gap(1).Background(p.Sidebar).Children(func() {
+			native.Text(c, "Settings").FontSize(11).FontWeight(700).TextColor(c.Theme().TextMuted).Padding(6, 8).PaddingY(10)
 			for i, name := range settingsPages {
 				page := i
-				button := native.ButtonBase(c.Key("settings-page:"+name)).FillWidth().Radius(6).Padding(6, 8).Label(name)
+				button := native.ButtonBase(c.Key("settings-page:"+name)).FillWidth().Radius(6).Padding(5, 8).Label(name)
 				if s.page == page {
 					button.Background(p.Selected)
 				} else {
 					w.controlState(button, p)
 				}
 				button.Children(func() {
-					native.Row(c).Gap(8).AlignItems(native.Center).Children(func() {
+					native.Row(c).Gap(9).AlignItems(native.Center).Children(func() {
 						native.Icon(c, settingsPageIcons[page]).Size(15, 15).TextColor(p.Secondary)
 						text := native.Text(c, name).FontSize(13)
 						if s.page == page {
@@ -122,9 +133,10 @@ func (w *Window) SettingsView(c *native.Context) {
 				}
 			}
 		})
+		native.Box(c).Width(1).FillHeight().Shrink(0).Background(p.Border)
 		native.Scroll(c.Key("settings-content")).Grow(1).MinWidth(0).Children(func() {
-			native.Column(c).Padding(20, 24).Gap(14).FillWidth().Children(func() {
-				native.Text(c, settingsPages[s.page]).FontSize(16).FontWeight(700)
+			native.Column(c).Padding(22, 26).Gap(18).FillWidth().MaxWidth(620).Children(func() {
+				native.Text(c, settingsPages[s.page]).FontSize(20).FontWeight(700)
 				switch s.page {
 				case 0:
 					w.settingsAppearance(c, p, s)
@@ -140,72 +152,114 @@ func (w *Window) SettingsView(c *native.Context) {
 	})
 }
 
+// settingsCard is one grouped card: a semibold caption, then rows on a
+// single rhythm.
 func (w *Window) settingsCard(c *native.Context, key, title string, p design.Palette, body func()) {
-	native.Column(c.Key(key)).FillWidth().Gap(8).Padding(14).Radius(10).Background(p.Inset).Border(1, p.Border).Children(func() {
-		native.Text(c, title).FontSize(13).FontWeight(600)
+	native.Column(c.Key(key)).FillWidth().Gap(2).Padding(16).Radius(10).Background(p.Inset).Border(1, p.Border).Children(func() {
+		native.Text(c, title).FontSize(13).FontWeight(600).PaddingY(4)
 		body()
 	})
 }
 
-func (w *Window) settingsAppearance(c *native.Context, p design.Palette, s *settingsUI) {
-	w.settingsCard(c, "settings-theme", "Theme", p, func() {
-		native.Text(c, "Light or dark chrome, or follow the system.").FontSize(12).TextColor(p.Secondary)
-		segment := native.Segmented(c.Key("settings-theme-choice"), &s.themeIndex, "System", "Light", "Dark")
-		if segment.Changed() {
-			s.snapshot.Theme = themeFromIndex(s.themeIndex)
-			if w.hooks.Theme != nil {
-				w.hooks.Theme(s.snapshot.Theme)
-			}
-		}
+// settingsRow puts one control on the shared grid: label column, then the
+// control starting where every control starts.
+func settingsRow(c *native.Context, label string, control func()) {
+	native.Row(c).FillWidth().Height(settingsRowHeight).AlignItems(native.Center).Gap(10).Children(func() {
+		native.Text(c, label).Width(settingsLabelWidth).Shrink(0).FontSize(12).TextColor(c.Theme().TextMuted)
+		control()
 	})
 }
 
+// settingsCaption explains the row above it, in the smaller muted voice
+// every caption shares.
+func settingsCaption(c *native.Context, p design.Palette, text string) {
+	native.Text(c, text).FontSize(11).TextColor(p.Tertiary).Padding(2, 0, 4, settingsLabelWidth+10)
+}
+
+// settingsSlider lays a slider and its value with unit on the shared grid.
+func settingsSlider(c *native.Context, key string, value *float64, lo, hi float64, format func(float64) string) native.Element {
+	slider := native.Slider(c.Key(key), value, lo, hi).Width(settingsSliderWidth).Shrink(0)
+	native.Text(c, format(*value)).Width(settingsValueWidth).Shrink(0).FontSize(12).TextColor(c.Theme().TextMuted)
+	return slider
+}
+
+func (w *Window) settingsAppearance(c *native.Context, p design.Palette, s *settingsUI) {
+	w.settingsCard(c, "settings-theme", "Theme", p, func() {
+		settingsRow(c, "Appearance", func() {
+			segment := native.Segmented(c.Key("settings-theme-choice"), &s.themeIndex, "System", "Light", "Dark").Shrink(0)
+			if segment.Changed() {
+				s.snapshot.Theme = themeFromIndex(s.themeIndex)
+				if w.hooks.Theme != nil {
+					w.hooks.Theme(s.snapshot.Theme)
+				}
+			}
+		})
+		settingsCaption(c, p, "Light or dark chrome, or follow the system.")
+	})
+}
+
+func formatSize(v float64) string { return strconv.FormatFloat(v, 'f', -1, 64) + " pt" }
+
+// formatMultiple trims trailing zeros, so 1 shows as "1×" and 1.2 as "1.20×".
+func formatMultiple(v float64) string {
+	text := strconv.FormatFloat(v, 'f', 2, 64)
+	for len(text) > 1 && text[len(text)-1] == '0' {
+		if text[len(text)-2] == '.' {
+			text = text[:len(text)-2]
+			break
+		}
+		text = text[:len(text)-1]
+	}
+	return text + "×"
+}
+
+func formatContrast(v float64) string { return strconv.FormatFloat(v, 'f', 1, 64) + "×" }
+
 func (w *Window) settingsTerminal(c *native.Context, p design.Palette, s *settingsUI) {
 	w.settingsCard(c, "settings-font", "Font", p, func() {
-		native.Row(c).FillWidth().Gap(10).AlignItems(native.Center).Children(func() {
-			native.Text(c, "Size").Width(110).TextColor(p.Secondary)
-			slider := native.Slider(c.Key("settings-font-size"), &s.size, 8, 48)
-			native.Text(c, strconv.FormatFloat(s.size, 'f', -1, 64)).Width(28).TextColor(p.Secondary)
+		settingsRow(c, "Size", func() {
+			slider := settingsSlider(c, "settings-font-size", &s.size, 8, 48, formatSize)
 			if slider.Changed() {
 				s.snapshot.Font.Size = clampFontSize(float32(s.size))
 				w.pushFont()
 			}
 		})
-		native.Row(c).FillWidth().Gap(10).AlignItems(native.Center).Children(func() {
-			native.Text(c, "Weight").Width(110).TextColor(p.Secondary)
-			segment := native.Segmented(c.Key("settings-font-weight"), &s.weightIndex, "Light", "Regular", "Medium", "Semibold")
+		settingsRow(c, "Weight", func() {
+			segment := native.Segmented(c.Key("settings-font-weight"), &s.weightIndex, "Light", "Regular", "Medium", "Semibold").Shrink(0)
 			if segment.Changed() {
 				s.snapshot.Font.Weight = fontWeights[max(0, min(len(fontWeights)-1, s.weightIndex))]
 				w.pushFont()
 			}
 		})
-		native.Row(c).FillWidth().Gap(10).AlignItems(native.Center).Children(func() {
-			native.Text(c, "Line height").Width(110).TextColor(p.Secondary)
-			slider := native.Slider(c.Key("settings-line-height"), &s.lineHeight, 1, 2)
-			native.Text(c, strconv.FormatFloat(s.lineHeight, 'f', 2, 64)).Width(28).TextColor(p.Secondary)
+		settingsRow(c, "Line height", func() {
+			slider := settingsSlider(c, "settings-line-height", &s.lineHeight, 1, 2, formatMultiple)
 			if slider.Changed() {
 				s.snapshot.Font.LineHeight = max(1, min(2, float32(s.lineHeight)))
 				w.pushFont()
 			}
 		})
+		settingsCaption(c, p, "The running terminals take each change as you make it.")
 	})
 	w.settingsCard(c, "settings-preview", "Preview", p, func() {
-		// A monospace sample at the chosen size and weight; the real
-		// terminals apply the same values as they render.
 		native.Text(c, "herdr pane run w1:p1 \"just test\"").Font("monospace").FontSize(s.snapshot.Font.Size)
-		native.Text(c, "← preview at "+strconv.FormatFloat(float64(s.snapshot.Font.Size), 'f', -1, 64)+"pt").FontSize(11).TextColor(p.Tertiary)
+		native.Row(c).Gap(6).PaddingY(2).Children(func() {
+			native.Text(c, "ok").Font("monospace").FontSize(s.snapshot.Font.Size).TextColor(p.Success)
+			native.Text(c, "warn").Font("monospace").FontSize(s.snapshot.Font.Size).TextColor(p.Warning)
+			native.Text(c, "error").Font("monospace").FontSize(s.snapshot.Font.Size).TextColor(p.Danger)
+		})
+		settingsCaption(c, p, "Preview at "+strconv.FormatFloat(float64(s.snapshot.Font.Size), 'f', -1, 64)+" pt, weight "+strconv.Itoa(s.snapshot.Font.Weight)+".")
 	})
 	w.settingsCard(c, "settings-selection", "Selection", p, func() {
-		box := native.Checkbox(c.Key("settings-copy-on-select"), &s.snapshot.CopyOnSelect, "Copy on select")
-		if box.Changed() && w.hooks.CopyOnSelect != nil {
-			w.hooks.CopyOnSelect(s.snapshot.CopyOnSelect)
-		}
+		settingsRow(c, "Copy on select", func() {
+			box := native.Checkbox(c.Key("settings-copy-on-select"), &s.snapshot.CopyOnSelect, "Copy a selection to the clipboard as it ends")
+			if box.Changed() && w.hooks.CopyOnSelect != nil {
+				w.hooks.CopyOnSelect(s.snapshot.CopyOnSelect)
+			}
+		})
 	})
 	w.settingsCard(c, "settings-contrast", "Minimum contrast", p, func() {
-		native.Text(c, "Keeps text readable over program colors; 1 leaves colors untouched.").FontSize(12).TextColor(p.Secondary)
-		native.Row(c).FillWidth().Gap(10).AlignItems(native.Center).Children(func() {
-			slider := native.Slider(c.Key("settings-contrast-slider"), &s.contrast, 1, 7)
-			native.Text(c, strconv.FormatFloat(s.contrast, 'f', 1, 64)).Width(28).TextColor(p.Secondary)
+		settingsRow(c, "Contrast", func() {
+			slider := settingsSlider(c, "settings-contrast-slider", &s.contrast, 1, 7, formatContrast)
 			if slider.Changed() {
 				s.snapshot.MinimumContrast = max(1, min(7, float32(s.contrast)))
 				if w.hooks.MinimumContrast != nil {
@@ -213,16 +267,19 @@ func (w *Window) settingsTerminal(c *native.Context, p design.Palette, s *settin
 				}
 			}
 		})
+		settingsCaption(c, p, "Keeps text readable over program colors; 1× leaves colors untouched.")
 	})
 }
 
 func (w *Window) settingsNotifications(c *native.Context, p design.Palette, s *settingsUI) {
 	w.settingsCard(c, "settings-notifications", "Agent status", p, func() {
-		box := native.Checkbox(c.Key("settings-notifications-toggle"), &s.snapshot.Notifications, "Notify when an agent needs you or finishes")
-		if box.Changed() && w.hooks.Notifications != nil {
-			w.hooks.Notifications(s.snapshot.Notifications)
-		}
-		native.Text(c, "Only while this window is not focused; the Dock badge follows the same switch.").FontSize(12).TextColor(p.Secondary)
+		settingsRow(c, "Notify", func() {
+			box := native.Checkbox(c.Key("settings-notifications-toggle"), &s.snapshot.Notifications, "When an agent needs you or finishes")
+			if box.Changed() && w.hooks.Notifications != nil {
+				w.hooks.Notifications(s.snapshot.Notifications)
+			}
+		})
+		settingsCaption(c, p, "Only while this window is not focused; the Dock badge follows the same switch.")
 	})
 }
 
@@ -243,7 +300,7 @@ func (w *Window) settingsShortcuts(c *native.Context, p design.Palette) {
 			if label == "" {
 				label = "—"
 			}
-			native.Row(c.Key("settings-action:" + action.ID)).FillWidth().Children(func() {
+			native.Row(c.Key("settings-action:" + action.ID)).FillWidth().Height(20).AlignItems(native.Center).Children(func() {
 				native.Text(c, w.ActionLabel(action.ID)).FontSize(12).Grow(1).SingleLine()
 				native.Text(c, label).FontSize(12).TextColor(p.Secondary)
 			})

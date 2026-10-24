@@ -1,0 +1,50 @@
+package ui
+
+import (
+	"fmt"
+	"image/png"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/Maidang1/herdr-ui/internal/design"
+	"github.com/egoist/mygo/plugins/terminal"
+	native "github.com/egoist/mygo/ui"
+)
+
+func TestRenderSettingsArtifacts(t *testing.T) {
+	dir := os.Getenv("HERDR_UI_RENDER_DIR")
+	if dir == "" {
+		t.Skip("set HERDR_UI_RENDER_DIR to export settings renders")
+	}
+	for _, dark := range []bool{false, true} {
+		w := referenceWindow(t)
+		w.SetInitialSettings(SettingsSnapshot{Theme: "dark", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Notifications: true})
+		for _, page := range settingsPages {
+			w.settings.page = indexOfPage(page)
+			tester := native.NewTester(w.SettingsView, 720, 520)
+			tester.SetDark(dark)
+			tester.Frame()
+			name := fmt.Sprintf("settings-%s-dark-%t.png", page, dark)
+			file, err := os.Create(filepath.Join(dir, name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = png.Encode(file, tester.Image())
+			file.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	_ = design.Colors
+}
+
+func indexOfPage(name string) int {
+	for i, p := range settingsPages {
+		if p == name {
+			return i
+		}
+	}
+	return 0
+}

@@ -28,7 +28,8 @@
     "Plus": "plus",
     "Search": "search",
     "Settings": "settings",
-    "RotateCw": "rotate-cw"
+    "RotateCw": "rotate-cw",
+    "Palette": "palette"
   },
   "lobe": {
     "ClaudeCode": "claudecode",
