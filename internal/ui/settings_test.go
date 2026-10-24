@@ -11,7 +11,7 @@ import (
 func settingsWindow(t *testing.T) *Window {
 	t.Helper()
 	w := referenceWindow(t)
-	w.SetInitialSettings(SettingsSnapshot{Theme: "system", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Notifications: true})
+	w.SetInitialSettings(SettingsSnapshot{Theme: "system", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Toast: ToastSettings{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}})
 	return w
 }
 
@@ -73,7 +73,7 @@ func TestSettingsCopyOnSelectTogglesHook(t *testing.T) {
 
 func TestSettingsZoomSharesTheFontHook(t *testing.T) {
 	w := populatedChromeWindow(t)
-	w.SetInitialSettings(SettingsSnapshot{Theme: "system", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Notifications: true})
+	w.SetInitialSettings(SettingsSnapshot{Theme: "system", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Toast: ToastSettings{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}})
 	var last terminal.Font
 	w.SetActionHooks(ActionHooks{Font: func(f terminal.Font) { last = f }})
 	w.Dispatch("zoom_in")
@@ -96,5 +96,38 @@ func TestBindingsSourceStillRender(t *testing.T) {
 	}
 	if !tester.HasText("Prefix chords load from Herdr's own configuration") {
 		t.Fatalf("shortcuts page explanation missing: %v", tester.Texts())
+	}
+}
+
+func TestSettingsNotificationDeliveryFollowsHerdrChoices(t *testing.T) {
+	w := settingsWindow(t)
+	var got []ToastSettings
+	w.SetActionHooks(ActionHooks{Notifications: func(s ToastSettings) { got = append(got, s) }})
+	tester := native.NewTester(w.SettingsView, 720, 520)
+	if err := tester.Click("Notifications"); err != nil {
+		t.Fatal(err)
+	}
+	for _, label := range []string{"Off", "In-app", "System", "Position", "Delay"} {
+		if _, ok := tester.Find(label); !ok {
+			t.Fatalf("notifications page missing %q", label)
+		}
+	}
+	if err := tester.Click("Top left"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tester.Click("System"); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Position != "top-left" || got[1] != (ToastSettings{Delivery: "system", Position: "top-left", DelaySeconds: 1}) {
+		t.Fatalf("notification hook saw %+v", got)
+	}
+	if _, ok := tester.Find("Position"); ok {
+		t.Fatal("system delivery still offers an in-app position")
+	}
+	if err := tester.Click("Off"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := tester.Find("Delay"); ok || got[len(got)-1].Delivery != "off" {
+		t.Fatal("off still offers a delay or was not reported", got)
 	}
 }

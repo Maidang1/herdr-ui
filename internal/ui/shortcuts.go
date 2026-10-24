@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/input"
 	"github.com/Maidang1/herdr-ui/internal/session"
 	"github.com/egoist/mygo/plugins/terminal"
@@ -13,15 +14,16 @@ import (
 
 // ActionHooks are platform integrations. All callbacks run on the UI thread.
 type ActionHooks struct {
-	Detach             func()
-	Settings           func() error
-	ReadImage          func() []byte
-	PasteImage         func(string, []byte) error
-	WriteClipboard     func(string) error
-	EditText           func(string) error
-	InvokeCommand      func(int, session.Operation, func(error))
-	NotificationTarget func() string
-	NotificationText   func() (string, time.Duration)
+	Detach         func()
+	Settings       func() error
+	ReadImage      func() []byte
+	PasteImage     func(string, []byte) error
+	WriteClipboard func(string) error
+	EditText       func(string) error
+	InvokeCommand  func(int, session.Operation, func(error))
+	// Notices returns the notifications Herdr sent since the last call,
+	// for the in-app toast queue.
+	Notices func() []app.Notice
 	// Font applies a new terminal font to every attached terminal and
 	// persists it.
 	Font func(font terminal.Font)
@@ -32,8 +34,12 @@ type ActionHooks struct {
 	CopyOnSelect func(enabled bool)
 	// MinimumContrast applies and persists the least text contrast.
 	MinimumContrast func(ratio float32)
-	// Notifications enables or disables agent status notifications.
-	Notifications func(enabled bool)
+	// Notifications applies and persists how agent notifications are
+	// delivered.
+	Notifications func(ToastSettings)
+	// PostNotification hands a ready notice to the system notification
+	// center, under system delivery.
+	PostNotification func(app.Notice)
 	// EditConfig opens Herdr's own configuration for editing.
 	EditConfig func() error
 	// RevealPath shows a workspace's directory in Finder.
@@ -205,10 +211,8 @@ func (w *Window) dispatchShortcut(action string, index int) bool {
 		}
 		return true
 	case "open_notification_target":
-		if w.hooks.NotificationTarget != nil {
-			if id := w.hooks.NotificationTarget(); id != "" {
-				w.selectShortcutPane(id)
-			}
+		if n, ok := w.toasts.Open(); ok {
+			w.OpenNotice(n)
 		}
 		return true
 	case "remote_image_paste":

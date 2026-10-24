@@ -16,7 +16,31 @@ type SettingsSnapshot struct {
 	Font            terminal.Font
 	CopyOnSelect    bool
 	MinimumContrast float32
-	Notifications   bool
+	Toast           ToastSettings
+}
+
+// ToastSettings is how agent notifications reach the user, in the terms of
+// Herdr's [ui.toast]: Delivery is "off", "herdr" (in-app) or "system".
+type ToastSettings struct {
+	Delivery, Position string
+	DelaySeconds       int
+}
+
+var (
+	toastDeliveries     = []string{"off", "herdr", "system"}
+	toastDeliveryLabels = []string{"Off", "In-app", "System"}
+	toastPositions      = []string{"top-left", "top-right", "bottom-left", "bottom-right"}
+	toastPositionLabels = []string{"Top left", "Top right", "Bottom left", "Bottom right"}
+	toastMaxSliderDelay = 10.0
+)
+
+func indexOf(values []string, value string, fallback int) int {
+	for i, v := range values {
+		if v == value {
+			return i
+		}
+	}
+	return fallback
 }
 
 // settingsUI is the settings window's state: the page on show and the
@@ -33,6 +57,9 @@ type settingsUI struct {
 	contrast    float64
 	themeIndex  int
 	weightIndex int
+	delivery    int
+	position    int
+	delay       float64
 }
 
 var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts"}
@@ -64,6 +91,9 @@ func (s *settingsUI) resetMirrors() {
 	s.contrast = float64(s.snapshot.MinimumContrast)
 	s.themeIndex = themeIndexOf(s.snapshot.Theme)
 	s.weightIndex = weightIndexOf(s.snapshot.Font.Weight)
+	s.delivery = indexOf(toastDeliveries, s.snapshot.Toast.Delivery, 0)
+	s.position = indexOf(toastPositions, s.snapshot.Toast.Position, 3)
+	s.delay = float64(s.snapshot.Toast.DelaySeconds)
 }
 
 func themeIndexOf(theme string) int {
@@ -322,16 +352,44 @@ func (w *Window) settingsTerminal(c *native.Context, p design.Palette, s *settin
 }
 
 func (w *Window) settingsNotifications(c *native.Context, p design.Palette, s *settingsUI) {
-	w.settingsCard(c, "settings-notifications", "Agent status", p, func() {
-		settingsRow(c, "Notify", func() {
-			box := native.Checkbox(c.Key("settings-notifications-toggle"), &s.snapshot.Notifications, "When an agent needs you or finishes")
-			if box.Changed() && w.hooks.Notifications != nil {
-				w.hooks.Notifications(s.snapshot.Notifications)
+	changed := false
+	w.settingsCard(c, "settings-notifications", "Agent notifications", p, func() {
+		settingsRow(c, "Delivery", func() {
+			if native.Segmented(c.Key("settings-notifications-delivery"), &s.delivery, toastDeliveryLabels...).Shrink(0).Changed() {
+				s.snapshot.Toast.Delivery = toastDeliveries[max(0, min(len(toastDeliveries)-1, s.delivery))]
+				changed = true
 			}
 		})
-		settingsCaption(c, p, "Only while this window is not focused; the Dock badge follows the same switch.")
+		settingsCaption(c, p, "When an agent needs you or finishes. In-app shows a card in this window; System posts to Notification Center while you are not watching that tab.")
+		if s.snapshot.Toast.Delivery == "herdr" {
+			settingsRow(c, "Position", func() {
+				if native.Segmented(c.Key("settings-notifications-position"), &s.position, toastPositionLabels...).Shrink(0).Changed() {
+					s.snapshot.Toast.Position = toastPositions[max(0, min(len(toastPositions)-1, s.position))]
+					changed = true
+				}
+			})
+		}
+		if s.snapshot.Toast.Delivery != "off" {
+			settingsRow(c, "Delay", func() {
+				// Herdr allows up to an hour; the slider covers the useful range
+				// and leaves a longer configured delay alone until moved.
+				hi := max(toastMaxSliderDelay, float64(s.snapshot.Toast.DelaySeconds))
+				if settingsSlider(c, "settings-notifications-delay", &s.delay, 0, hi, formatSeconds).Changed() {
+					s.delay = float64(int(s.delay + .5))
+					s.snapshot.Toast.DelaySeconds = int(s.delay)
+					changed = true
+				}
+			})
+			settingsCaption(c, p, "Holds a notification back, then drops it if the agent has moved on.")
+		}
+		settingsCaption(c, p, "Starts from Herdr’s own [ui.toast] settings. The Dock badge counts agents waiting for you unless notifications are off.")
 	})
+	if changed && w.hooks.Notifications != nil {
+		w.hooks.Notifications(s.snapshot.Toast)
+	}
 }
+
+func formatSeconds(v float64) string { return strconv.Itoa(int(v+.5)) + " s" }
 
 func (w *Window) settingsShortcuts(c *native.Context, p design.Palette) {
 	a := w.controller

@@ -43,6 +43,7 @@ type Window struct {
 	navigatorSessions   int
 	settings            settingsUI
 	shape               design.Shape
+	toasts              app.Toasts
 }
 
 func New(a *app.App, retry func()) *Window {

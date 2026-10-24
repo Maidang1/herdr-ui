@@ -74,3 +74,72 @@ func contains(haystack, needle string) bool {
 		return false
 	})()
 }
+
+func TestToastFollowsHerdrUntilChosenHere(t *testing.T) {
+	dir := t.TempDir()
+	config := filepath.Join(dir, "config.toml")
+	if err := os.WriteFile(config, []byte("[ui.toast]\ndelivery = \"system\"\ndelay_seconds = 3\n[ui.toast.herdr]\nposition = \"top-left\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "prefs.json")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.InheritToast(HerdrToast(config))
+	if got := s.Settings().Toast; got != (Toast{Delivery: "system", Position: "top-left", DelaySeconds: 3}) {
+		t.Fatalf("Herdr's toast settings not inherited: %+v", got)
+	}
+	// An unrelated change must not pin the inherited values.
+	if _, err := s.Update(func(v *Settings) { v.FontSize = 15 }); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Update(func(v *Settings) { v.Toast.Delivery = "herdr" }); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	again.InheritToast(Toast{Delivery: "off", Position: "bottom-left", DelaySeconds: 0})
+	if got := again.Settings().Toast; got != (Toast{Delivery: "herdr", Position: "bottom-left", DelaySeconds: 0}) {
+		t.Fatalf("chosen delivery lost or unchosen values pinned: %+v", got)
+	}
+}
+
+func TestHerdrToastReadsLegacyAndIgnoresInvalid(t *testing.T) {
+	dir := t.TempDir()
+	config := filepath.Join(dir, "config.toml")
+	for text, want := range map[string]Toast{
+		"[ui.toast]\nenabled = true\n":                                {Delivery: "herdr", DelaySeconds: -1},
+		"[ui.toast]\ndelivery = \"terminal\"\n":                       {Delivery: "herdr", DelaySeconds: -1},
+		"[ui.toast]\ndelivery = \"loud\"\ndelay_seconds = 9999\n":     {DelaySeconds: -1},
+		"[ui.toast.herdr]\nposition = \"middle\"\n[keys]\nprefix = 1": {DelaySeconds: -1},
+		"not toml [": {DelaySeconds: -1},
+	} {
+		if err := os.WriteFile(config, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if got := HerdrToast(config); got != want {
+			t.Fatalf("%q read as %+v", text, got)
+		}
+	}
+	if got := HerdrToast(filepath.Join(dir, "missing.toml")); got != (Toast{DelaySeconds: -1}) {
+		t.Fatalf("missing config read as %+v", got)
+	}
+}
+
+func TestLegacyNotificationsOffMeansDeliveryOff(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "prefs.json")
+	if err := os.WriteFile(path, []byte(`{"notifications":false}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.InheritToast(Toast{Delivery: "system", DelaySeconds: -1})
+	if got := s.Settings().Toast.Delivery; got != "off" {
+		t.Fatalf("the old off switch was not kept: %q", got)
+	}
+}

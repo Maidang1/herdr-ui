@@ -3,27 +3,22 @@ package main
 import (
 	"errors"
 	"log"
+	"strconv"
 	"strings"
 
+	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/session"
 	"github.com/egoist/mygo"
 )
 
-// agentEntry is one agent pane as the sidebar lists it, with the status in
-// its lowercase wire form.
-type agentEntry struct {
-	workspaceID, workspaceName, paneID, agent, status string
-}
-
-// notifier reports agent status transitions as system notifications and the
-// Dock badge. Every method runs on the window's UI thread; the platform
-// actions are fields so tests can collect calls without a desktop.
+// notifier posts Herdr's notifications to the system and keeps the Dock
+// badge. Which notices to post, and when, is the toast queue's decision;
+// the badge follows the snapshot. Every method runs on the window's UI
+// thread; the platform actions are fields so tests can collect calls
+// without a desktop.
 type notifier struct {
-	// active reports whether the user is watching the window; delivery stays
-	// quiet while they are, as the in-app overlay already has their eyes.
-	active func() bool
-	// jump selects an agent's workspace and pane, as a notification click does.
-	jump func(workspaceID, paneID string)
+	// open selects the place a notice names, as a notification click does.
+	open func(app.Notice)
 	// supported reports whether the desktop can show notifications at all;
 	// when it cannot, only the badge remains.
 	supported func() bool
@@ -34,22 +29,21 @@ type notifier struct {
 	// clearAll removes the notifications this app has delivered.
 	clearAll func()
 
-	// enabled is the user's switch: off mutes delivery and the badge
-	// alike, so one setting governs every surface.
+	// enabled is off only when delivery is off, which mutes the badge too,
+	// so one setting governs every surface.
 	enabled bool
-	last    map[string]agentEntry
+	blocked int
 }
 
-func newNotifier(active func() bool, jump func(workspaceID, paneID string)) *notifier {
+func newNotifier(open func(app.Notice)) *notifier {
 	return &notifier{
-		active:    active,
+		open:      open,
 		enabled:   true,
-		jump:      jump,
 		supported: mygo.NotificationsSupported,
 		badge:     mygo.App.SetBadgeCount,
 		clearAll:  mygo.ClearNotifications,
 		show: func(group, title, body string, click func()) {
-			// One slot per agent, so a newer event replaces its older banner.
+			// One slot per pane, so a newer event replaces its older banner.
 			note := mygo.NewNotification(mygo.NotificationOptions{ID: "agent/" + group, Group: group, Title: title, Body: body})
 			note.OnClick(func() {
 				mygo.App.Focus()
@@ -64,56 +58,43 @@ func newNotifier(active func() bool, jump func(workspaceID, paneID string)) *not
 				}
 			}()
 		},
-		last: make(map[string]agentEntry),
 	}
 }
 
-// Step reports transitions since the previous publication. An agent seen for
-// the first time only starts a baseline, so an attaching client never storms;
-// one that vanished is forgotten, so its return is a first sight again.
-// SetEnabled follows the settings switch: off mutes delivery and clears
-// both the badge and whatever banners already went out.
+// SetEnabled follows the delivery setting: off clears the badge and
+// whatever banners already went out.
 func (n *notifier) SetEnabled(enabled bool) {
 	n.enabled = enabled
 	if !enabled {
 		n.clearAll()
 		n.badge(0)
+		return
 	}
+	n.badge(n.blocked)
 }
 
-func (n *notifier) Step(latest session.PublishedSnapshot) {
-	entries := agentEntries(latest)
-	quiet := !n.enabled || !n.supported() || n.active()
-	live := make(map[string]bool, len(entries))
-	blocked := 0
-	for _, entry := range entries {
-		live[entry.paneID] = true
-		if entry.status == "blocked" {
-			blocked++
-		}
-		prev, seen := n.last[entry.paneID]
-		n.last[entry.paneID] = entry
-		if quiet || !seen || prev.status == entry.status {
-			continue
-		}
-		var title string
-		switch {
-		case entry.status == "blocked":
-			title = entry.agent + " needs you"
-		case prev.status == "working" && entry.status == "done":
-			title = entry.agent + " finished"
-		default:
-			continue
-		}
-		n.show(entry.paneID, title, entry.workspaceName, func() { n.jump(entry.workspaceID, entry.paneID) })
+// Post shows one notice the toast queue made ready for the system.
+func (n *notifier) Post(notice app.Notice) {
+	if !n.enabled || !n.supported() {
+		return
 	}
-	for id := range n.last {
-		if !live[id] {
-			delete(n.last, id)
+	group := notice.PaneID
+	if group == "" {
+		group = "notice/" + strconv.FormatInt(notice.Received.UnixNano(), 10)
+	}
+	n.show(group, notice.Title, notice.Body, func() { n.open(notice) })
+}
+
+// Step recounts the badge from a publication: the agents blocked on the user.
+func (n *notifier) Step(latest session.PublishedSnapshot) {
+	n.blocked = 0
+	for _, entry := range agentEntries(latest) {
+		if entry.status == "blocked" {
+			n.blocked++
 		}
 	}
 	if n.enabled {
-		n.badge(blocked)
+		n.badge(n.blocked)
 	}
 }
 
@@ -121,13 +102,15 @@ func (n *notifier) Step(latest session.PublishedSnapshot) {
 // means the user is looking; the badge still counts what needs them.
 func (n *notifier) Clear() {
 	n.clearAll()
-	blocked := 0
-	for _, entry := range n.last {
-		if entry.status == "blocked" {
-			blocked++
-		}
+	if n.enabled {
+		n.badge(n.blocked)
 	}
-	n.badge(blocked)
+}
+
+// agentEntry is one agent pane as the sidebar lists it, with the status in
+// its lowercase wire form.
+type agentEntry struct {
+	workspaceID, workspaceName, paneID, agent, status string
 }
 
 // agentEntries lists one entry per agent pane, as the sidebar's agent list

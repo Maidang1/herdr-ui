@@ -19,7 +19,7 @@ func TestRenderSettingsArtifacts(t *testing.T) {
 	}
 	for _, dark := range []bool{false, true} {
 		w := referenceWindow(t)
-		w.SetInitialSettings(SettingsSnapshot{Theme: "dark", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Notifications: true})
+		w.SetInitialSettings(SettingsSnapshot{Theme: "dark", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Toast: ToastSettings{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}})
 		for _, page := range settingsPages {
 			w.settings.page = indexOfPage(page)
 			tester := native.NewTester(w.SettingsView, 720, 520)

@@ -29,14 +29,27 @@ type Settings struct {
 	// MinimumContrast is the least text contrast a terminal keeps, 1–21;
 	// 1 leaves colors as they come.
 	MinimumContrast float32
-	// Notifications reports agent status changes through the system.
-	// Absent in the file means true, so an upgrade keeps them on.
-	Notifications bool
+	// Toast is how agent notifications reach the user.
+	Toast Toast
+}
+
+// Toast mirrors Herdr's [ui.toast] settings. Until the user picks a value
+// here, it follows Herdr's own configuration (see InheritToast).
+type Toast struct {
+	// Delivery is "off", "herdr" (an in-app card) or "system" (the
+	// Notification Center), as Herdr names them.
+	Delivery string
+	// Position is the in-app card's corner: "top-left", "top-right",
+	// "bottom-left" or "bottom-right".
+	Position string
+	// DelaySeconds holds agent notifications back, 0–3600, and drops
+	// those whose agent moved on meanwhile.
+	DelaySeconds int
 }
 
 // Defaults returns the settings a fresh installation starts with.
 func Defaults() Settings {
-	return Settings{WindowTheme: "system", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 1, Notifications: true}
+	return Settings{WindowTheme: "system", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 1, Toast: Toast{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}}
 }
 
 // Store loads and saves the settings file. Load applies defaults for
@@ -46,6 +59,9 @@ type Store struct {
 	path   string
 	values Settings
 	extra  map[string]json.RawMessage
+	// toastSet names the toast keys chosen here, which Herdr's
+	// configuration no longer overrides.
+	toastSet map[string]bool
 }
 
 func pathFor(explicit string) (string, error) {
@@ -66,7 +82,7 @@ func Open(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{path: resolved, values: Defaults()}
+	s := &Store{path: resolved, values: Defaults(), toastSet: map[string]bool{}}
 	data, err := os.ReadFile(resolved)
 	if os.IsNotExist(err) {
 		return s, nil
@@ -118,13 +134,33 @@ func Open(path string) (*Store, error) {
 			s.values.MinimumContrast = float32(contrast)
 		}
 	}
-	if v, ok := raw["notifications"]; ok {
-		var enabled bool
-		if json.Unmarshal(v, &enabled) == nil {
-			s.values.Notifications = enabled
+	if v, ok := raw["toast_delivery"]; ok {
+		var delivery string
+		if json.Unmarshal(v, &delivery) == nil && validDelivery(delivery) {
+			s.values.Toast.Delivery = delivery
+			s.toastSet["delivery"] = true
 		}
-	} else {
-		s.values.Notifications = true
+	} else if v, ok := raw["notifications"]; ok {
+		// The earlier on/off switch: off still means off.
+		var enabled bool
+		if json.Unmarshal(v, &enabled) == nil && !enabled {
+			s.values.Toast.Delivery = "off"
+			s.toastSet["delivery"] = true
+		}
+	}
+	if v, ok := raw["toast_position"]; ok {
+		var position string
+		if json.Unmarshal(v, &position) == nil && validPosition(position) {
+			s.values.Toast.Position = position
+			s.toastSet["position"] = true
+		}
+	}
+	if v, ok := raw["toast_delay_seconds"]; ok {
+		var delay int
+		if json.Unmarshal(v, &delay) == nil && delay >= 0 && delay <= maxToastDelay {
+			s.values.Toast.DelaySeconds = delay
+			s.toastSet["delay"] = true
+		}
 	}
 	return s, nil
 }
@@ -142,7 +178,15 @@ func (s *Store) Settings() Settings {
 func (s *Store) Update(fn func(*Settings)) (Settings, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	before := s.values.Toast
 	fn(&s.values)
+	if s.toastSet == nil {
+		s.toastSet = map[string]bool{}
+	}
+	after := s.values.Toast
+	s.toastSet["delivery"] = s.toastSet["delivery"] || after.Delivery != before.Delivery
+	s.toastSet["position"] = s.toastSet["position"] || after.Position != before.Position
+	s.toastSet["delay"] = s.toastSet["delay"] || after.DelaySeconds != before.DelaySeconds
 	if s.extra == nil {
 		s.extra = map[string]json.RawMessage{}
 	}
@@ -153,7 +197,15 @@ func (s *Store) Update(fn func(*Settings)) (Settings, error) {
 	document["line_height"], _ = json.Marshal(s.values.LineHeight)
 	document["copy_on_select"], _ = json.Marshal(s.values.CopyOnSelect)
 	document["minimum_contrast"], _ = json.Marshal(s.values.MinimumContrast)
-	document["notifications"], _ = json.Marshal(s.values.Notifications)
+	if s.toastSet["delivery"] {
+		document["toast_delivery"], _ = json.Marshal(s.values.Toast.Delivery)
+	}
+	if s.toastSet["position"] {
+		document["toast_position"], _ = json.Marshal(s.values.Toast.Position)
+	}
+	if s.toastSet["delay"] {
+		document["toast_delay_seconds"], _ = json.Marshal(s.values.Toast.DelaySeconds)
+	}
 	data, err := json.MarshalIndent(document, "", "  ")
 	if err != nil {
 		return s.values, err
@@ -172,4 +224,29 @@ func (s *Store) Update(fn func(*Settings)) (Settings, error) {
 	// replaced file can; fall back to a direct write for exotic setups.
 	err = os.WriteFile(s.path, append(data, '\n'), 0o644)
 	return s.values, err
+}
+
+// InheritToast adopts Herdr's own [ui.toast] settings for every toast value
+// not chosen here, so both clients agree until the user tells them apart.
+// Fields of herdr left empty (DelaySeconds below zero) keep the defaults.
+func (s *Store) InheritToast(herdr Toast) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.toastSet["delivery"] && herdr.Delivery != "" {
+		s.values.Toast.Delivery = herdr.Delivery
+	}
+	if !s.toastSet["position"] && herdr.Position != "" {
+		s.values.Toast.Position = herdr.Position
+	}
+	if !s.toastSet["delay"] && herdr.DelaySeconds >= 0 {
+		s.values.Toast.DelaySeconds = herdr.DelaySeconds
+	}
+}
+
+const maxToastDelay = 3600
+
+func validDelivery(v string) bool { return v == "off" || v == "herdr" || v == "system" }
+
+func validPosition(v string) bool {
+	return v == "top-left" || v == "top-right" || v == "bottom-left" || v == "bottom-right"
 }
