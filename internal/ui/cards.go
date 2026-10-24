@@ -88,5 +88,11 @@ func (w *Window) paneCard(c *native.Context, r layout.Rect, pane app.PaneRow, fr
 			w.cardControls(c, pane, frameView, r.W, p)
 		})
 		body()
+		if multi && !selected {
+			// An unfocused pane steps back behind a translucent shell tint
+			// over its content, below the header whose controls stay live.
+			// The layer is decorative: it passes the pointer through.
+			native.Box(c.Key("pane-dim:" + pane.ID)).Absolute().Left(0).Top(float32(cardHeaderHeight)).Right(0).Bottom(0).Background(p.Shell.Alpha(.35)).PassThrough()
+		}
 	})
 }

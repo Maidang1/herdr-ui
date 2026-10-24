@@ -39,6 +39,7 @@ type Window struct {
 	agentsGrouped       bool
 	fontSize            float32
 	fontSizeDefault     float32
+	find                findState
 }
 
 func New(a *app.App, retry func()) *Window {
@@ -130,7 +131,7 @@ func (w *Window) View(c *native.Context) {
 	}
 	w.styleShell(c, root, p)
 	root.HandleInput(func(ev native.InputEvent) bool {
-		if ev.Kind != native.InputKeyDown || w.controller == nil || w.controller.bindingError != "" || w.modalOpen() || w.sidebarFilterOn || w.currentView().PaneID != "" {
+		if ev.Kind != native.InputKeyDown || w.controller == nil || w.controller.bindingError != "" || w.modalOpen() || w.sidebarFilterOn || w.findOpen() || w.currentView().PaneID != "" {
 			return false
 		}
 		label, ok := input.NativeKey(ev.Mods, ev.Key)

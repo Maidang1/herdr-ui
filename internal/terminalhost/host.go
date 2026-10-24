@@ -51,6 +51,9 @@ type Config struct {
 	Changed  func()
 	OnScroll func(Binding, int)
 	OnKey    func(Binding, ui.Modifiers, ui.Key, InputState) KeyResult
+	// OnSearch reports a pane's search status on the UI thread, while the
+	// binding still owns its terminal.
+	OnSearch func(Binding, terminal.SearchStatus)
 	// Font sizes every new terminal attaches with; a zero Size falls back
 	// to the plugin's own default.
 	Font terminal.Font
@@ -59,6 +62,10 @@ type instance interface {
 	View(*ui.Context) ui.Element
 	Send([]byte)
 	SetFont(terminal.Font)
+	Search(text string)
+	SearchNext()
+	SearchPrevious()
+	EndSearch()
 	Close() error
 }
 type factory func(terminal.Options) (instance, error)
@@ -319,6 +326,39 @@ func (h *Host) View(c *ui.Context, b Binding) ui.Element {
 	return t.View(c)
 }
 
+// SearchPane, SearchNext, SearchPrevious and EndSearch drive the plugin's
+// search of a pane's screen and scrollback. They run on the UI thread,
+// like View; the instance is called outside the lock for the same reason,
+// and a stale or unattached binding addresses nothing.
+func (h *Host) SearchPane(b Binding, text string) {
+	if t := h.searchInstance(b); t != nil {
+		t.Search(text)
+	}
+}
+func (h *Host) SearchNext(b Binding) {
+	if t := h.searchInstance(b); t != nil {
+		t.SearchNext()
+	}
+}
+func (h *Host) SearchPrevious(b Binding) {
+	if t := h.searchInstance(b); t != nil {
+		t.SearchPrevious()
+	}
+}
+func (h *Host) EndSearch(b Binding) {
+	if t := h.searchInstance(b); t != nil {
+		t.EndSearch()
+	}
+}
+func (h *Host) searchInstance(b Binding) instance {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if e := h.lookup(b); e != nil && e.installed && e.owned != nil {
+		return e.owned
+	}
+	return nil
+}
+
 // SetFont applies f to every attached terminal and remembers it for the
 // next attach. It runs on the UI thread, like View; instances update
 // outside the lock for the same reason View renders there.
@@ -335,6 +375,14 @@ func (h *Host) SetFont(f terminal.Font) {
 	for _, t := range live {
 		t.SetFont(f)
 	}
+}
+
+// SetOnSearch installs Config.OnSearch after construction, for callers
+// that own the window the host renders into. It runs on the UI thread.
+func (h *Host) SetOnSearch(fn func(Binding, terminal.SearchStatus)) {
+	h.mu.Lock()
+	h.cfg.OnSearch = fn
+	h.mu.Unlock()
 }
 
 // Close marks all callbacks stale before closing any plugin. It waits only for
@@ -377,6 +425,17 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 	}
 	return terminal.Options{Command: cmd, Env: env, Dir: e.spec.CWD, Font: font, Padding: terminal.Padding{X: 16, Y: 12}, Theme: light, DarkTheme: dark, RightClick: terminal.RightClickCopyOrPaste, ClipboardRead: terminal.ClipboardDeny,
 		OnTitle: func(_ string) { h.post(e, func() {}) },
+		OnSearch: func(status terminal.SearchStatus) {
+			// The plugin reports on the UI thread mid-frame; posting keeps
+			// the report off that build and drops retired generations.
+			// status is this call's own binding, so each report closes
+			// over its own value rather than one shared variable.
+			h.post(e, func() {
+				if h.cfg.OnSearch != nil {
+					h.cfg.OnSearch(e.binding, status)
+				}
+			})
+		},
 		OnExit: func(code int) {
 			h.post(e, func() {
 				e.status = Status{State: Failed, Message: fmt.Sprintf("Attach exited (%d). Retry to reconnect.", code), ExitCode: code}

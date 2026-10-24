@@ -33,6 +33,7 @@ type terminalPanel struct {
 // ConnectTerminal is called by main during window assembly, on the UI thread.
 func (w *Window) ConnectTerminal(host *terminalhost.Host, s *session.Session, ctx context.Context, post func(func())) {
 	w.terminal = &terminalPanel{host: host, session: s, ctx: ctx, post: post, panes: map[string]*terminalPanel{}}
+	host.SetOnSearch(w.SetSearchStatus)
 }
 
 func (w *Window) DetachTerminal() {
@@ -203,6 +204,8 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			}
 		}
 		requestFocus := t.focused != v.PaneID
+		var findCard *layout.Rect
+		findDrawn := false
 		for _, rect := range cards {
 			pane, ok := rows[rect.PaneID]
 			child := t.panes[rect.PaneID]
@@ -210,9 +213,23 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 				continue
 			}
 			r := rect.Rect
+			if pane.ID == v.PaneID {
+				findCard = &r
+			}
+			if pane.ID == w.find.pane {
+				findDrawn = true
+			}
 			w.paneCard(c, r, pane, v, pane.ID == v.PaneID, multi, p, func() {
 				w.drawTerminal(c, v, p, child, pane, valid, requestFocus)
 			})
+		}
+		// A bar whose pane left the screen goes away, its search with it,
+		// giving the terminal the keyboard it may hold.
+		if w.findOpen() && !findDrawn {
+			w.findClose()
+		}
+		if w.findOpen() && w.find.pane == v.PaneID && findCard != nil {
+			w.findBar(c, *findCard, p)
 		}
 		if valid && !v.Layout.Zoomed {
 			w.dividers(c, projection, v.Layout.Splits, previewDrag, p)
@@ -272,7 +289,8 @@ func (w *Window) drawTerminal(c *native.Context, v app.View, p design.Palette, t
 		}
 		el := t.host.View(c.Key(fmt.Sprintf("terminal:%d:%s:%d", t.binding.TargetID, t.binding.TerminalID, t.binding.Generation)), t.binding).Fill()
 		if requestFocus && pane.ID == v.PaneID {
-			if !w.modalOpen() {
+			// The find bar's field keeps the keyboard while it is open.
+			if !w.modalOpen() && !w.findOpen() {
 				el.Focus()
 			}
 			w.terminal.focused = pane.ID

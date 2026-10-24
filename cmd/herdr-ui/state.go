@@ -54,6 +54,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 	}
 	var host *terminalhost.Host
 	var sidebar *sidebarinfo.Collector
+	var notifier *notifier
 	var closed, pending, starting, started atomic.Bool
 	var startup sync.WaitGroup
 	mygo.App.WhenReady(func() {
@@ -70,6 +71,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				}
 				latest := s.Latest()
 				a.Update(latest)
+				notifier.Step(latest)
 				if sidebar != nil {
 					sidebar.Update(latest)
 				}
@@ -126,6 +128,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				})
 			}
 		}
+		notifier = newNotifier(screen.WindowActive, func(workspaceID, paneID string) { post(func() { screen.JumpTo(workspaceID, paneID) }) })
 		sidebar = sidebarinfo.New(target, func(p sidebarinfo.Publication) { post(func() { a.UpdateSidebar(p) }) })
 		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: terminal.Font{Size: settings.Settings().FontSize}, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key})
 		screen.ConnectTerminal(host, s, ctx, post)
@@ -150,7 +153,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		screen.SetActionHooks(hooks)
 		go keyboard.run(ctx, target.Socket, func() { post(func() {}) })
 		win.OnBlur(func() { post(func() { screen.SetWindowActive(false) }) })
-		win.OnFocus(func() { post(func() { screen.SetWindowActive(true) }) })
+		win.OnFocus(func() { post(func() { screen.SetWindowActive(true); notifier.Clear() }) })
 		themeItems := map[mygo.ThemeSource]*mygo.MenuItem{}
 		offAppearance := mygo.Theme.OnUpdated(func() {
 			if closed.Load() {
@@ -175,7 +178,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		menuLabels := map[string]string{}
 		// Window-level commands keep their direct key equivalents, as Herdr
 		// and Kero do; the prefix chords remain Herdr's own layer beneath.
-		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J"}
+		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J", "find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G"}
 		for _, action := range view.Actions {
 			action := action
 			label := screen.ActionLabel(action.ID)

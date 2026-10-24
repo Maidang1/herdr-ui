@@ -12,10 +12,14 @@ import (
 )
 
 type fakeTerminal struct {
-	mu     sync.Mutex
-	closes int
-	views  int
-	sent   []byte
+	mu       sync.Mutex
+	closes   int
+	views    int
+	sent     []byte
+	searches []string
+	nexts    int
+	prevs    int
+	ended    int
 }
 
 func (f *fakeTerminal) Close() error { f.mu.Lock(); defer f.mu.Unlock(); f.closes++; return nil }
@@ -31,6 +35,26 @@ func (f *fakeTerminal) View(*ui.Context) ui.Element {
 	return ui.Element{}
 }
 func (f *fakeTerminal) SetFont(terminal.Font) {}
+func (f *fakeTerminal) Search(text string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.searches = append(f.searches, text)
+}
+func (f *fakeTerminal) SearchNext() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nexts++
+}
+func (f *fakeTerminal) SearchPrevious() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.prevs++
+}
+func (f *fakeTerminal) EndSearch() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.ended++
+}
 
 type harness struct {
 	h       *Host
@@ -588,4 +612,67 @@ drained:
 	if h.Status(retained).State != Closed {
 		t.Fatal("late UI work revived a closed binding")
 	}
+}
+
+func attach(t *testing.T, x *harness) (Binding, terminal.Options) {
+	t.Helper()
+	b := reconcile(t, x)
+	o := receive(t, x.options)
+	x.release <- struct{}{}
+	receive(t, x.posts)()
+	return b, o
+}
+
+func TestSearchRoutesByBindingAndDropsStale(t *testing.T) {
+	x := setup()
+	b, _ := attach(t, x)
+	x.h.SearchPane(b, "query")
+	x.h.SearchNext(b)
+	x.h.SearchPrevious(b)
+	x.h.EndSearch(b)
+	// A replaced binding must not address the replacement's terminal.
+	x.h.SearchPane(Binding{b.TargetID, b.TerminalID, b.Generation + 1}, "stale")
+	x.f.mu.Lock()
+	searches, nexts, prevs, ended := len(x.f.searches), x.f.nexts, x.f.prevs, x.f.ended
+	x.f.mu.Unlock()
+	if searches != 1 || x.f.searches[0] != "query" || nexts != 1 || prevs != 1 || ended != 1 {
+		t.Fatal(searches, nexts, prevs, ended)
+	}
+	finish(t, x)
+	x.h.SearchPane(b, "late")
+	x.f.mu.Lock()
+	searches = len(x.f.searches)
+	x.f.mu.Unlock()
+	if searches != 1 {
+		t.Fatal("closed host searched")
+	}
+}
+
+func TestOnSearchPostedWithBindingAndDroppedWhenRetired(t *testing.T) {
+	x := setup()
+	var got []terminal.SearchStatus
+	x.h.SetOnSearch(func(b Binding, s terminal.SearchStatus) {
+		if b.TargetID != demand.TargetID || b.TerminalID != demand.TerminalID {
+			t.Fatal("search reported for a foreign binding")
+		}
+		got = append(got, s)
+	})
+	b, o := attach(t, x)
+	o.OnSearch(terminal.SearchStatus{Text: "q", Total: 3, Selected: 1})
+	receive(t, x.posts)()
+	o.OnSearch(terminal.SearchStatus{})
+	receive(t, x.posts)()
+	if len(got) != 2 || got[0].Total != 3 || got[1] != (terminal.SearchStatus{}) {
+		t.Fatal(got)
+	}
+	x.h.Reconcile(nil)
+	o.OnSearch(terminal.SearchStatus{Text: "retired"})
+	select {
+	case fn := <-x.posts:
+		fn()
+		t.Fatal("retired generation posted a search report")
+	default:
+	}
+	finish(t, x)
+	_ = b
 }
