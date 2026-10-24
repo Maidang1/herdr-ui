@@ -34,12 +34,16 @@ type notifier struct {
 	// clearAll removes the notifications this app has delivered.
 	clearAll func()
 
-	last map[string]agentEntry
+	// enabled is the user's switch: off mutes delivery and the badge
+	// alike, so one setting governs every surface.
+	enabled bool
+	last    map[string]agentEntry
 }
 
 func newNotifier(active func() bool, jump func(workspaceID, paneID string)) *notifier {
 	return &notifier{
 		active:    active,
+		enabled:   true,
 		jump:      jump,
 		supported: mygo.NotificationsSupported,
 		badge:     mygo.App.SetBadgeCount,
@@ -67,9 +71,19 @@ func newNotifier(active func() bool, jump func(workspaceID, paneID string)) *not
 // Step reports transitions since the previous publication. An agent seen for
 // the first time only starts a baseline, so an attaching client never storms;
 // one that vanished is forgotten, so its return is a first sight again.
+// SetEnabled follows the settings switch: off mutes delivery and clears
+// both the badge and whatever banners already went out.
+func (n *notifier) SetEnabled(enabled bool) {
+	n.enabled = enabled
+	if !enabled {
+		n.clearAll()
+		n.badge(0)
+	}
+}
+
 func (n *notifier) Step(latest session.PublishedSnapshot) {
 	entries := agentEntries(latest)
-	quiet := !n.supported() || n.active()
+	quiet := !n.enabled || !n.supported() || n.active()
 	live := make(map[string]bool, len(entries))
 	blocked := 0
 	for _, entry := range entries {
@@ -98,7 +112,9 @@ func (n *notifier) Step(latest session.PublishedSnapshot) {
 			delete(n.last, id)
 		}
 	}
-	n.badge(blocked)
+	if n.enabled {
+		n.badge(blocked)
+	}
 }
 
 // Clear treats what was delivered as seen, as the window coming forward

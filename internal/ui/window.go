@@ -37,32 +37,33 @@ type Window struct {
 	sidebarMenuOpen     bool
 	tabMenuOpen         bool
 	agentsGrouped       bool
-	fontSize            float32
-	fontSizeDefault     float32
 	find                findState
 	zen                 bool
 	navigatorUses       []navigatorUse
 	navigatorSessions   int
+	settings            settingsUI
 }
 
 func New(a *app.App, retry func()) *Window {
-	return &Window{app: a, retry: retry, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, agentsGrouped: true, fontSize: 13, fontSizeDefault: 13, appearance: windowAppearance{active: true}}
+	return &Window{app: a, retry: retry, sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, agentsGrouped: true, appearance: windowAppearance{active: true}}
 }
 
-// SetInitialFontSize applies the persisted terminal font size before the
-// first terminal attaches, and remembers it as the size Actual Size
-// returns to.
-func (w *Window) SetInitialFontSize(size float32) {
-	w.fontSize = clampFontSize(size)
-	w.fontSizeDefault = w.fontSize
+// SetInitialSettings applies the persisted settings before the first
+// terminal attaches, and remembers the font size Actual Size returns to.
+func (w *Window) SetInitialSettings(snapshot SettingsSnapshot) {
+	w.settings.install(snapshot)
 }
 
-// SetFontSize pushes a new size to every attached terminal through the
-// FontSize hook, which also persists it.
+// SetFontSize steps the settings' font size and pushes the whole font to
+// every attached terminal through the Font hook, which also persists it.
 func (w *Window) SetFontSize(size float32) {
-	w.fontSize = clampFontSize(size)
-	if w.hooks.FontSize != nil {
-		w.hooks.FontSize(w.fontSize)
+	w.settings.snapshot.Font.Size = clampFontSize(size)
+	w.pushFont()
+}
+
+func (w *Window) pushFont() {
+	if w.hooks.Font != nil {
+		w.hooks.Font(w.settings.snapshot.Font)
 	}
 }
 
@@ -72,10 +73,10 @@ func clampFontSize(size float32) float32 { return max(8, min(48, size)) }
 // commands do; a zero step returns to the persisted default.
 func (w *Window) applyFontZoom(step float32) {
 	if step == 0 {
-		w.SetFontSize(w.fontSizeDefault)
+		w.SetFontSize(w.settings.sizeDefault)
 		return
 	}
-	w.SetFontSize(w.fontSize + step)
+	w.SetFontSize(w.settings.snapshot.Font.Size + step)
 }
 
 // jumpToAttention cycles through the agents that need a reply, starting

@@ -12,14 +12,16 @@ import (
 )
 
 type fakeTerminal struct {
-	mu       sync.Mutex
-	closes   int
-	views    int
-	sent     []byte
-	searches []string
-	nexts    int
-	prevs    int
-	ended    int
+	mu        sync.Mutex
+	closes    int
+	views     int
+	sent      []byte
+	searches  []string
+	nexts     int
+	prevs     int
+	ended     int
+	copies    int
+	contrasts []float32
 }
 
 func (f *fakeTerminal) Close() error { f.mu.Lock(); defer f.mu.Unlock(); f.closes++; return nil }
@@ -35,6 +37,16 @@ func (f *fakeTerminal) View(*ui.Context) ui.Element {
 	return ui.Element{}
 }
 func (f *fakeTerminal) SetFont(terminal.Font) {}
+func (f *fakeTerminal) SetCopyOnSelect(terminal.CopyOnSelect) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.copies++
+}
+func (f *fakeTerminal) SetMinimumContrast(ratio float32) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.contrasts = append(f.contrasts, ratio)
+}
 func (f *fakeTerminal) Search(text string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

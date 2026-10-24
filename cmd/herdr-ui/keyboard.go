@@ -67,18 +67,10 @@ func keyboardHooks(ctx context.Context, s *session.Session, k *keyboardEndpoint,
 	_, env, _ := target.Attach(binary, "keyboard-overlay", os.Environ())
 	return view.ActionHooks{
 		Detach: closeWindow,
-		Settings: func() error {
-			path := configPath()
-			if _, err := os.Stat(path); os.IsNotExist(err) {
-				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-					return err
-				}
-				if err := os.WriteFile(path, []byte("# Herdr configuration\n[keys]\nprefix = \"ctrl+b\"\n"), 0600); err != nil {
-					return err
-				}
-			}
-			return screen.OpenCommandSurface("Settings", []string{"/bin/sh", "-c", `exec ${EDITOR:-vi} "$1"`, "herdr-editor", path}, env, "")
-		},
+		// The settings window replaces this hook in state.go; the
+		// config editor below stays reachable as EditConfig from the
+		// Shortcuts page.
+		Settings:       func() error { return editHerdrConfigWith(binary, target, screen, env) },
 		WriteClipboard: func(text string) error { return mygo.Clipboard.Write(transfer.TextData(text)) },
 		ReadImage:      func() []byte { return mygo.Clipboard.ReadImage() },
 		EditText: func(text string) error {
@@ -170,6 +162,27 @@ func configPath() string {
 		base = filepath.Join(home, ".config")
 	}
 	return filepath.Join(base, "herdr", "config.toml")
+}
+
+// editHerdrConfig opens Herdr's own configuration in the user's editor,
+// inside the window's command surface. The settings window's Shortcuts
+// page and any fallback Settings path both land here.
+func editHerdrConfig(binary string, target herdr.Target, screen *view.Window) error {
+	_, env, _ := target.Attach(binary, "keyboard-overlay", os.Environ())
+	return editHerdrConfigWith(binary, target, screen, env)
+}
+
+func editHerdrConfigWith(_ string, _ herdr.Target, screen *view.Window, env []string) error {
+	path := configPath()
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			return err
+		}
+		if err := os.WriteFile(path, []byte("# Herdr configuration\n[keys]\nprefix = \"ctrl+b\"\n"), 0600); err != nil {
+			return err
+		}
+	}
+	return screen.OpenCommandSurface("Herdr configuration", []string{"/bin/sh", "-c", `exec ${EDITOR:-vi} "$1"`, "herdr-editor", path}, env, "")
 }
 func matchCommand(state endpoint.State, b input.Bindings, index int) (string, error) {
 	if !state.Connected || state.Snapshot == nil {

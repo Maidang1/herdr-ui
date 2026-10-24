@@ -41,10 +41,17 @@
 | ⌘K 清屏 | herdr 语义 pane.clear | 走 Shortcut 操作清服务端屏幕，避免本地清被下一帧覆盖 |
 | Zen 模式 ⌃⌘Z | herdr-gpui `window/zen.rs` | 窗口级视图状态：隐藏侧栏/标签条/参考面板/标题条，红绿灯浮于终端；不影响服务端焦点与侧栏偏好 |
 
+## 第四批（已实现）
+
+| 功能 | 来源 | 说明 |
+| --- | --- | --- |
+| 设置窗口 ⌘, | kero `settings_view.go`；herdr 设置窗口范式 | 独立可复用窗口（StateKey 记忆几何），左侧页面导航 + 右侧卡片：Appearance（System/Light/Dark 分段）、Terminal（字号/字重/行高滑杆与分段、等宽预览、选中即复制、最小对比度）、Notifications（通知与角标总开关）、Shortcuts（键位来源说明 + 编辑 Herdr 配置入口 + 动作清单）。改动即时生效并落盘 |
+| 终端行为热更 | kero `app.go:812-842` | CopyOnSelect / MinimumContrast / 字体全量经 Host 热更到所有已附加终端，并为新 attach 记住 |
+
 ## 后续候选（暂缓，含原因）
 
 1. ⌘+悬停图片 Flyout 预览（kero `peek.go`）：需 Flyout 窗口与图片解码管线，收益场景较窄。
 2. 快捷键重绑定界面：prefix 层键位本就由 Herdr 自己的 config.toml 管理（`input.LoadBindings`）；直键（⌘B/⌘F 等）固定，与 macOS 惯例一致。
 3. 终端配色主题（Ghostty 主题名）：锁定的 mygo v0.6.3-dev 未导出 `terminal.GhosttyTheme`（kero 用的 v0.6.4 才有）；升级框架属独立决策。
-4. 设置窗口 GUI：当前基础项（主题/字号）由原生菜单 + prefs 覆盖；完整设置页待功能面扩大后再做。
-5. 标签拖拽重排（herdr 服务端有 tab.move）：pills 交互重排属打磨项。
+
+4. 标签拖拽重排（herdr 服务端有 tab.move）：pills 交互重排属打磨项。

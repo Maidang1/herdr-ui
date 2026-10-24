@@ -55,6 +55,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 	var host *terminalhost.Host
 	var sidebar *sidebarinfo.Collector
 	var notifier *notifier
+	var settingsWin *mygo.Window
 	var closed, pending, starting, started atomic.Bool
 	var startup sync.WaitGroup
 	mygo.App.WhenReady(func() {
@@ -129,10 +130,17 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			}
 		}
 		notifier = newNotifier(screen.WindowActive, func(workspaceID, paneID string) { post(func() { screen.JumpTo(workspaceID, paneID) }) })
+		persisted := settings.Settings()
+		notifier.SetEnabled(persisted.Notifications)
+		font := terminal.Font{Size: persisted.FontSize, Weight: persisted.FontWeight, LineHeight: persisted.LineHeight}
+		copyOnSelect := terminal.CopyOnSelectNone
+		if persisted.CopyOnSelect {
+			copyOnSelect = terminal.CopyOnSelectClipboard
+		}
 		sidebar = sidebarinfo.New(target, func(p sidebarinfo.Publication) { post(func() { a.UpdateSidebar(p) }) })
-		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: terminal.Font{Size: settings.Settings().FontSize}, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key})
+		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: font, CopyOnSelect: copyOnSelect, MinimumContrast: persisted.MinimumContrast, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key})
 		screen.ConnectTerminal(host, s, ctx, post)
-		screen.SetInitialFontSize(settings.Settings().FontSize)
+		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, Notifications: persisted.Notifications})
 		preferences := mygo.Theme.Preferences()
 		screen.SetReducedTransparency(preferences.ReduceTransparency)
 		material := mygo.VibrancySidebar
@@ -140,15 +148,48 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			material = mygo.VibrancyNone
 		}
 		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Vibrancy: material, Content: native.View(screen.View)})
-		keyboard := &keyboardEndpoint{}
-		hooks := keyboardHooks(ctx, s, keyboard, screen, post, func() { win.Close() }, resolvedBinary, target)
-		hooks.FontSize = func(size float32) {
-			host.SetFont(terminal.Font{Size: size})
+		persist := func(fn func(*prefs.Settings)) {
 			go func() {
-				if _, err := settings.Update(func(v *prefs.Settings) { v.FontSize = size }); err != nil {
+				if _, err := settings.Update(fn); err != nil {
 					log.Printf("prefs: %v", err)
 				}
 			}()
+		}
+		openSettings := func() {
+			if settingsWin != nil {
+				settingsWin.Focus()
+				return
+			}
+			settingsWin = mygo.NewWindow(mygo.WindowOptions{Title: "Settings", Width: 720, Height: 520, MinWidth: 560, MinHeight: 420, StateKey: "settings", Content: native.View(screen.SettingsView)})
+			settingsWin.OnClosed(func() { settingsWin = nil })
+		}
+		keyboard := &keyboardEndpoint{}
+		hooks := keyboardHooks(ctx, s, keyboard, screen, post, func() { win.Close() }, resolvedBinary, target)
+		hooks.Settings = func() error { openSettings(); return nil }
+		hooks.EditConfig = func() error { return editHerdrConfig(resolvedBinary, target, screen) }
+		hooks.Font = func(f terminal.Font) {
+			host.SetFont(f)
+			persist(func(v *prefs.Settings) { v.FontSize, v.FontWeight, v.LineHeight = f.Size, f.Weight, f.LineHeight })
+		}
+		hooks.Theme = func(source string) {
+			mygo.Theme.SetSource(mygo.ThemeSource(source))
+			persist(func(v *prefs.Settings) { v.WindowTheme = source })
+		}
+		hooks.CopyOnSelect = func(enabled bool) {
+			behavior := terminal.CopyOnSelectNone
+			if enabled {
+				behavior = terminal.CopyOnSelectClipboard
+			}
+			host.SetCopyOnSelect(behavior)
+			persist(func(v *prefs.Settings) { v.CopyOnSelect = enabled })
+		}
+		hooks.MinimumContrast = func(ratio float32) {
+			host.SetMinimumContrast(ratio)
+			persist(func(v *prefs.Settings) { v.MinimumContrast = ratio })
+		}
+		hooks.Notifications = func(enabled bool) {
+			notifier.SetEnabled(enabled)
+			persist(func(v *prefs.Settings) { v.Notifications = enabled })
 		}
 		screen.SetActionHooks(hooks)
 		go keyboard.run(ctx, target.Socket, func() { post(func() {}) })
@@ -178,7 +219,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		menuLabels := map[string]string{}
 		// Window-level commands keep their direct key equivalents, as Herdr
 		// and Kero do; the prefix chords remain Herdr's own layer beneath.
-		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J", "find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G", "clear_pane": "CmdOrCtrl+K", "zen": "Ctrl+Cmd+Z"}
+		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J", "find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G", "clear_pane": "CmdOrCtrl+K", "zen": "Ctrl+Cmd+Z", "settings": "CmdOrCtrl+,"}
 		for _, action := range view.Actions {
 			action := action
 			label := screen.ActionLabel(action.ID)

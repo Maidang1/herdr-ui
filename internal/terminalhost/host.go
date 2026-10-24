@@ -59,11 +59,17 @@ type Config struct {
 	// Font sizes every new terminal attaches with; a zero Size falls back
 	// to the plugin's own default.
 	Font terminal.Font
+	// CopyOnSelect and MinimumContrast are the terminal behaviors every
+	// attach starts with; both have hot setters below.
+	CopyOnSelect    terminal.CopyOnSelect
+	MinimumContrast float32
 }
 type instance interface {
 	View(*ui.Context) ui.Element
 	Send([]byte)
 	SetFont(terminal.Font)
+	SetCopyOnSelect(terminal.CopyOnSelect)
+	SetMinimumContrast(float32)
 	Search(text string)
 	SearchNext()
 	SearchPrevious()
@@ -387,6 +393,40 @@ func (h *Host) SetOnSearch(fn func(Binding, terminal.SearchStatus)) {
 	h.mu.Unlock()
 }
 
+// SetCopyOnSelect applies the selection-copy behavior to every attached
+// terminal and remembers it for the next attach, on the UI thread.
+func (h *Host) SetCopyOnSelect(c terminal.CopyOnSelect) {
+	h.mu.Lock()
+	h.cfg.CopyOnSelect = c
+	live := h.liveInstances()
+	h.mu.Unlock()
+	for _, t := range live {
+		t.SetCopyOnSelect(c)
+	}
+}
+
+// SetMinimumContrast applies the least text contrast to every attached
+// terminal and remembers it for the next attach, on the UI thread.
+func (h *Host) SetMinimumContrast(ratio float32) {
+	h.mu.Lock()
+	h.cfg.MinimumContrast = ratio
+	live := h.liveInstances()
+	h.mu.Unlock()
+	for _, t := range live {
+		t.SetMinimumContrast(ratio)
+	}
+}
+
+func (h *Host) liveInstances() []instance {
+	live := make([]instance, 0, len(h.entries))
+	for _, e := range h.entries {
+		if e.installed {
+			live = append(live, e.owned)
+		}
+	}
+	return live
+}
+
 // Close marks all callbacks stale before closing any plugin. It waits only for
 // the caller's context, and subsequent calls can continue waiting for cleanup.
 func (h *Host) Close(ctx context.Context) error {
@@ -425,7 +465,7 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 	if font.Size <= 0 {
 		font.Size = 13
 	}
-	return terminal.Options{Command: cmd, Env: env, Dir: e.spec.CWD, Font: font, Padding: terminal.Padding{X: 16, Y: 12}, Theme: light, DarkTheme: dark, RightClick: terminal.RightClickCopyOrPaste, ClipboardRead: terminal.ClipboardDeny,
+	return terminal.Options{Command: cmd, Env: env, Dir: e.spec.CWD, Font: font, CopyOnSelect: h.cfg.CopyOnSelect, MinimumContrast: h.cfg.MinimumContrast, Padding: terminal.Padding{X: 16, Y: 12}, Theme: light, DarkTheme: dark, RightClick: terminal.RightClickCopyOrPaste, ClipboardRead: terminal.ClipboardDeny,
 		OnTitle: func(_ string) { h.post(e, func() {}) },
 		// The plugin only offers printed file paths to OpenLink, already
 		// resolved against the pane's own directory. URLs stay with the

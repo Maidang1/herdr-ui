@@ -14,11 +14,17 @@ type pluginInstance struct{ terminal *terminal.Terminal }
 
 func (p *pluginInstance) View(c *ui.Context) ui.Element { return terminal.View(c, p.terminal) }
 func (p *pluginInstance) Send(b []byte)                 { p.terminal.Send(b) }
-func (p *pluginInstance) SetFont(f terminal.Font)        { p.terminal.SetFont(f) }
-func (p *pluginInstance) Search(text string)             { p.terminal.Search(text) }
-func (p *pluginInstance) SearchNext()                    { p.terminal.SearchNext() }
-func (p *pluginInstance) SearchPrevious()                { p.terminal.SearchPrevious() }
-func (p *pluginInstance) EndSearch()                     { p.terminal.EndSearch() }
+func (p *pluginInstance) SetFont(f terminal.Font)       { p.terminal.SetFont(f) }
+func (p *pluginInstance) SetCopyOnSelect(c terminal.CopyOnSelect) {
+	p.terminal.SetCopyOnSelect(c)
+}
+func (p *pluginInstance) SetMinimumContrast(ratio float32) {
+	p.terminal.SetMinimumContrast(ratio)
+}
+func (p *pluginInstance) Search(text string) { p.terminal.Search(text) }
+func (p *pluginInstance) SearchNext()        { p.terminal.SearchNext() }
+func (p *pluginInstance) SearchPrevious()    { p.terminal.SearchPrevious() }
+func (p *pluginInstance) EndSearch()         { p.terminal.EndSearch() }
 func (p *pluginInstance) Close() error {
 	err := p.terminal.Close()
 	// Close hangs up the PTY; Done fences the plugin's terminal finalization.

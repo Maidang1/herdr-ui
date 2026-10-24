@@ -25,7 +25,9 @@ type shownNotification struct {
 func (f *fake) notifier() *notifier {
 	n := newNotifier(func() bool { return f.active }, func(workspaceID, paneID string) { f.jumps = append(f.jumps, [2]string{workspaceID, paneID}) })
 	n.supported = func() bool { return !f.disabled }
-	n.show = func(group, title, body string, click func()) { f.shown = append(f.shown, shownNotification{group, title, body, click}) }
+	n.show = func(group, title, body string, click func()) {
+		f.shown = append(f.shown, shownNotification{group, title, body, click})
+	}
 	n.badge = func(count int) { f.badges = append(f.badges, count) }
 	n.clearAll = func() { f.cleared++ }
 	return n

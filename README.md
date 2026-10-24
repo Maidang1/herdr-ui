@@ -4,7 +4,7 @@ Herdr 的原生桌面客户端，第一版面向本机 macOS，使用 **Go + myg
 
 目前已实现 M4 原生收尾：当前标签的多窗格终端支持分屏、方向选择、zoom 与比例调整；精简的终端内容区、可调整侧栏和右侧快捷键参考面板适配最小 820×560 窗口。原生菜单提供 System / Light / Dark，外壳跟随减少透明度与增加对比度偏好。阶段证据见 [M0](docs/m0-validation.md)、[M1](docs/m1-validation.md)、[M2](docs/m2-validation.md)、[M3](docs/m3-validation.md)、[M4 验收记录](docs/m4-validation.md)。系统 IME、真实鼠标和 VoiceOver 等交互仍需实机验收。
 
-对照 Herdr 与 Kero（同框架的 agent 终端）实机与源码调研后，补齐了一批终端相关能力（清单与取舍见 [功能对齐清单](docs/feature-parity-plan.md)）：外观与字号偏好持久化（⌘=/⌘-/⌘0，启动恢复）；agent 状态系统通知（需要你/完成）与 Dock 角标，点击跳转对应 pane；终端内查找条 ⌘F（实时计数与步进）；⌘+点击打开打印出的文件路径；⌘K 按 Herdr 语义清屏；Zen 模式 ⌃⌘Z；Go To 面板升级为会话目的地 + 命令的混合面板（frecency 排序）。⌘B 切换侧栏、⌘J 跳到等待中的 agent。
+对照 Herdr 与 Kero（同框架的 agent 终端）实机与源码调研后，补齐了一批终端相关能力（清单与取舍见 [功能对齐清单](docs/feature-parity-plan.md)）：外观与字号偏好持久化（⌘=/⌘-/⌘0，启动恢复）；agent 状态系统通知（需要你/完成）与 Dock 角标，点击跳转对应 pane；终端内查找条 ⌘F（实时计数与步进）；⌘+点击打开打印出的文件路径；⌘K 按 Herdr 语义清屏；Zen 模式 ⌃⌘Z；Go To 面板升级为会话目的地 + 命令的混合面板（frecency 排序）。⌘B 切换侧栏、⌘J 跳到等待中的 agent。设置窗口（⌘，）提供外观、终端（字号/字重/行高/选中即复制/最小对比度，热更全部终端）、通知开关与快捷键参考四页，改动即时生效并落盘。
 
 - [设计与实现方案](docs/implementation.md)：唯一主文档，包含第一版范围、界面、架构、接口、事件同步、终端、快捷键、颜色 token 与验收步骤。
 - [第一版设计稿](docs.pen/new.pen)：Workspaces、Split Panes、Switch Tabs、Shortcuts Reference 四张画板，使用 Pencil 打开。

@@ -73,3 +73,7 @@ Host新增100次快速可见集合切换回归：始终可见的pane binding保�
 批次 3（feat(links,zen,palette)）：OpenLink——插件检测的 URL 走系统、打印的文件路径按 pane cwd 解析后 Shell.OpenPath 打开；⌘K 清屏走 pane.clear Shortcut（服务端清屏）；Zen ⌃⌘Z——窗口级隐藏侧栏/标签条/参考面板/标题条（chromeLayout 与 windowControls 增加 zen 短路，修复 reference 参数回归后测试恢复）；goto 面板升级为会话目的地+全部命令混合、frecency（计数+会话衰减）排序、命令项显示动态标签与键位提示。
 
 验证：make test（12 包）与 vet 全绿；新增 prefs 往返/通知迁移（10 例）/find bar 交互/暗化穿透/zen 往返/palette 命令分发与排序/clear_pane 映射测试。实机（AX）：批次 3 构建侧栏/标签条/4 终端渲染正常，sidebar menu popover 开合正常；种子 prefs（dark/15pt）启动路径正常。CUA 键盘直发因与用户 Herdr 应用名称包含冲突不可用，直键（⌘F/⌘K/⌃⌘Z 等）以菜单加速器接线 + headless dispatch 测试覆盖，留待实机人工验收。
+
+## 2026-10-24 设置窗口
+
+参考 kero settings_view.go 与 herdr 设置窗口范式（左侧页面导航 + 右侧卡片、改动即时生效自动保存）实现原生设置窗口（⌘, / 侧栏 menu / palette 均可达）：独立窗口复用实例（StateKey 记忆几何，重开聚焦已有），四页——Appearance（System/Light/Dark 分段，经 hooks.Theme 即时 SetSource 并落盘）、Terminal（字号 8–48 与行高 1–2 滑杆、四档字重分段、等宽预览、Copy on select、Minimum contrast 1–7，全部经 Host.SetFont/SetCopyOnSelect/SetMinimumContrast 热更全部已附加终端并持久化）、Notifications（总开关：关闭即静默投递并清空横幅与角标）、Shortcuts（prefix 键位来源展示、Edit Herdr configuration 保留原 $EDITOR 命令面、动作+键位清单）。prefs 扩展 font_weight/line_height/copy_on_select/minimum_contrast/notifications 字段（notifications 缺省 true，坏值回退默认，未知字段保留）。字号缩放（⌘=/⌘-/⌘0）与设置共享同一 Font hook，热更携带完整字体而非仅字号。新增 tester 测试：页面导航、主题选择调 hook、copy-on-select 开关调 hook、缩放共享字体 hook、快捷键页说明与配置入口；prefs 新字段往返由既有测试覆盖。实机 AX 验证：设置窗口打开/四页导航/Dark 选中/Terminal 页滑杆-分段-复选框齐全/copy-on-select 勾选，prefs.json 实时记录 {"window_theme":"dark","copy_on_select":true,...}，恢复默认后文件删除重启干净。

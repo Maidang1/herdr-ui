@@ -8,6 +8,7 @@ import (
 
 	"github.com/Maidang1/herdr-ui/internal/input"
 	"github.com/Maidang1/herdr-ui/internal/session"
+	"github.com/egoist/mygo/plugins/terminal"
 )
 
 // ActionHooks are platform integrations. All callbacks run on the UI thread.
@@ -21,9 +22,20 @@ type ActionHooks struct {
 	InvokeCommand      func(int, session.Operation, func(error))
 	NotificationTarget func() string
 	NotificationText   func() (string, time.Duration)
-	// FontSize applies a new terminal font size to every attached
-	// terminal and persists it.
-	FontSize func(size float32)
+	// Font applies a new terminal font to every attached terminal and
+	// persists it.
+	Font func(font terminal.Font)
+	// Theme applies the window appearance ("system", "light", "dark") and
+	// persists it.
+	Theme func(source string)
+	// CopyOnSelect applies and persists the selection-copy behavior.
+	CopyOnSelect func(enabled bool)
+	// MinimumContrast applies and persists the least text contrast.
+	MinimumContrast func(ratio float32)
+	// Notifications enables or disables agent status notifications.
+	Notifications func(enabled bool)
+	// EditConfig opens Herdr's own configuration for editing.
+	EditConfig func() error
 }
 
 func (w *Window) SetActionHooks(h ActionHooks) { w.hooks = h }
