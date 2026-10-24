@@ -61,3 +61,15 @@ Host新增100次快速可见集合切换回归：始终可见的pane binding保�
 同日再按用户选择把顶部标签组右对齐：顶栏左端为工作区上下文（工作区名与聚焦 agent，跟随本窗口选择），右端为标签 pills、新建标签与 Tab actions；标题行（侧栏隐藏）同样式。实测可见态：上下文 x=268、Tab 1 x=967、Tab actions 右缘 x=1162–1188。测试与 vet 通过。
 
 同日按用户标注再调顶栏：标签组放回左端（Tab 1 实测 x=268），右端保留 Tab actions；等待 prefix 和弦时不再在内容区显示 "Prefix" 文字面板，改为顶栏右侧的小键位标签（如 "Ctrl + B"，由实际 Bindings.Prefix 生成，warning 底色），Resize 提示保持不变。新增 tester 测试：按下 prefix 后顶栏出现 "Ctrl + B" 标签且无裸 "Prefix" 字样。测试与 vet 通过。
+
+## 2026-10-24 对齐 Kero/Herdr 的功能批次
+
+调研：两个只读子代理分别产出 kero（同框架 mygo 的 agent 终端）与 herdr-gpui（Herdr 官方 GUI）功能报告；computer-use 实机核对 Herdr 界面；Kero 进程窗口不可用（AX 仅残留），以源码与 docs/ 为准。定位边界：GitHub PR、usage 额度、浏览器标签、teleport/云设备等一律不搬。清单与决策见 docs/feature-parity-plan.md。
+
+批次 1（feat(prefs)）：internal/prefs 设置持久化（~/Library/Application Support/herdr-ui/prefs.json，原子写、坏值回退默认、保留未知字段）；System/Light/Dark 启动恢复（SetSource before Run）+ 菜单切换写盘；字号 ⌘=/⌘-/⌘0（8–48pt，Host.SetFont 热更全部已附加终端并持久化）；⌘B 侧栏、⌘J 跳到下一个 blocked agent（jumpToAttention 循环）。
+
+批次 2（feat(notifications,find)）：notifier 跟踪每 pane 的 agent 状态迁移（→blocked "needs you"、working→done "finished"），仅窗口不活跃时发系统通知（首见只基线，无启动风暴；每 agent 一槽覆盖旧横幅），点击经 App.Focus+JumpTo 跳转，Dock 角标=当前 blocked 数，窗口聚焦清横幅；终端查找条 ⌘F/⌘G/⌘⇧G（插件 Search API，实时 "1 of 3" 计数，Enter/⇧Enter 步进，Esc 还焦点，跟随 pane 退役）；未聚焦分屏卡片 veil 暗化（指针穿透，tester 验证点击可达）。本批实现由两个并行子代理完成、区域互斥；期间一次二分回退误删未提交产物，从 agent 转录（rollout toolCalls）逐调用回放恢复，42 调用 41 成功 1 条为原代理自身的失败尝试，恢复后全量 -count=1 测试与原状态一致通过。
+
+批次 3（feat(links,zen,palette)）：OpenLink——插件检测的 URL 走系统、打印的文件路径按 pane cwd 解析后 Shell.OpenPath 打开；⌘K 清屏走 pane.clear Shortcut（服务端清屏）；Zen ⌃⌘Z——窗口级隐藏侧栏/标签条/参考面板/标题条（chromeLayout 与 windowControls 增加 zen 短路，修复 reference 参数回归后测试恢复）；goto 面板升级为会话目的地+全部命令混合、frecency（计数+会话衰减）排序、命令项显示动态标签与键位提示。
+
+验证：make test（12 包）与 vet 全绿；新增 prefs 往返/通知迁移（10 例）/find bar 交互/暗化穿透/zen 往返/palette 命令分发与排序/clear_pane 映射测试。实机（AX）：批次 3 构建侧栏/标签条/4 终端渲染正常，sidebar menu popover 开合正常；种子 prefs（dark/15pt）启动路径正常。CUA 键盘直发因与用户 Herdr 应用名称包含冲突不可用，直键（⌘F/⌘K/⌃⌘Z 等）以菜单加速器接线 + headless dispatch 测试覆盖，留待实机人工验收。

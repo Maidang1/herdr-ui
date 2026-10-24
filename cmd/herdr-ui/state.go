@@ -178,7 +178,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		menuLabels := map[string]string{}
 		// Window-level commands keep their direct key equivalents, as Herdr
 		// and Kero do; the prefix chords remain Herdr's own layer beneath.
-		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J", "find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G"}
+		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J", "find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G", "clear_pane": "CmdOrCtrl+K", "zen": "Ctrl+Cmd+Z"}
 		for _, action := range view.Actions {
 			action := action
 			label := screen.ActionLabel(action.ID)
@@ -187,7 +187,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			}
 			item := &mygo.MenuItem{Label: label, Accelerator: accelerators[action.ID], Disabled: !screen.Can(action.ID), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.Dispatch(action.ID) }) }}
 			switch action.ID {
-			case "toggle_sidebar", "previous_tab", "next_tab", "zoom_in", "zoom_out", "zoom_reset":
+			case "toggle_sidebar", "previous_tab", "next_tab", "zoom_in", "zoom_out", "zoom_reset", "zen":
 				viewItems = append(viewItems, item)
 			case "attention":
 				terminalItems = append([]*mygo.MenuItem{item}, terminalItems...)

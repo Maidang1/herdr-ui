@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/Maidang1/herdr-ui/internal/herdr"
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
@@ -425,6 +427,15 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 	}
 	return terminal.Options{Command: cmd, Env: env, Dir: e.spec.CWD, Font: font, Padding: terminal.Padding{X: 16, Y: 12}, Theme: light, DarkTheme: dark, RightClick: terminal.RightClickCopyOrPaste, ClipboardRead: terminal.ClipboardDeny,
 		OnTitle: func(_ string) { h.post(e, func() {}) },
+		// The plugin only offers printed file paths to OpenLink, already
+		// resolved against the pane's own directory. URLs stay with the
+		// system handler; a path that no longer exists opens nothing.
+		OpenLink: func(link string) bool {
+			if strings.Contains(link, "://") {
+				return false
+			}
+			return mygo.Shell.OpenPath(link) == nil
+		},
 		OnSearch: func(status terminal.SearchStatus) {
 			// The plugin reports on the UI thread mid-frame; posting keeps
 			// the report off that build and drops retired generations.

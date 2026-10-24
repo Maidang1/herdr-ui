@@ -20,6 +20,7 @@ func TestShortcutRequestsKeepExplicitScope(t *testing.T) {
 		{"new_worktree", "worktree.create", "worktree_created", "workspace_id"},
 		{"open_worktree", "worktree.open", "worktree_opened", "workspace_id"},
 		{"remove_worktree", "worktree.remove", "worktree_removed", "workspace_id"},
+		{"clear_pane", "pane.clear", "ok", "pane_id"},
 	} {
 		t.Run(test.action, func(t *testing.T) {
 			method, params, kind, err := shortcutRequest(Operation{Action: test.action, WorkspaceID: "workspace", TabID: "tab", PaneID: "pane", Text: "value", Index: 2})

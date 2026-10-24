@@ -56,7 +56,7 @@ type shortcutState struct {
 
 func extendedAction(action string) bool {
 	switch action {
-	case "help", "toggle_sidebar", "previous_tab", "next_tab", "split_vertical", "split_horizontal", "focus_pane_left", "focus_pane_down", "focus_pane_up", "focus_pane_right", "close_pane", "zoom", "resize_mode", "resize_left", "resize_right", "resize_up", "resize_down", "zoom_in", "zoom_out", "zoom_reset", "attention", "find", "find_next", "find_previous":
+	case "help", "toggle_sidebar", "previous_tab", "next_tab", "split_vertical", "split_horizontal", "focus_pane_left", "focus_pane_down", "focus_pane_up", "focus_pane_right", "close_pane", "zoom", "resize_mode", "resize_left", "resize_right", "resize_up", "resize_down", "zoom_in", "zoom_out", "zoom_reset", "attention", "zen", "find", "find_next", "find_previous":
 		return false
 	}
 	for _, a := range Actions {
@@ -118,6 +118,7 @@ func (w *Window) dispatchShortcut(action string, index int) bool {
 		a.navigatorQuery = ""
 		a.navigatorIndex = 0
 		a.navigatorFocus = true
+		w.navigatorSessions++
 		return true
 	case "workspace_picker":
 		a.navigate = true

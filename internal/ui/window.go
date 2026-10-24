@@ -40,6 +40,9 @@ type Window struct {
 	fontSize            float32
 	fontSizeDefault     float32
 	find                findState
+	zen                 bool
+	navigatorUses       []navigatorUse
+	navigatorSessions   int
 }
 
 func New(a *app.App, retry func()) *Window {
@@ -117,7 +120,7 @@ func (w *Window) View(c *native.Context) {
 	w.syncInput()
 	width, _ := c.Size()
 	w.viewportWidth = width
-	w.sidebarVisible = chromeLayout(width, w.sidebarWidth, w.hidden, w.referenceOpen()).sidebarVisible
+	w.sidebarVisible = chromeLayout(width, w.sidebarWidth, w.hidden || w.zen, w.referenceOpen() && !w.zen).sidebarVisible
 	if w.actionState != nil {
 		for _, action := range Actions {
 			w.actionState(action.ID, w.Can(action.ID))
@@ -182,7 +185,7 @@ func (w *Window) View(c *native.Context) {
 				}
 			})
 		})
-		if w.referenceOpen() {
+		if w.referenceOpen() && !w.zen {
 			w.referencePanel(c, p)
 		}
 	})
@@ -192,8 +195,10 @@ func (w *Window) View(c *native.Context) {
 // The strip stays at 36pt so its controls' centers land on the lights' own
 // line (measured center y=26), and carries the tab strip inline — as the
 // reference apps do — so no empty bar sits between the lights and content.
+// Zen mode draws nothing here: the lights float over the terminal, as
+// Herdr's zen does.
 func (w *Window) windowControls(c *native.Context, v app.View, p design.Palette) {
-	if w.sidebarVisible {
+	if w.sidebarVisible || w.zen {
 		return
 	}
 	bar := c.TitleBar()

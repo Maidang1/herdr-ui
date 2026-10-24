@@ -32,13 +32,19 @@
 - VS Code/px0 内嵌编辑器（herdr-gpui `src/code_server/`）
 - 应用自更新、崩溃报告面板（发布工程，非终端功能）
 
-## 后续候选（按性价比，未实现）
+## 第三批（已实现）
 
-1. 命令面板升级：现有 navigator 扩展为 frecency + 命令混合搜索（herdr-gpui `palette.rs`、kero `palette.go`），⌘P/⌘⇧P 与双击 Shift。
-2. 链接与路径处理：⌘+点击打开 URL/文件路径，⌘+悬停图片 Flyout 预览（kero `peek.go`；herdr-gpui `window/links.rs` 的三态验证）。
-3. ⌘K 清远端屏（herdr 语义 pane.clear）。
-4. Zen 模式（隐藏全部 chrome + 可选居中列宽，herdr-gpui `window/zen.rs`）。
-5. 快捷键重绑定界面（kero Settings›Keyboard 的录制/冲突检测）。
-6. 终端配色主题（Ghostty 主题名，light/dark 双套，kero `terminal.GhosttyTheme`）。
-7. 设置窗口（分页 + 搜索 + 配置热加载，kero `settings_view.go` 整体范式）。
-8. 标签拖拽重排/拖出成窗（herdr-gpui `tab_drag.rs`）。
+| 功能 | 来源 | 说明 |
+| --- | --- | --- |
+| 命令面板升级 | herdr-gpui `palette.rs`；kero `palette.go` | goto 面板混合会话目的地与全部命令（含动态标签与键位提示），frecency 排序（使用计数 + 会话衰减），选择即执行 |
+| 链接与路径 ⌘+点击 | kero `app.go openLink` | 终端插件自带 OSC 8/URL/路径检测与相对路径解析；URL 走系统，路径经 Shell.OpenPath 打开 |
+| ⌘K 清屏 | herdr 语义 pane.clear | 走 Shortcut 操作清服务端屏幕，避免本地清被下一帧覆盖 |
+| Zen 模式 ⌃⌘Z | herdr-gpui `window/zen.rs` | 窗口级视图状态：隐藏侧栏/标签条/参考面板/标题条，红绿灯浮于终端；不影响服务端焦点与侧栏偏好 |
+
+## 后续候选（暂缓，含原因）
+
+1. ⌘+悬停图片 Flyout 预览（kero `peek.go`）：需 Flyout 窗口与图片解码管线，收益场景较窄。
+2. 快捷键重绑定界面：prefix 层键位本就由 Herdr 自己的 config.toml 管理（`input.LoadBindings`）；直键（⌘B/⌘F 等）固定，与 macOS 惯例一致。
+3. 终端配色主题（Ghostty 主题名）：锁定的 mygo v0.6.3-dev 未导出 `terminal.GhosttyTheme`（kero 用的 v0.6.4 才有）；升级框架属独立决策。
+4. 设置窗口 GUI：当前基础项（主题/字号）由原生菜单 + prefs 覆盖；完整设置页待功能面扩大后再做。
+5. 标签拖拽重排（herdr 服务端有 tab.move）：pills 交互重排属打磨项。

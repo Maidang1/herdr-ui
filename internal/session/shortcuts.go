@@ -70,6 +70,11 @@ func shortcutRequest(op Operation) (string, map[string]any, string, error) {
 		p["pane_id"] = op.PaneID
 	case "reload_config":
 		method, response = "server.reload_config", "config_reload"
+	case "clear_pane":
+		// Herdr owns the screen; clearing on the server keeps the next
+		// frame from redrawing what a local clear would wipe.
+		method = "pane.clear"
+		p["pane_id"] = op.PaneID
 	case "new_worktree", "open_worktree":
 		p["workspace_id"] = op.WorkspaceID
 		if op.Action == "new_worktree" {
