@@ -31,7 +31,10 @@ make probe         # 只读检查当前 Herdr、配置与布局，不占用终�
 make window        # 本地 /bin/cat 输入测试窗口，不连接 Herdr
 make integration   # 临时独立服务 + 真实插件 + 原生窗口，结束后清理
 make package       # 固定版本 mygo CLI，输出含原生库的本地签名 .app
+make dmg           # 通用二进制（arm64 + x86_64）.app 与 .dmg，与发布流程一致
 ```
+
+发布：把 `mygo.json` 的 `version` 改为新版本并提交，再推送同名标签（如 `git tag v0.1.0 && git push origin v0.1.0`）。[Release 工作流](.github/workflows/release.yml)在 macOS runner 上校验标签与版本一致、运行 `make test`、执行 `make dmg`，然后创建 GitHub Release 并上传 `Herdr-UI-<version>-macos-universal.dmg` 及其 SHA-256。手动运行该工作流只构建，产物留在运行记录里，不发布。应用为 ad hoc 签名，未经公证，首次打开需移除隔离属性（发布说明中附命令）。
 
 默认窗口按事件同步，并差量 attach 当前标签的全部可见终端。普通工作区/标签/pane 选择保持窗口本地，不修改 Herdr 全局焦点；滚动通过显式目标 `pane.scroll` 更新服务端视口。可使用 `./bin/herdr-ui -socket /path/to/herdr.sock` 指定目标。
 

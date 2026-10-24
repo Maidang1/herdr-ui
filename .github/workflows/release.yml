@@ -1,0 +1,85 @@
+name: Release
+
+# Pushing a tag vX.Y.Z publishes a GitHub release with the universal macOS
+# disk image. The tag must match "version" in mygo.json. Running the workflow
+# by hand builds the same image as an artifact of the run, without a release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write # creating the release and uploading to it
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the tag against mygo.json
+        id: version
+        run: |
+          version="$(jq -r .version mygo.json)"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match mygo.json version $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # libghostty-vt, which mygo downloads by checksum; go.sum pins mygo.
+      - name: Cache native libraries
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/mygo/natives
+          key: mygo-natives-${{ hashFiles('go.sum') }}
+
+      - name: Test
+        run: make test
+
+      - name: Build the universal app and disk image
+        run: make dmg
+
+      - name: Name the disk image
+        id: dmg
+        run: |
+          name="Herdr-UI-${{ steps.version.outputs.version }}-macos-universal.dmg"
+          mv "dist/darwin-universal/Herdr UI ${{ steps.version.outputs.version }}.dmg" "dist/$name"
+          shasum -a 256 "dist/$name" | sed 's| dist/| |' > "dist/$name.sha256"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.dmg.outputs.name }}
+          path: dist/${{ steps.dmg.outputs.name }}*
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DMG: dist/${{ steps.dmg.outputs.name }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$DMG" "$DMG.sha256" --clobber
+          else
+            cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          The app is signed ad hoc, not with a Developer ID, so Gatekeeper blocks it on first launch. After dragging it to Applications, run:
+
+          ```sh
+          xattr -dr com.apple.quarantine "/Applications/Herdr UI.app"
+          ```
+
+          Herdr UI attaches to a running Herdr; install and start Herdr first.
+          NOTES
+            gh release create "$GITHUB_REF_NAME" "$DMG" "$DMG.sha256" \
+              --verify-tag --title "Herdr UI $GITHUB_REF_NAME" \
+              --notes-file "$RUNNER_TEMP/notes.md" --generate-notes
+          fi

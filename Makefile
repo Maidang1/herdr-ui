@@ -1,4 +1,4 @@
-.PHONY: build test integration probe run window package
+.PHONY: build test integration probe run window package dmg
 
 build:
 	CGO_ENABLED=0 ./scripts/go.sh build -trimpath -o bin/herdr-ui ./cmd/herdr-ui
@@ -23,3 +23,7 @@ window: build
 # The CLI resolves from the same exact mygo module revision as the application.
 package:
 	CGO_ENABLED=0 ./scripts/go.sh run github.com/egoist/mygo/cmd/mygo build -skip-dmg
+
+# Universal (arm64 + x86_64) app and disk image, as the release workflow builds.
+dmg:
+	CGO_ENABLED=0 ./scripts/go.sh run github.com/egoist/mygo/cmd/mygo build -platform darwin/universal
