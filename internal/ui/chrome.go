@@ -2,7 +2,17 @@ package ui
 
 import (
 	"github.com/Maidang1/herdr-ui/internal/design"
+	"github.com/egoist/mygo/plugins/glass"
 	native "github.com/egoist/mygo/ui"
+)
+
+// How much of the raised surface's own color frosts a floating glass:
+// a little for a bar or a toast, enough that controls passing under its
+// few words do not break them up; most for a menu or a dialog, whose
+// lists of text must read as steadily as on paper.
+const (
+	glassThin  float32 = .42
+	glassDense float32 = .62
 )
 
 type chromeDimensions struct {
@@ -36,10 +46,22 @@ func (w *Window) iconButton(c *native.Context, key string, icon *native.SVG, lab
 	return button
 }
 
+// floating fills a surface that floats over the window's content, as a
+// menu, a bar, a toast or a dialog, with Liquid Glass frosted by frost of
+// the raised surface's color, as macOS 26 draws them. Where the user asks
+// for less transparency or more contrast it is the opaque raised surface,
+// outlined.
+func (w *Window) floating(c *native.Context, surface native.Element, p design.Palette, frost float32) native.Element {
+	if w.glassy(c) {
+		return surface.Material(glass.Glass{Tint: p.Elevated.Alpha(frost)})
+	}
+	return surface.Background(p.Elevated).Border(1, p.Border)
+}
+
 // popoverPanel styles a popover's panel: its items sit MenuPadding in,
 // rounded concentrically with it (shape.MenuItem).
-func (w *Window) popoverPanel(panel native.Element, p design.Palette) {
-	panel.MinWidth(200).Background(p.Elevated).Border(1, p.Border).Radius(w.shape.Popover).Shadow(0, 8, 24, 0, p.ContentShadow).Padding(design.MenuPadding)
+func (w *Window) popoverPanel(c *native.Context, panel native.Element, p design.Palette) {
+	w.floating(c, panel.MinWidth(200).Radius(w.shape.Popover).Shadow(0, 8, 24, 0, p.ContentShadow).Padding(design.MenuPadding), p, glassDense)
 }
 
 func (w *Window) sidebarResizeHandle(c *native.Context) {

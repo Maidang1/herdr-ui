@@ -97,7 +97,8 @@ func (w *Window) notificationToast(c *native.Context, p design.Palette) {
 	}
 	width, _ := c.Size()
 	native.Overlay(c.Key("notification-overlay"), func() {
-		card := native.Column(c.Key("notification-toast")).Label("Notification toast").Absolute().Width(min(360, max(0, width-32))).Padding(12, 12, 12, 16).Gap(10).Radius(w.shape.Panel).Background(p.Elevated).Border(1, p.Border).Shadow(0, 6, 24, 0, p.ContentShadow).TextColor(p.Text).FontSize(13)
+		card := native.Column(c.Key("notification-toast")).Label("Notification toast").Absolute().Width(min(360, max(0, width-32))).Padding(12, 12, 12, 16).Gap(10).Radius(w.shape.Panel).Shadow(0, 6, 24, 0, p.ContentShadow).TextColor(p.Text).FontSize(13)
+		w.floating(c, card, p, glassThin)
 		switch position {
 		case "top-left":
 			card.Top(56).Left(16)
@@ -152,7 +153,8 @@ func (w *Window) referencePanel(c *native.Context, p design.Palette) {
 	width, height := c.Size()
 	native.DialogBase(c.Key("keyboard-reference-dialog"), &open, func(backdrop, panel native.Element) {
 		backdrop.Background(native.RGBA(0, 0, 0, .32))
-		panel.Label("Keyboard reference panel").Width(min(560, max(0, width-48))).Height(min(680, max(0, height-48))).Padding(20, 20, 0, 20).Gap(12).Background(p.Elevated).Border(1, p.Border).Radius(w.shape.Dialog).Shadow(0, 16, 48, 0, p.ContentShadow).AlignItems(native.Stretch)
+		panel.Label("Keyboard reference panel").Width(min(560, max(0, width-48))).Height(min(680, max(0, height-48))).Padding(20, 20, 0, 20).Gap(12).Radius(w.shape.Dialog).Shadow(0, 16, 48, 0, p.ContentShadow).AlignItems(native.Stretch)
+		w.floating(c, panel, p, glassDense)
 
 		native.Row(c).FillWidth().Gap(10).AlignItems(native.Start).Children(func() {
 			native.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
@@ -303,7 +305,8 @@ func (w *Window) copyConfirmation(c *native.Context, p design.Palette) {
 	c.After(copyShown - since)
 	native.Overlay(c.Key("copy-overlay"), func() {
 		native.Row(c.Key("copy-confirmation-row")).Absolute().Left(0).Right(0).Bottom(24).Justify(native.Center).PassThrough().Children(func() {
-			native.Row(c.Key("copy-confirmation")).Label("Copied to clipboard").Padding(6, 12).Gap(6).AlignItems(native.Center).Radius(14).Background(p.Elevated).Border(1, p.Border).Shadow(0, 4, 16, 0, p.ContentShadow).PassThrough().Children(func() {
+			chip := native.Row(c.Key("copy-confirmation")).Label("Copied to clipboard").Padding(6, 12).Gap(6).AlignItems(native.Center).Radius(14).Shadow(0, 4, 16, 0, p.ContentShadow).PassThrough()
+			w.floating(c, chip, p, glassThin).Children(func() {
 				native.Icon(c, icons.Check).Size(14, 14).TextColor(p.Success)
 				native.Text(c, "Copied").FontSize(12).TextColor(p.Text)
 			})

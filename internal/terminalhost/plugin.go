@@ -78,14 +78,17 @@ func openTerminal(o terminal.Options) (instance, error) {
 }
 func terminalThemes() (*terminal.Theme, *terminal.Theme) {
 	light, dark := *terminal.LightTheme(), *terminal.DarkTheme()
-	light.Background = design.Colors(false).Content
-	light.Foreground = design.Colors(false).Text
+	// The labels are translucent; a terminal paints its foreground solid,
+	// so it takes the color the label shows on the terminal's background.
+	lp, dp := design.Colors(false), design.Colors(true)
+	light.Background = lp.Content
+	light.Foreground = design.Over(lp.Text, lp.Content)
 	light.Cursor = light.Foreground
 	light.CursorText = light.Background
 	light.Selection = ui.Hex("#DCEAF8")
 	light.SelectionText = light.Foreground
-	dark.Background = design.Colors(true).Content
-	dark.Foreground = design.Colors(true).Text
+	dark.Background = dp.Content
+	dark.Foreground = design.Over(dp.Text, dp.Content)
 	dark.Cursor = dark.Foreground
 	dark.CursorText = dark.Background
 	dark.Selection = ui.Hex("#354B66")

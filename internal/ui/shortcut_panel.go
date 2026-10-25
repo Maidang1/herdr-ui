@@ -144,7 +144,8 @@ func (w *Window) shortcutDialog(c *native.Context, p design.Palette) {
 	}
 	native.DialogBase(c.Key("shortcut-prompt"), &open, func(backdrop, panel native.Element) {
 		backdrop.Background(native.RGBA(0, 0, 0, .32))
-		panel.Label("Action confirmation dialog").Width(min(420, max(0, width-48))).Padding(20).Background(p.Elevated).Border(1, p.Border).Radius(w.shape.Dialog).Shadow(0, 16, 48, 0, p.ContentShadow).AlignItems(native.Stretch)
+		panel.Label("Action confirmation dialog").Width(min(420, max(0, width-48))).Padding(20).Radius(w.shape.Dialog).Shadow(0, 16, 48, 0, p.ContentShadow).AlignItems(native.Stretch)
+		w.floating(c, panel, p, glassDense)
 		native.Column(c).FillWidth().Gap(6).Children(func() {
 			native.Text(c, prompt.title).FontSize(15).FontWeight(600).FillWidth()
 			if prompt.message != "" {

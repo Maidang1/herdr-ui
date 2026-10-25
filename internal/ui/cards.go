@@ -83,14 +83,15 @@ func (w *Window) paneCard(c *native.Context, r layout.Rect, pane app.PaneRow, fr
 				}
 				w.cardControls(c, pane, frameView, r.W, p)
 			})
-			native.Box(c).Height(1).Shrink(0).FillWidth().Background(p.Border)
 		}
 		body()
 		if multi && !selected {
 			// An unfocused pane steps back behind a translucent shell tint
 			// over its content, below the header whose controls stay live.
+			// No rule divides the header from its terminal: the pane reads
+			// as one card, the split hairlines alone dividing panes.
 			// The layer is decorative: it passes the pointer through.
-			native.Box(c.Key("pane-dim:" + pane.ID)).Absolute().Left(0).Top(float32(cardHeaderHeight + 1)).Right(0).Bottom(0).Background(p.Shell.Alpha(.35)).PassThrough()
+			native.Box(c.Key("pane-dim:" + pane.ID)).Absolute().Left(0).Top(float32(cardHeaderHeight)).Right(0).Bottom(0).Background(p.Shell.Alpha(.35)).PassThrough()
 		}
 	})
 }

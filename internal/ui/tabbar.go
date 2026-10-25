@@ -208,7 +208,7 @@ func (w *Window) tabActionsMenu(c *native.Context, p design.Palette) {
 		w.tabMenuOpen = !w.tabMenuOpen
 	}
 	native.PopoverBase(c, more, &w.tabMenuOpen, func(panel native.Element) {
-		w.popoverPanel(panel, p)
+		w.popoverPanel(c, panel, p)
 		panel.Children(func() {
 			w.tabMenuItem(c, p, "tab-menu-new", icons.Plus, "New tab", "new_tab")
 			w.tabMenuItem(c, p, "tab-menu-rename", icons.GitBranch, "Rename tab", "rename_tab")

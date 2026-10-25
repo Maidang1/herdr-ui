@@ -24,6 +24,7 @@ func TestRenderSettingsArtifacts(t *testing.T) {
 			for _, size := range [][2]int{{720, 520}, {1000, 1160}} {
 				w.settings.page = indexOfPage(page)
 				tester := native.NewTester(w.SettingsView, size[0], size[1])
+				tester.SetTitleBar(native.TitleBar{Left: 80, Height: 44})
 				tester.SetDark(dark)
 				tester.Frame()
 				name := fmt.Sprintf("settings-%s-%dx%d-dark-%t.png", page, size[0], size[1], dark)

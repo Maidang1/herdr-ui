@@ -176,30 +176,46 @@ const (
 	settingsSelectWidth = 220
 )
 
-// SettingsView renders the settings window: a page list on the left, the
-// page's groups on the right. Every change applies immediately through the
-// hooks, which persist.
+// SettingsView renders the settings window as System Settings: a page
+// list on the window's sidebar material on the left, under the traffic
+// lights of its hidden title bar, and the page's groups on an opaque page
+// on the right. Every change applies immediately through the hooks, which
+// persist.
 func (w *Window) SettingsView(c *native.Context) {
 	p := w.appearancePalette(c)
 	s := &w.settings
 	s.resetMirrors()
-	root := native.Row(c.Key("settings-root")).Fill().AlignItems(native.Stretch).Background(p.Inset).TextColor(p.Text).FontSize(13)
+	if w.translucent(c) {
+		c.Root().Background(native.Transparent)
+	} else {
+		c.Root().Background(p.Sidebar)
+	}
+	titleBar := c.TitleBar().Height
+	root := native.Row(c.Key("settings-root")).Fill().AlignItems(native.Stretch).TextColor(p.Text).FontSize(13)
 	root.Children(func() {
-		native.Column(c.Key("settings-nav")).Width(180).Shrink(0).FillHeight().Padding(18, 10).Gap(4).Background(p.Sidebar).Children(func() {
-			native.Text(c, "Settings").FontSize(11).FontWeight(700).TextColor(p.Tertiary).Padding(0, 10, 10, 10)
+		native.Column(c.Key("settings-nav")).Width(180).Shrink(0).FillHeight().Padding(max(18, titleBar+8), 10, 18, 10).Gap(2).Background(p.Sidebar).DragWindow().Children(func() {
+			native.Text(c, "Settings").FontSize(11).FontWeight(700).TextColor(p.Tertiary).Padding(0, 10, 8, 10)
 			for i, name := range settingsPages {
 				page := i
-				button := native.ButtonBase(c.Key("settings-page:"+name)).FillWidth().Height(34).Justify(native.Start).Radius(7).Padding(0, 10).Label(name).Selected(s.page == page)
-				if s.page == page {
-					button.Background(p.Accent.Alpha(.12))
+				selected := s.page == page
+				button := native.ButtonBase(c.Key("settings-page:"+name)).FillWidth().Height(32).Justify(native.Start).Radius(8).Padding(0, 10).Label(name).Selected(selected)
+				// The selected page is filled with the accent, as a Mac
+				// sidebar's selection in the key window.
+				icon, label := p.Secondary, p.Text
+				if selected {
+					button.Background(p.Accent)
+					icon, label = c.Theme().AccentText, c.Theme().AccentText
+					if button.FocusVisible() {
+						button.Border(2, p.Focus)
+					}
 				} else {
 					w.controlState(button, p)
 				}
 				button.Children(func() {
 					native.Row(c).FillWidth().Gap(9).AlignItems(native.Center).Children(func() {
-						native.Icon(c, settingsPageIcons[page]).Size(15, 15).TextColor(p.Secondary)
-						text := native.Text(c, name).FontSize(13).TextColor(p.Text)
-						if s.page == page {
+						native.Icon(c, settingsPageIcons[page]).Size(15, 15).TextColor(icon)
+						text := native.Text(c, name).FontSize(13).TextColor(label)
+						if selected {
 							text.FontWeight(600)
 						}
 					})
@@ -210,24 +226,39 @@ func (w *Window) SettingsView(c *native.Context) {
 			}
 		})
 		native.Box(c).Width(1).FillHeight().Shrink(0).Background(p.Border)
-		native.Scroll(c.Key("settings-content")).Grow(1).FillHeight().MinWidth(0).AlignItems(native.Center).Children(func() {
-			native.Column(c.Key("settings-page")).FillWidth().MaxWidth(settingsColumnWidth+2*settingsPagePadding).Shrink(0).Padding(28, settingsPagePadding, 40, settingsPagePadding).Gap(24).AlignItems(native.Stretch).Children(func() {
-				native.Column(c).Gap(4).Children(func() {
-					native.Text(c, settingsPages[s.page]).FontSize(22).FontWeight(700)
-					descriptions := []string{"Make Herdr feel at home.", "Fine-tune your terminal experience.", "Choose when Herdr gets your attention.", "Keep your workflow close at hand."}
-					native.Text(c, descriptions[s.page]).FontSize(13).TextColor(p.Secondary)
-				})
-				switch s.page {
-				case 0:
-					w.settingsAppearance(c, p, s)
-				case 1:
-					w.settingsTerminal(c, p, s)
-				case 2:
-					w.settingsNotifications(c, p, s)
-				default:
-					w.settingsShortcuts(c, p)
-				}
+		native.Column(c.Key("settings-pane")).Grow(1).FillHeight().MinWidth(0).AlignItems(native.Stretch).Background(p.Grouped).Children(func() {
+			// The hidden title bar's strip drags the window; the page
+			// scrolls under it.
+			if titleBar > 0 {
+				native.Box(c.Key("settings-title-bar")).FillWidth().Height(titleBar).Shrink(0).DragWindow()
+			}
+			w.settingsPage(c, p, s, titleBar)
+		})
+	})
+}
+
+func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI, titleBar float32) {
+	top := float32(28)
+	if titleBar > 0 {
+		top = 4
+	}
+	native.Scroll(c.Key("settings-content")).Grow(1).FillHeight().MinWidth(0).AlignItems(native.Center).Children(func() {
+		native.Column(c.Key("settings-page")).FillWidth().MaxWidth(settingsColumnWidth+2*settingsPagePadding).Shrink(0).Padding(top, settingsPagePadding, 40, settingsPagePadding).Gap(24).AlignItems(native.Stretch).Children(func() {
+			native.Column(c).Gap(4).Children(func() {
+				native.Text(c, settingsPages[s.page]).FontSize(22).FontWeight(700)
+				descriptions := []string{"Make Herdr feel at home.", "Fine-tune your terminal experience.", "Choose when Herdr gets your attention.", "Keep your workflow close at hand."}
+				native.Text(c, descriptions[s.page]).FontSize(13).TextColor(p.Secondary)
 			})
+			switch s.page {
+			case 0:
+				w.settingsAppearance(c, p, s)
+			case 1:
+				w.settingsTerminal(c, p, s)
+			case 2:
+				w.settingsNotifications(c, p, s)
+			default:
+				w.settingsShortcuts(c, p)
+			}
 		})
 	})
 }
@@ -246,7 +277,13 @@ func (w *Window) settingsSection(c *native.Context, key, title, footnote string,
 	native.Column(c.Key(key)).FillWidth().Shrink(0).Gap(8).AlignItems(native.Stretch).Children(func() {
 		native.Text(c, title).FontSize(13).FontWeight(600).PaddingX(4)
 		g := &settingsGroup{c: c, p: p}
-		native.Column(c.Key(key+"-card")).Label(title+" settings").FillWidth().Radius(10).Background(p.Elevated).Border(1, p.Border).Clip().AlignItems(native.Stretch).Children(func() { rows(g) })
+		// The card stands off the grouped page by its own fill, as System
+		// Settings' do; Increase Contrast outlines it.
+		card := native.Column(c.Key(key + "-card")).Label(title + " settings").FillWidth().Radius(10).Background(p.Elevated).Clip().AlignItems(native.Stretch)
+		if c.Preferences().HighContrast {
+			card.Border(1, p.Border)
+		}
+		card.Children(func() { rows(g) })
 		if footnote != "" {
 			native.Text(c, footnote).FontSize(11).TextColor(p.Tertiary).FillWidth().PaddingX(4)
 		}
