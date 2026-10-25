@@ -6,22 +6,41 @@ import "github.com/egoist/mygo/ui"
 type Palette struct {
 	Shell, Top, Middle, Bottom, Sidebar, Content, Inset, Text, Secondary, Tertiary, Border, Selected, Hover, Accent, Working, Idle, Warning, Danger, Success ui.Color
 	Elevated, ControlBorder, Focus, InactiveSelected, SidebarTint, ContentShadow, Disabled, Pressed                                                          ui.Color
-	// RowSelected is the selected sidebar row's wash, in the shell's own
-	// lavender hue rather than the action blue.
+	// RowSelected is the selected sidebar row's wash: a neutral fill, as
+	// a Mac sidebar's, that the material under it tints.
 	RowSelected ui.Color
+	// Highlight is the hairline of light along a raised surface's top
+	// edge in dark mode, where a shadow alone does not lift it; light mode
+	// leaves it clear.
+	Highlight ui.Color
+	// Grouped is the opaque page a settings window's grouped cards sit on.
+	Grouped ui.Color
 }
 
+// Colors is the window's palette. Surfaces are neutral, as Apple's, so the
+// behind-window material carries the wallpaper's tint rather than fighting
+// it; labels are white or black at an opacity, as AppKit's label colors,
+// so whatever they sit on reads through them.
 func Colors(dark bool) Palette {
 	if dark {
 		return Palette{
-			Shell: ui.Hex("#211D28"), Top: ui.Hex("#2C2435"), Middle: ui.Hex("#2C252C"), Bottom: ui.Hex("#302D25"), Sidebar: ui.Hex("#201D24"), Content: ui.Hex("#211F25"), Inset: ui.Hex("#29262F"), Text: ui.Hex("#F2EFF5"), Secondary: ui.Hex("#C2BBCB"), Tertiary: ui.Hex("#B0A7BD"), Border: ui.Hex("#FFFFFF12"), Selected: ui.Hex("#FFFFFF1F"), Hover: ui.Hex("#FFFFFF0A"), Accent: ui.Hex("#78B7FF"), Working: ui.Hex("#C4A6EA"), Idle: ui.Hex("#B0A7BD"), Warning: ui.Hex("#E7BF72"), Danger: ui.Hex("#FF9CA5"), Success: ui.Hex("#83C79B"),
-			Elevated: ui.Hex("#302D35"), ControlBorder: ui.Hex("#8F859B"), Focus: ui.Hex("#78B7FF"), InactiveSelected: ui.Hex("#FFFFFF14"), SidebarTint: ui.Hex("#1D1A2166"), ContentShadow: ui.Hex("#00000029"), Disabled: ui.Hex("#776E82"), Pressed: ui.Hex("#FFFFFF14"), RowSelected: ui.Hex("#C4A6EA2E"),
+			Shell: ui.Hex("#2A2A2D"), Top: ui.Hex("#2D2D30"), Middle: ui.Hex("#2A2A2D"), Bottom: ui.Hex("#27272A"), Sidebar: ui.Hex("#2A2A2D"), Content: ui.Hex("#1E1E20"), Inset: ui.Hex("#FFFFFF0F"), Text: ui.Hex("#FFFFFFE0"), Secondary: ui.Hex("#FFFFFFA6"), Tertiary: ui.Hex("#FFFFFF85"), Border: ui.Hex("#FFFFFF14"), Selected: ui.Hex("#FFFFFF1A"), Hover: ui.Hex("#FFFFFF0D"), Accent: ui.Hex("#78B7FF"), Working: ui.Hex("#C4A6EA"), Idle: ui.Hex("#A1A1A8"), Warning: ui.Hex("#E7BF72"), Danger: ui.Hex("#FF9CA5"), Success: ui.Hex("#8EE0AB"),
+			Elevated: ui.Hex("#2C2C2F"), ControlBorder: ui.Hex("#8E8E95"), Focus: ui.Hex("#78B7FF"), InactiveSelected: ui.Hex("#FFFFFF12"), SidebarTint: ui.Hex("#1E1E2026"), ContentShadow: ui.Hex("#00000059"), Disabled: ui.Hex("#6E6E75"), Pressed: ui.Hex("#FFFFFF17"), RowSelected: ui.Hex("#FFFFFF1C"), Highlight: ui.Hex("#FFFFFF12"), Grouped: ui.Hex("#1E1E20"),
 		}
 	}
 	return Palette{
-		Shell: ui.Hex("#EEE7EF"), Top: ui.Hex("#EAE0EF"), Middle: ui.Hex("#F3E8E7"), Bottom: ui.Hex("#F4EED3"), Sidebar: ui.Hex("#F2F0F4"), Content: ui.Hex("#FFFFFF"), Inset: ui.Hex("#F5F3F7"), Text: ui.Hex("#252329"), Secondary: ui.Hex("#5D5866"), Tertiary: ui.Hex("#625D6B"), Border: ui.Hex("#3026380F"), Selected: ui.Hex("#30263814"), Hover: ui.Hex("#3026380B"), Accent: ui.Hex("#0057A6"), Working: ui.Hex("#68448F"), Idle: ui.Hex("#5D5866"), Warning: ui.Hex("#795000"), Danger: ui.Hex("#9F2934"), Success: ui.Hex("#1E623C"),
-		Elevated: ui.Hex("#FFFFFF"), ControlBorder: ui.Hex("#756D80"), Focus: ui.Hex("#0057A6"), InactiveSelected: ui.Hex("#3026380F"), SidebarTint: ui.Hex("#F9F7FB73"), ContentShadow: ui.Hex("#3026380A"), Disabled: ui.Hex("#8C8595"), Pressed: ui.Hex("#30263817"), RowSelected: ui.Hex("#7A55A82B"),
+		Shell: ui.Hex("#ECECEF"), Top: ui.Hex("#EFEFF2"), Middle: ui.Hex("#ECECEF"), Bottom: ui.Hex("#E8E8EB"), Sidebar: ui.Hex("#ECECEF"), Content: ui.Hex("#FFFFFF"), Inset: ui.Hex("#0000000A"), Text: ui.Hex("#000000DE"), Secondary: ui.Hex("#000000A8"), Tertiary: ui.Hex("#0000008F"), Border: ui.Hex("#00000014"), Selected: ui.Hex("#00000012"), Hover: ui.Hex("#0000000A"), Accent: ui.Hex("#0057A6"), Working: ui.Hex("#68448F"), Idle: ui.Hex("#5C5C63"), Warning: ui.Hex("#795000"), Danger: ui.Hex("#9F2934"), Success: ui.Hex("#1E7546"),
+		Elevated: ui.Hex("#FFFFFF"), ControlBorder: ui.Hex("#76767D"), Focus: ui.Hex("#0057A6"), InactiveSelected: ui.Hex("#0000000D"), SidebarTint: ui.Hex("#F6F6F840"), ContentShadow: ui.Hex("#0000001A"), Disabled: ui.Hex("#8E8E94"), Pressed: ui.Hex("#00000017"), RowSelected: ui.Hex("#00000014"), Highlight: ui.Hex("#FFFFFF00"), Grouped: ui.Hex("#F0F0F3"),
 	}
+}
+
+// Over is fg composited over the opaque bg: the solid color a translucent
+// label shows on it, for consumers that take no alpha, as a terminal's
+// foreground.
+func Over(fg, bg ui.Color) ui.Color {
+	a := float32(fg.A) / 255
+	mix := func(f, b uint8) uint8 { return uint8(float32(f)*a + float32(b)*(1-a) + .5) }
+	return ui.RGBA(mix(fg.R, bg.R), mix(fg.G, bg.G), mix(fg.B, bg.B), 1)
 }
 
 func WindowColors(dark, highContrast, inactive bool) Palette {

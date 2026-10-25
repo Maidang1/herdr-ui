@@ -546,7 +546,7 @@ JSON重连保留当前目标仍存活的插件实例；新快照映射不符再�
 
 | Token | 亮色 | 暗色 | 语义 |
 |---|---|---|---|
-| `status.success` | `#1E623CFF` | `#83C79BFF` | 已连接、成功、任务完成 |
+| `status.success` | `#1E7546FF` | `#8EE0ABFF` | 已连接、成功、任务完成 |
 | `status.warning` | `#795000FF` | `#E7BF72FF` | 正在连接、等待用户处理 |
 | `status.danger` | `#9F2934FF` | `#FF9CA5FF` | 连接失败、运行失败 |
 | `status.working` | `#68448FFF` | `#C4A6EAFF` | 代理正在工作 |

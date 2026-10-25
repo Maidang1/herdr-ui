@@ -48,6 +48,19 @@
 | 设置窗口 ⌘, | kero `settings_view.go`；herdr 设置窗口范式 | 独立可复用窗口（StateKey 记忆几何），左侧页面导航 + 右侧卡片：Appearance（System/Light/Dark 分段）、Terminal（字号/字重/行高滑杆与分段、等宽预览、选中即复制、最小对比度）、Notifications（通知与角标总开关）、Shortcuts（键位来源说明 + 编辑 Herdr 配置入口 + 动作清单）。改动即时生效并落盘 |
 | 终端行为热更 | kero `app.go:812-842` | CopyOnSelect / MinimumContrast / 字体全量经 Host 热更到所有已附加终端，并为新 attach 记住 |
 
+## 第五批（已实现）
+
+| 功能 | 来源 | 说明 |
+| --- | --- | --- |
+| 鼠标拖动选中文字 | Ghostty/Terminal 常规行为 | `herdr terminal attach` 总是开启鼠标上报（即使 pane 里是普通 shell），拖动原先被 Herdr 丢弃。补丁后拖出按下的格子即本地选区；原地单击仍完整交给程序 |
+| Mac 直接快捷键 | Terminal/iTerm2/Ghostty；kero `actions.go` | ⌘T 新标签、⌘W 关 pane（agent 在跑时先确认；设置窗在前时关设置窗）、⌘D/⇧⌘D 分屏、⌘1–8/⌘9 选标签（⌘9 为最后一个）、⇧⌘[ ⇧⌘] 切标签、⌘[ ⌘] 切 pane、⌥⌘方向键按方向切 pane |
+| 字体族、光标、Option 作 Meta | kero `settings_view.go` | 设置 → Terminal：已安装等宽字体列表、光标形状（块/竖线/下划线）与闪烁、Option 作 Meta（默认关）。全部热更到已附加终端并落盘 |
+| 复制提示 | Ghostty `app-notifications = clipboard-copy` | ⌘C、右键复制、选中即复制后底部浮出「Copied」 |
+
+Option 作 Meta 同时修正了 mygo 的缺陷：macOS 输入法在 Meta 键之后仍会插入 Option 字符（⌥B 得到 `ESC b∫`），⌥E 等死键还会开启组字。补丁让终端在 Option 按下且输入法未在组字时绕过输入法。
+
+终端响铃不做：attach 流会吞掉 BEL、OSC 52 与 OSC 9（实测 `printf '\a'` 后只剩重绘），客户端收不到。
+
 ## 后续候选（暂缓，含原因）
 
 1. ⌘+悬停图片 Flyout 预览（kero `peek.go`）：需 Flyout 窗口与图片解码管线，收益场景较窄。

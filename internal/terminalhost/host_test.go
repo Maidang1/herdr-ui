@@ -295,6 +295,19 @@ func TestOptionsUseArgvAndPluginPalette(t *testing.T) {
 	finish(t, x)
 }
 
+func TestOptionsCarryKeyboardAndCursorSettings(t *testing.T) {
+	x := setup()
+	x.h.SetOptionAsAlt(true)
+	x.h.SetCursor(terminal.CursorBar, true)
+	reconcile(t, x)
+	o := receive(t, x.options)
+	if !o.OptionAsAlt || o.Cursor != terminal.CursorBar || !o.NoBlink {
+		t.Fatalf("attach ignored settings: option as alt %v, cursor %v, no blink %v", o.OptionAsAlt, o.Cursor, o.NoBlink)
+	}
+	x.release <- struct{}{}
+	finish(t, x)
+}
+
 func TestInitializationFailureRequiresExplicitRetry(t *testing.T) {
 	posts := make(chan func(), 10)
 	attempts := make(chan struct{}, 10)

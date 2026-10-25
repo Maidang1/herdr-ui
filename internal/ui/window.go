@@ -2,6 +2,8 @@
 package ui
 
 import (
+	"time"
+
 	"strings"
 
 	"github.com/Maidang1/herdr-ui/internal/app"
@@ -44,6 +46,10 @@ type Window struct {
 	settings            settingsUI
 	shape               design.Shape
 	toasts              app.Toasts
+	// copied asks the next frame to show the copy confirmation, which
+	// stays from copiedAt by the frames' clock.
+	copied   bool
+	copiedAt time.Time
 }
 
 func New(a *app.App, retry func()) *Window {
@@ -66,6 +72,12 @@ func (w *Window) SetFontSize(size float32) {
 func (w *Window) pushFont() {
 	if w.hooks.Font != nil {
 		w.hooks.Font(w.settings.snapshot.Font)
+	}
+}
+
+func (w *Window) pushCursor() {
+	if w.hooks.Cursor != nil {
+		w.hooks.Cursor(w.settings.snapshot.Cursor, w.settings.snapshot.CursorBlink)
 	}
 }
 
@@ -159,7 +171,13 @@ func (w *Window) View(c *native.Context) {
 			// One white panel holds the toolbar and the terminals, as a Mac
 			// window's toolbar and content share one surface.
 			content := native.Column(c.Key("terminal-content")).Label("Terminal content").Grow(1).MinWidth(0).AlignItems(native.Stretch)
-			content.Radius(w.shape.Panel).Background(p.Content).Border(1, p.Border).Shadow(0, 1, 5, 0, p.ContentShadow).Clip()
+			// The panel floats on the material: a broad, faint shadow and
+			// a tight contact one, as a Mac window's, and in dark mode a
+			// hairline of light along its top edge.
+			content.Radius(w.shape.Panel).Background(p.Content).Border(1, p.Border).Shadow(0, 8, 24, 0, p.ContentShadow).Shadow(0, 0, 1, 0, p.ContentShadow).Clip()
+			if p.Highlight.A > 0 {
+				content.InsetShadow(0, 1, 0, 0, p.Highlight)
+			}
 			content.Children(func() {
 				w.toolbar(c, v, p)
 				w.actionBar(c, v, p)
@@ -185,6 +203,7 @@ func (w *Window) View(c *native.Context) {
 		})
 	})
 	w.notificationToast(c, p)
+	w.copyConfirmation(c, p)
 	if w.referenceOpen() && !w.zen {
 		w.referencePanel(c, p)
 	}

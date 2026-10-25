@@ -57,7 +57,9 @@ func (w *Window) shortcutPanel(c *native.Context, p design.Palette) {
 			}
 			if key == "/" || key == "?" {
 				reverse := key == "?"
-				a.prompt = &shortcutPrompt{title: "Search history", value: cp.query, focus: true, submit: func(query string) { cp.query = query; cp.reverse = reverse; cp.search(reverse); cp.focus = true }}
+				prompt := searchPrompt(cp.query, reverse)
+				prompt.focus, prompt.submit = true, func(query string) { cp.query = query; cp.reverse = reverse; cp.search(reverse); cp.focus = true }
+				a.prompt = &prompt
 				return true
 			}
 			exit, copy := cp.key(key)
@@ -114,56 +116,111 @@ func (w *Window) shortcutPanel(c *native.Context, p design.Palette) {
 	}
 }
 
+// shortcutDialog asks before an action as a Mac alert does: what it acts
+// on as the title, what follows under it, then the field when it takes
+// text, and the buttons at the trailing edge with the default, named by its
+// verb, last. Return chooses the default and Escape cancels.
 func (w *Window) shortcutDialog(c *native.Context, p design.Palette) {
 	if w.controller == nil {
 		return
 	}
 	a := &w.controller.shortcut
-	if prompt := a.prompt; prompt != nil {
-		open := true
-		width, _ := c.Size()
-		native.DialogBase(c.Key("shortcut-prompt"), &open, func(backdrop, panel native.Element) {
-			backdrop.Background(native.RGBA(0, 0, 0, .28))
-			panel.Label("Action confirmation dialog").Width(min(400, max(0, width-48))).Padding(24).Gap(16).Background(p.Elevated).Border(1, p.Border).Radius(w.shape.Dialog).Shadow(0, 12, 36, 0, p.ContentShadow)
-			submitted := false
-			native.Text(c, prompt.title).Bold()
-			if !prompt.confirm {
-				field := native.TextInput(c.Key("shortcut-value"), &prompt.value).Label(prompt.title).FillWidth()
-				submitted = field.Submitted()
-				if prompt.focus {
-					field.Focus()
-					prompt.focus = false
-				}
+	prompt := a.prompt
+	if prompt == nil {
+		return
+	}
+	open := true
+	width, _ := c.Size()
+	action := prompt.action
+	if action == "" {
+		action = "OK"
+	}
+	closePrompt := func() {
+		a.prompt = nil
+		if a.copy != nil {
+			a.copy.focus = true
+		}
+		w.BlurInput()
+	}
+	native.DialogBase(c.Key("shortcut-prompt"), &open, func(backdrop, panel native.Element) {
+		backdrop.Background(native.RGBA(0, 0, 0, .32))
+		panel.Label("Action confirmation dialog").Width(min(420, max(0, width-48))).Padding(20).Radius(w.shape.Dialog).Shadow(0, 16, 48, 0, p.ContentShadow).AlignItems(native.Stretch)
+		w.floating(c, panel, p, glassDense)
+		native.Column(c).FillWidth().Gap(6).Children(func() {
+			native.Text(c, prompt.title).FontSize(15).FontWeight(600).FillWidth()
+			if prompt.message != "" {
+				native.Text(c, prompt.message).FontSize(13).TextColor(p.Secondary).FillWidth()
 			}
-			native.Row(c).Gap(8).Children(func() {
-				accept := native.Button(c, "Confirm").Label("Confirm action")
-				if prompt.confirm && prompt.focus {
-					accept.Focus()
-					prompt.focus = false
-				}
-				submit := submitted || accept.Clicked() || (panel.FocusWithin() && panel.Shortcut(0, native.KeyEnter))
-				cancel := native.Button(c, "Cancel").Clicked() || (panel.FocusWithin() && panel.Shortcut(0, native.KeyEscape))
-				if cancel {
-					a.prompt = nil
-					if a.copy != nil {
-						a.copy.focus = true
-					}
-					w.BlurInput()
-				} else if submit {
-					a.prompt = nil
-					prompt.submit(prompt.value)
-					w.BlurInput()
-				}
-			})
 		})
-		if !open && a.prompt == prompt {
-			a.prompt = nil
-			if a.copy != nil {
-				a.copy.focus = true
+		submitted := false
+		if !prompt.confirm {
+			field := native.TextInput(c.Key("shortcut-value"), &prompt.value).Label(prompt.title).Placeholder(prompt.placeholder).FillWidth().Margin(14, 0, 0, 0)
+			submitted = field.Submitted()
+			if prompt.focus {
+				field.Focus()
+				prompt.focus = false
 			}
-			w.BlurInput()
+		}
+		ready := !prompt.required || strings.TrimSpace(prompt.value) != ""
+		native.Row(c).FillWidth().Margin(20, 0, 0, 0).Gap(8).AlignItems(native.Center).Children(func() {
+			native.Box(c).Grow(1)
+			cancel := w.dialogButton(c, "prompt-cancel", "Cancel", false, false, true, p).Clicked()
+			accept := w.dialogButton(c, "prompt-accept", action, true, prompt.destructive, ready, p)
+			if prompt.confirm && prompt.focus {
+				accept.Focus()
+				prompt.focus = false
+			}
+			submit := ready && (submitted || accept.Clicked() || (panel.FocusWithin() && panel.Shortcut(0, native.KeyEnter)))
+			cancel = cancel || (panel.FocusWithin() && panel.Shortcut(0, native.KeyEscape))
+			if cancel {
+				closePrompt()
+			} else if submit {
+				a.prompt = nil
+				prompt.submit(prompt.value)
+				w.BlurInput()
+			}
+		})
+	})
+	if !open && a.prompt == prompt {
+		closePrompt()
+	}
+}
+
+// dialogButton is a push button of a dialog: the default one filled with
+// the accent, or red when it destroys, the others quiet.
+func (w *Window) dialogButton(c *native.Context, key, label string, primary, destructive, enabled bool, p design.Palette) native.Element {
+	button := native.ButtonBase(c.Key(key)).Label(label).Height(30).MinWidth(84).Padding(0, 14).Radius(max(6, w.shape.Dialog-20)).Center().Disabled(!enabled)
+	fill, text := p.Hover, p.Text
+	if primary {
+		// The accent and red are light in dark windows and deep in light
+		// ones: the label takes the opposite end.
+		fill, text = p.Accent, native.RGB(255, 255, 255)
+		if c.Theme().Dark {
+			text = native.RGB(28, 26, 32)
+		}
+		if destructive {
+			fill = p.Danger
 		}
 	}
+	switch {
+	case !enabled:
+		fill, text = fill.Alpha(.45), text.Alpha(.6)
+	case button.Pressed():
+		fill = fill.Mix(p.Text, .18)
+	case button.Hovered():
+		fill = fill.Mix(p.Text, .08)
+	}
+	button.Background(fill)
+	if !primary {
+		button.Border(1, p.Border)
+	}
+	if button.FocusVisible() {
+		button.Border(2, p.Focus)
+	}
+	button.Children(func() {
+		native.Text(c, label).FontSize(13).FontWeight(500).TextColor(text).SingleLine()
+	})
+	return button
 }
 
 func (w *Window) modalOpen() bool {

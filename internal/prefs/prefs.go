@@ -1,5 +1,5 @@
 // Package prefs persists herdr-ui's own window settings — the appearance
-// choice and the terminal font size — apart from Herdr's keybinding config,
+// choice and the terminal's font, cursor and keyboard — apart from Herdr's keybinding config,
 // which stays in Herdr's own file.
 package prefs
 
@@ -17,6 +17,9 @@ import (
 type Settings struct {
 	// WindowTheme is the app appearance: "system", "light" or "dark".
 	WindowTheme string
+	// FontFamily is the terminal font family; "" is the system's
+	// monospaced font.
+	FontFamily string
 	// FontSize is the terminal font size in DIPs.
 	FontSize float32
 	// FontWeight is the terminal text weight, 100–900; 400 is regular.
@@ -29,6 +32,14 @@ type Settings struct {
 	// MinimumContrast is the least text contrast a terminal keeps, 1–21;
 	// 1 leaves colors as they come.
 	MinimumContrast float32
+	// OptionAsAlt makes Option the Meta (Alt) key of programs instead of
+	// the key that types accented letters and symbols.
+	OptionAsAlt bool
+	// Cursor is the terminal cursor's shape, "block", "bar" or
+	// "underline", until a program asks for another; CursorBlink whether
+	// it blinks.
+	Cursor      string
+	CursorBlink bool
 	// Toast is how agent notifications reach the user.
 	Toast Toast
 }
@@ -49,7 +60,7 @@ type Toast struct {
 
 // Defaults returns the settings a fresh installation starts with.
 func Defaults() Settings {
-	return Settings{WindowTheme: "system", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 1, Toast: Toast{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}}
+	return Settings{WindowTheme: "system", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 1, Cursor: "block", CursorBlink: true, Toast: Toast{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}}
 }
 
 // Store loads and saves the settings file. Load applies defaults for
@@ -104,6 +115,12 @@ func Open(path string) (*Store, error) {
 			}
 		}
 	}
+	if v, ok := raw["font_family"]; ok {
+		var family string
+		if json.Unmarshal(v, &family) == nil {
+			s.values.FontFamily = family
+		}
+	}
 	if v, ok := raw["font_size"]; ok {
 		var size float64
 		if json.Unmarshal(v, &size) == nil && size >= 8 && size <= 48 {
@@ -132,6 +149,24 @@ func Open(path string) (*Store, error) {
 		var contrast float64
 		if json.Unmarshal(v, &contrast) == nil && contrast >= 1 && contrast <= 21 {
 			s.values.MinimumContrast = float32(contrast)
+		}
+	}
+	if v, ok := raw["option_as_alt"]; ok {
+		var on bool
+		if json.Unmarshal(v, &on) == nil {
+			s.values.OptionAsAlt = on
+		}
+	}
+	if v, ok := raw["cursor_style"]; ok {
+		var style string
+		if json.Unmarshal(v, &style) == nil && ValidCursor(style) {
+			s.values.Cursor = style
+		}
+	}
+	if v, ok := raw["cursor_blink"]; ok {
+		var blink bool
+		if json.Unmarshal(v, &blink) == nil {
+			s.values.CursorBlink = blink
 		}
 	}
 	if v, ok := raw["toast_delivery"]; ok {
@@ -192,11 +227,15 @@ func (s *Store) Update(fn func(*Settings)) (Settings, error) {
 	}
 	document := s.extra
 	document["window_theme"], _ = json.Marshal(s.values.WindowTheme)
+	document["font_family"], _ = json.Marshal(s.values.FontFamily)
 	document["font_size"], _ = json.Marshal(s.values.FontSize)
 	document["font_weight"], _ = json.Marshal(s.values.FontWeight)
 	document["line_height"], _ = json.Marshal(s.values.LineHeight)
 	document["copy_on_select"], _ = json.Marshal(s.values.CopyOnSelect)
 	document["minimum_contrast"], _ = json.Marshal(s.values.MinimumContrast)
+	document["option_as_alt"], _ = json.Marshal(s.values.OptionAsAlt)
+	document["cursor_style"], _ = json.Marshal(s.values.Cursor)
+	document["cursor_blink"], _ = json.Marshal(s.values.CursorBlink)
 	if s.toastSet["delivery"] {
 		document["toast_delivery"], _ = json.Marshal(s.values.Toast.Delivery)
 	}
@@ -244,6 +283,9 @@ func (s *Store) InheritToast(herdr Toast) {
 }
 
 const maxToastDelay = 3600
+
+// ValidCursor reports whether v names a cursor shape Settings.Cursor takes.
+func ValidCursor(v string) bool { return v == "block" || v == "bar" || v == "underline" }
 
 func validDelivery(v string) bool { return v == "off" || v == "herdr" || v == "system" }
 

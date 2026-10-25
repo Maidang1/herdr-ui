@@ -26,7 +26,7 @@ func TestSettingsPagesNavigate(t *testing.T) {
 	if err := tester.Click("Terminal"); err != nil {
 		t.Fatal(err)
 	}
-	for _, label := range []string{"Font", "Size", "Weight", "Line height", "Preview", "Selection", "Minimum contrast"} {
+	for _, label := range []string{"Font", "Family", "Size", "Weight", "Line height", "Preview", "Cursor", "Blink", "Input", "Option as Meta", "Copy on select", "Readability", "Minimum contrast"} {
 		if _, ok := tester.Find(label); !ok {
 			t.Fatalf("terminal page missing %q", label)
 		}
@@ -59,15 +59,38 @@ func TestSettingsCopyOnSelectTogglesHook(t *testing.T) {
 	w := settingsWindow(t)
 	var enabled bool
 	w.SetActionHooks(ActionHooks{CopyOnSelect: func(on bool) { enabled = on }})
-	tester := native.NewTester(w.SettingsView, 720, 520)
+	tester := native.NewTester(w.SettingsView, 720, 1200)
 	if err := tester.Click("Terminal"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tester.Click("Copy a selection to the clipboard as it ends"); err != nil {
+	if err := tester.Click("Copy on select"); err != nil {
 		t.Fatal(err)
 	}
 	if !w.settings.snapshot.CopyOnSelect || !enabled {
 		t.Fatal("copy-on-select did not flip and report")
+	}
+}
+
+func TestSettingsCursorAndOptionKeyCallHooks(t *testing.T) {
+	w := settingsWindow(t)
+	var style string
+	blink, meta := true, false
+	w.SetInitialSettings(SettingsSnapshot{Theme: "system", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, CursorBlink: true})
+	w.SetActionHooks(ActionHooks{Cursor: func(s string, b bool) { style, blink = s, b }, OptionAsAlt: func(on bool) { meta = on }})
+	tester := native.NewTester(w.SettingsView, 720, 1200)
+	if err := tester.Click("Terminal"); err != nil {
+		t.Fatal(err)
+	}
+	if !w.settings.snapshot.CursorBlink || w.settings.snapshot.Cursor != "block" {
+		t.Fatalf("cursor defaults = %q, blink %v", w.settings.snapshot.Cursor, w.settings.snapshot.CursorBlink)
+	}
+	for _, label := range []string{"Bar", "Blink", "Option as Meta"} {
+		if err := tester.Click(label); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if style != "bar" || blink || !meta {
+		t.Fatalf("hooks saw cursor %q blink %v, option as meta %v", style, blink, meta)
 	}
 }
 
@@ -94,7 +117,7 @@ func TestBindingsSourceStillRender(t *testing.T) {
 	if err := tester.Click("Shortcuts"); err != nil {
 		t.Fatal(err)
 	}
-	if !tester.HasText("Prefix chords load from Herdr's own configuration") {
+	if !tester.HasText("Prefix chords come from Herdr’s own configuration") {
 		t.Fatalf("shortcuts page explanation missing: %v", tester.Texts())
 	}
 }
@@ -112,8 +135,11 @@ func TestSettingsNotificationDeliveryFollowsHerdrChoices(t *testing.T) {
 			t.Fatalf("notifications page missing %q", label)
 		}
 	}
-	if err := tester.Click("Top left"); err != nil {
-		t.Fatal(err)
+	// Position is a pop-up: open it on its current corner, then choose.
+	for _, label := range []string{"Bottom right", "Top left"} {
+		if err := tester.Click(label); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := tester.Click("System"); err != nil {
 		t.Fatal(err)

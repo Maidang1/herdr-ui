@@ -122,7 +122,8 @@ func (w *Window) navigatorPanel(c *native.Context, p design.Palette) {
 	width, height := c.Size()
 	native.DialogBase(c.Key("session-navigator-dialog"), &open, func(backdrop, panel native.Element) {
 		backdrop.Background(native.RGBA(0, 0, 0, .14))
-		panel.Label("Go to anything, or run a command").Width(min(620, max(0, width-48))).MaxHeight(min(520, max(0, height-96))).Padding(design.MenuPadding*2).Gap(4).Background(p.Elevated).Border(1, p.Border).Radius(w.shape.Dialog).Shadow(0, 16, 48, 0, p.ContentShadow)
+		panel.Label("Go to anything, or run a command").Width(min(620, max(0, width-48))).MaxHeight(min(520, max(0, height-96))).Padding(design.MenuPadding*2).Gap(4).Radius(w.shape.Dialog).Shadow(0, 16, 48, 0, p.ContentShadow)
+		w.floating(c, panel, p, glassDense)
 		native.Row(c).FillWidth().Height(44).Shrink(0).Padding(0, 10).Gap(10).AlignItems(native.Center).Children(func() {
 			native.Icon(c, icons.Search).Size(18, 18).Shrink(0).TextColor(p.Tertiary)
 			field := native.TextInputBase(c.Key("navigator-query"), &a.navigatorQuery).Label("Search session and commands").Placeholder("Spaces, panes and commands").FontSize(17).TextColor(p.Text).FillWidth()
@@ -186,6 +187,9 @@ func (w *Window) navigatorRow(c *native.Context, entry navigatorEntry, highlight
 			hint := entry.hint
 			if entry.action != "" {
 				hint = keyGlyphs(hint)
+				if direct := directKeyLabel(entry.action); direct != "" {
+					native.Text(c, direct).FontSize(11).SingleLine().Shrink(0).TextColor(text)
+				}
 			}
 			if hint != "" {
 				native.Text(c, hint).FontSize(11).SingleLine().Shrink(1).MinWidth(0).MaxWidth(220).TextColor(secondary)

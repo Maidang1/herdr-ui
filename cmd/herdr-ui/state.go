@@ -148,22 +148,17 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				pumpTimer = time.AfterFunc(wake, func() { post(pumpNotifications) })
 			}
 		}
-		font := terminal.Font{Size: persisted.FontSize, Weight: persisted.FontWeight, LineHeight: persisted.LineHeight}
+		font := terminal.Font{Family: persisted.FontFamily, Size: persisted.FontSize, Weight: persisted.FontWeight, LineHeight: persisted.LineHeight}
 		copyOnSelect := terminal.CopyOnSelectNone
 		if persisted.CopyOnSelect {
 			copyOnSelect = terminal.CopyOnSelectClipboard
 		}
 		sidebar = sidebarinfo.New(target, func(p sidebarinfo.Publication) { post(func() { a.UpdateSidebar(p) }) })
-		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: font, CopyOnSelect: copyOnSelect, MinimumContrast: persisted.MinimumContrast, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key, OnPaste: screen.Paste})
+		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: font, CopyOnSelect: copyOnSelect, MinimumContrast: persisted.MinimumContrast, OptionAsAlt: persisted.OptionAsAlt, Cursor: cursorStyle(persisted.Cursor), NoBlink: !persisted.CursorBlink, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key, OnPaste: screen.Paste})
 		screen.ConnectTerminal(host, s, ctx, post)
-		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, Toast: view.ToastSettings{Delivery: persisted.Toast.Delivery, Position: persisted.Toast.Position, DelaySeconds: persisted.Toast.DelaySeconds}})
-		preferences := mygo.Theme.Preferences()
-		screen.SetReducedTransparency(preferences.ReduceTransparency)
-		material := mygo.VibrancySidebar
-		if preferences.ReduceTransparency || preferences.HighContrast {
-			material = mygo.VibrancyNone
-		}
-		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Vibrancy: material, Content: native.View(screen.View)})
+		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, OptionAsAlt: persisted.OptionAsAlt, Cursor: persisted.Cursor, CursorBlink: persisted.CursorBlink, Toast: view.ToastSettings{Delivery: persisted.Toast.Delivery, Position: persisted.Toast.Position, DelaySeconds: persisted.Toast.DelaySeconds}})
+		screen.SetReducedTransparency(mygo.Theme.Preferences().ReduceTransparency)
+		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Vibrancy: windowMaterial(), Content: native.View(screen.View)})
 		persist := func(fn func(*prefs.Settings)) {
 			go func() {
 				if _, err := settings.Update(fn); err != nil {
@@ -176,7 +171,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				settingsWin.Focus()
 				return
 			}
-			settingsWin = mygo.NewWindow(mygo.WindowOptions{Title: "Settings", Width: 720, Height: 520, MinWidth: 560, MinHeight: 420, StateKey: "settings", Content: native.View(screen.SettingsView)})
+			settingsWin = mygo.NewWindow(mygo.WindowOptions{Title: "Settings", Width: 720, Height: 520, MinWidth: 560, MinHeight: 420, StateKey: "settings", TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Vibrancy: windowMaterial(), Content: native.View(screen.SettingsView)})
 			settingsWin.OnClosed(func() { settingsWin = nil })
 		}
 		keyboard := &keyboardEndpoint{}
@@ -185,7 +180,9 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		hooks.EditConfig = func() error { return editHerdrConfig(resolvedBinary, target, screen) }
 		hooks.Font = func(f terminal.Font) {
 			host.SetFont(f)
-			persist(func(v *prefs.Settings) { v.FontSize, v.FontWeight, v.LineHeight = f.Size, f.Weight, f.LineHeight })
+			persist(func(v *prefs.Settings) {
+				v.FontFamily, v.FontSize, v.FontWeight, v.LineHeight = f.Family, f.Size, f.Weight, f.LineHeight
+			})
 		}
 		hooks.Theme = func(source string) {
 			mygo.Theme.SetSource(mygo.ThemeSource(source))
@@ -202,6 +199,14 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		hooks.MinimumContrast = func(ratio float32) {
 			host.SetMinimumContrast(ratio)
 			persist(func(v *prefs.Settings) { v.MinimumContrast = ratio })
+		}
+		hooks.OptionAsAlt = func(on bool) {
+			host.SetOptionAsAlt(on)
+			persist(func(v *prefs.Settings) { v.OptionAsAlt = on })
+		}
+		hooks.Cursor = func(style string, blink bool) {
+			host.SetCursor(cursorStyle(style), !blink)
+			persist(func(v *prefs.Settings) { v.Cursor, v.CursorBlink = style, blink })
 		}
 		hooks.Notifications = func(t view.ToastSettings) {
 			notifier.SetEnabled(t.Delivery != "off")
@@ -221,16 +226,15 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			if closed.Load() {
 				return
 			}
-			preferences := mygo.Theme.Preferences()
-			material := mygo.VibrancySidebar
-			if preferences.ReduceTransparency || preferences.HighContrast {
-				material = mygo.VibrancyNone
-			}
+			reduced := mygo.Theme.Preferences().ReduceTransparency
 			for source, item := range themeItems {
 				item.SetChecked(source == mygo.Theme.Source())
 			}
-			win.SetVibrancy(material)
-			post(func() { screen.SetReducedTransparency(preferences.ReduceTransparency) })
+			win.SetVibrancy(windowMaterial())
+			if settingsWin != nil {
+				settingsWin.SetVibrancy(windowMaterial())
+			}
+			post(func() { screen.SetReducedTransparency(reduced) })
 		})
 		menuItems := map[string]*mygo.MenuItem{}
 		menuEnabled := map[string]bool{}
@@ -238,10 +242,22 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		// Window-level commands keep their direct key equivalents, as Herdr
 		// and Kero do; the prefix chords remain Herdr's own layer beneath,
 		// shown after each title.
-		accelerators := map[string]string{"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0", "toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J", "find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G", "clear_pane": "CmdOrCtrl+K", "zen": "Ctrl+Cmd+Z", "settings": "CmdOrCtrl+,", "goto": "CmdOrCtrl+P"}
+		accelerators := view.DirectKeys
 		commandItem := func(id string) *mygo.MenuItem {
 			label := screen.MenuLabel(id)
-			item := &mygo.MenuItem{Label: label, Accelerator: accelerators[id], Disabled: !screen.Can(id), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.Dispatch(id) }) }}
+			click := func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.Dispatch(id) }) }
+			if id == "close_pane" {
+				// ⌘W closes the window in front when that is not the
+				// terminal window, as Settings; it never reaches past it.
+				click = func(_ *mygo.MenuItem, front *mygo.Window) {
+					if front != nil && front != win {
+						front.Close()
+						return
+					}
+					post(screen.ClosePaneKey)
+				}
+			}
+			item := &mygo.MenuItem{Label: label, Accelerator: accelerators[id], Disabled: !screen.Can(id), Click: click}
 			menuItems[id] = item
 			menuEnabled[id] = !item.Disabled
 			menuLabels[id] = label
@@ -260,6 +276,15 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			}
 			sections[section.Title] = items
 		}
+		var tabNumbers []*mygo.MenuItem
+		for n := 1; n <= 9; n++ {
+			label := fmt.Sprintf("Tab %d", n)
+			if n == 9 {
+				label = "Last Tab"
+			}
+			tabNumbers = append(tabNumbers, &mygo.MenuItem{Label: label, Accelerator: fmt.Sprintf("CmdOrCtrl+%d", n), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.SelectTabNumber(n) }) }})
+		}
+		sections["Tab"] = append(sections["Tab"], &mygo.MenuItem{Type: mygo.MenuItemSeparator}, &mygo.MenuItem{Label: "Select Tab", Submenu: tabNumbers})
 		helpItems := []*mygo.MenuItem{commandItem("help")}
 		appItems := []*mygo.MenuItem{{Role: mygo.RoleAbout}, {Type: mygo.MenuItemSeparator}, commandItem("settings"), {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleServices}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleHide}, {Role: mygo.RoleHideOthers}, {Role: mygo.RoleUnhide}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleQuit}}
 		appearanceItems := []*mygo.MenuItem{}
@@ -368,4 +393,26 @@ func baseline(ctx context.Context, binary string) error {
 	}
 	log.Printf("Herdr CLI %s schema_sha256=%x", version, sha256.Sum256(schema))
 	return nil
+}
+
+// cursorStyle is the plugin's cursor for a persisted shape name.
+func cursorStyle(name string) terminal.CursorStyle {
+	switch name {
+	case "bar":
+		return terminal.CursorBar
+	case "underline":
+		return terminal.CursorUnderline
+	}
+	return terminal.CursorBlock
+}
+
+// windowMaterial is the behind-window material of Herdr's windows: the
+// sidebar's, unless the user asks for less transparency or more contrast,
+// where the windows paint their own opaque surfaces.
+func windowMaterial() mygo.Vibrancy {
+	preferences := mygo.Theme.Preferences()
+	if preferences.ReduceTransparency || preferences.HighContrast {
+		return mygo.VibrancyNone
+	}
+	return mygo.VibrancySidebar
 }

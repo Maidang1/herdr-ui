@@ -21,6 +21,21 @@ func (p *pluginInstance) SetCopyOnSelect(c terminal.CopyOnSelect) {
 func (p *pluginInstance) SetMinimumContrast(ratio float32) {
 	p.terminal.SetMinimumContrast(ratio)
 }
+
+// The optional assertions keep ordinary builds compatible with pristine
+// mygo, whose running terminals keep the options they started with.
+func (p *pluginInstance) SetOptionAsAlt(on bool) {
+	if t, ok := any(p.terminal).(interface{ SetOptionAsAlt(bool) }); ok {
+		t.SetOptionAsAlt(on)
+	}
+}
+func (p *pluginInstance) SetCursor(style terminal.CursorStyle, noBlink bool) {
+	if t, ok := any(p.terminal).(interface {
+		SetCursor(terminal.CursorStyle, bool)
+	}); ok {
+		t.SetCursor(style, noBlink)
+	}
+}
 func (p *pluginInstance) Search(text string) { p.terminal.Search(text) }
 func (p *pluginInstance) SearchNext()        { p.terminal.SearchNext() }
 func (p *pluginInstance) SearchPrevious()    { p.terminal.SearchPrevious() }
@@ -54,18 +69,26 @@ func openTerminal(o terminal.Options) (instance, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Herdr's attach client takes the mouse even over a plain shell, so a
+	// drag must select locally rather than go to Herdr, which drops it.
+	if d, ok := any(t).(interface{ SetDragSelects(bool) }); ok {
+		d.SetDragSelects(true)
+	}
 	return &pluginInstance{t}, nil
 }
 func terminalThemes() (*terminal.Theme, *terminal.Theme) {
 	light, dark := *terminal.LightTheme(), *terminal.DarkTheme()
-	light.Background = design.Colors(false).Content
-	light.Foreground = design.Colors(false).Text
+	// The labels are translucent; a terminal paints its foreground solid,
+	// so it takes the color the label shows on the terminal's background.
+	lp, dp := design.Colors(false), design.Colors(true)
+	light.Background = lp.Content
+	light.Foreground = design.Over(lp.Text, lp.Content)
 	light.Cursor = light.Foreground
 	light.CursorText = light.Background
 	light.Selection = ui.Hex("#DCEAF8")
 	light.SelectionText = light.Foreground
-	dark.Background = design.Colors(true).Content
-	dark.Foreground = design.Colors(true).Text
+	dark.Background = dp.Content
+	dark.Foreground = design.Over(dp.Text, dp.Content)
 	dark.Cursor = dark.Foreground
 	dark.CursorText = dark.Background
 	dark.Selection = ui.Hex("#354B66")

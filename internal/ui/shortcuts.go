@@ -34,6 +34,11 @@ type ActionHooks struct {
 	CopyOnSelect func(enabled bool)
 	// MinimumContrast applies and persists the least text contrast.
 	MinimumContrast func(ratio float32)
+	// OptionAsAlt applies and persists whether Option is the Meta key.
+	OptionAsAlt func(on bool)
+	// Cursor applies and persists the cursor shape ("block", "bar",
+	// "underline") and blinking.
+	Cursor func(style string, blink bool)
 	// Notifications applies and persists how agent notifications are
 	// delivered.
 	Notifications func(ToastSettings)
@@ -48,11 +53,17 @@ type ActionHooks struct {
 
 func (w *Window) SetActionHooks(h ActionHooks) { w.hooks = h }
 
+// shortcutPrompt is the dialog an action asks with: a confirmation, or a
+// field when confirm is false. message says what follows; action names the
+// default button, red when destructive; required keeps it off while the
+// field is empty, whose placeholder hints at what goes in it.
 type shortcutPrompt struct {
-	title, value string
-	confirm      bool
-	focus        bool
-	submit       func(string)
+	title, value, message string
+	action, placeholder   string
+	confirm, destructive  bool
+	required              bool
+	focus                 bool
+	submit                func(string)
 }
 type shortcutState struct {
 	navigator                   bool
@@ -223,42 +234,22 @@ func (w *Window) dispatchShortcut(action string, index int) bool {
 		}
 		return true
 	case "rename_workspace", "rename_tab", "rename_pane", "new_worktree", "open_worktree":
-		value := ""
-		switch action {
-		case "rename_workspace":
-			value = v.WorkspaceName
-		case "rename_tab":
-			for _, tab := range v.Tabs {
-				if tab.ID == v.TabID {
-					value = tab.Name
-				}
-			}
-		case "rename_pane":
-			for _, pane := range v.Panes {
-				if pane.ID == v.PaneID {
-					value = pane.Label
-				}
-			}
-		}
 		op, ok := w.shortcutOperation(action)
 		if !ok {
 			return true
 		}
-		a.prompt = &shortcutPrompt{title: w.ActionLabel(action), value: value, focus: true, submit: func(text string) { op.Text = text; w.runShortcut(op, nil) }}
+		prompt := promptFor(action, v)
+		prompt.focus, prompt.submit = true, func(text string) { op.Text = text; w.runShortcut(op, nil) }
+		a.prompt = &prompt
 		return true
 	case "close_tab", "close_workspace", "remove_worktree":
 		op, ok := w.shortcutOperation(action)
 		if !ok {
 			return true
 		}
-		title := w.ActionLabel(action) + "?"
-		if action == "close_workspace" {
-			title = "Close workspace " + v.WorkspaceName + " and its linked workspaces?"
-		}
-		if action == "remove_worktree" {
-			title = "Remove worktree checkout for " + v.WorkspaceName + "?"
-		}
-		a.prompt = &shortcutPrompt{title: title, confirm: true, focus: true, submit: func(string) { w.runShortcut(op, nil) }}
+		prompt := promptFor(action, v)
+		prompt.focus, prompt.submit = true, func(string) { w.runShortcut(op, nil) }
+		a.prompt = &prompt
 		return true
 	case "copy_mode":
 		w.readHistory(func(text string) {
@@ -556,9 +547,16 @@ func (w *Window) offerGroupClose(op session.Operation, r session.OperationResult
 	if r.Status != session.Rejected || !strings.Contains(r.Error, "confirmation_required") || w.controller == nil {
 		return false
 	}
-	title := "Close workspace " + op.WorkspaceID + " and all linked workspaces?"
+	name := op.WorkspaceID
+	for _, row := range w.currentView().Rows {
+		if row.ID == op.WorkspaceID {
+			name = row.Name
+		}
+	}
 	op.Kind = session.Shortcut
 	op.Action = "close_workspace"
-	w.controller.shortcut.prompt = &shortcutPrompt{title: title, confirm: true, focus: true, submit: func(string) { w.app.ClearActionMessage(); w.runShortcut(op, nil) }}
+	prompt := groupClosePrompt(name)
+	prompt.focus, prompt.submit = true, func(string) { w.app.ClearActionMessage(); w.runShortcut(op, nil) }
+	w.controller.shortcut.prompt = &prompt
 	return true
 }

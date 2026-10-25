@@ -75,3 +75,38 @@ func TestWindowInactiveStateKeepsReadableTextAndCancelsInput(t *testing.T) {
 		t.Fatal("focus regain did not restore selection")
 	}
 }
+
+// Floating surfaces are glass only while the user allows transparency;
+// the settings window shows its material only where the system draws it,
+// and paints itself opaque under Reduce Transparency or Increase Contrast.
+func TestMaterialsFallBackToOpaqueSurfaces(t *testing.T) {
+	w := New(app.New(), nil)
+	var glassy, translucent bool
+	tester := native.NewTester(func(c *native.Context) {
+		w.SettingsView(c)
+		glassy, translucent = w.glassy(c), w.translucent(c)
+	}, 720, 520)
+	navAlpha := func() uint32 {
+		_, _, _, a := tester.Image().At(20, 500).RGBA()
+		return a
+	}
+	if !glassy || translucent || navAlpha() != 65535 {
+		t.Fatal("without the window material the settings sidebar must be opaque")
+	}
+	tester.SetVibrancy(true)
+	tester.Frame()
+	if !glassy || !translucent || navAlpha() == 65535 {
+		t.Fatal("settings sidebar hides the window material")
+	}
+	w.SetReducedTransparency(true)
+	tester.Frame()
+	if glassy || translucent || navAlpha() != 65535 {
+		t.Fatal("reduced transparency kept glass or material")
+	}
+	w.SetReducedTransparency(false)
+	tester.SetPreferences(native.Preferences{HighContrast: true})
+	tester.Frame()
+	if glassy || translucent || navAlpha() != 65535 {
+		t.Fatal("increased contrast kept glass or material")
+	}
+}

@@ -214,7 +214,7 @@ func (w *Window) sidebarMenu(c *native.Context, p design.Palette) {
 		w.sidebarMenuOpen = !w.sidebarMenuOpen
 	}
 	native.PopoverBase(c, menuButton, &w.sidebarMenuOpen, func(panel native.Element) {
-		w.popoverPanel(panel, p)
+		w.popoverPanel(c, panel, p)
 		panel.Children(func() {
 			w.sidebarMenuItem(c, p, "settings", icons.Settings, "Settings", func() { w.Dispatch("settings") })
 			w.sidebarMenuItem(c, p, "menu-help", icons.Keyboard, "Keyboard reference", func() { w.Dispatch("help") })

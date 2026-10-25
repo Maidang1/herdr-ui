@@ -1,7 +1,10 @@
 package design
 
 import (
+	"math"
 	"testing"
+
+	"github.com/egoist/mygo/ui"
 )
 
 func TestWindowPaletteInactiveAndContrast(t *testing.T) {
@@ -31,8 +34,8 @@ func TestWindowPaletteInactiveAndContrast(t *testing.T) {
 func TestShellTintDoesNotFadeContentTokens(t *testing.T) {
 	for _, dark := range []bool{false, true} {
 		p := Colors(dark)
-		if p.Content.A != 255 || p.Text.A != 255 || p.Secondary.A != 255 {
-			t.Fatal("content/typography lost opacity")
+		if p.Content.A != 255 || p.Elevated.A != 255 || p.Grouped.A != 255 {
+			t.Fatal("content surfaces lost opacity")
 		}
 		if p.SidebarTint.A == 255 || p.Sidebar.A != 255 {
 			t.Fatal("sidebar tint/fallback not distinguished")
@@ -41,6 +44,50 @@ func TestShellTintDoesNotFadeContentTokens(t *testing.T) {
 			t.Fatal("focus must use action accent")
 		}
 	}
+}
+
+// Labels are translucent, as AppKit's: on every opaque surface they still
+// read at WCAG AA, and each level steps back from the one before.
+func TestLabelsReadOnEverySurface(t *testing.T) {
+	for _, dark := range []bool{false, true} {
+		p := Colors(dark)
+		for _, bg := range []ui.Color{p.Content, p.Elevated, p.Grouped, p.Shell} {
+			previous := 22.0
+			for _, label := range []ui.Color{p.Text, p.Secondary, p.Tertiary} {
+				ratio := contrast(Over(label, bg), bg)
+				if ratio < 4.5 || ratio >= previous {
+					t.Fatalf("dark=%t label %v on %v: contrast %.2f", dark, label, bg, ratio)
+				}
+				previous = ratio
+			}
+		}
+	}
+}
+
+func TestOverCompositesOpaque(t *testing.T) {
+	got := Over(ui.Hex("#FFFFFF80"), ui.Hex("#000000"))
+	if got.A != 255 || got.R < 127 || got.R > 129 {
+		t.Fatalf("Over = %+v", got)
+	}
+	if solid := ui.Hex("#123456"); Over(solid, ui.Hex("#FFFFFF")) != solid {
+		t.Fatal("an opaque label changed over its background")
+	}
+}
+
+func contrast(a, b ui.Color) float64 {
+	la, lb := luminance(a), luminance(b)
+	return (max(la, lb) + .05) / (min(la, lb) + .05)
+}
+
+func luminance(c ui.Color) float64 {
+	channel := func(v uint8) float64 {
+		s := float64(v) / 255
+		if s <= .04045 {
+			return s / 12.92
+		}
+		return math.Pow((s+.055)/1.055, 2.4)
+	}
+	return .2126*channel(c.R) + .7152*channel(c.G) + .0722*channel(c.B)
 }
 
 func TestShapesAreConcentric(t *testing.T) {
