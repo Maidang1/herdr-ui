@@ -35,6 +35,33 @@ func TestUpdatePersistsAndReloads(t *testing.T) {
 	}
 }
 
+func TestTerminalBehaviorRoundTrips(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "prefs.json")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Settings(); got.FontFamily != "" || got.OptionAsAlt || got.Cursor != "block" || !got.CursorBlink {
+		t.Fatalf("defaults = %+v", got)
+	}
+	if _, err := s.Update(func(v *Settings) { v.FontFamily, v.OptionAsAlt, v.Cursor, v.CursorBlink = "Menlo", true, "bar", false }); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := again.Settings(); got.FontFamily != "Menlo" || !got.OptionAsAlt || got.Cursor != "bar" || got.CursorBlink {
+		t.Fatalf("round trip lost values: %+v", got)
+	}
+	if err := os.WriteFile(path, []byte(`{"cursor_style":"beam"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if invalid, err := Open(path); err != nil || invalid.Settings().Cursor != "block" {
+		t.Fatalf("invalid cursor accepted: %+v, %v", invalid.Settings(), err)
+	}
+}
+
 func TestInvalidValuesFallBackToDefaults(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "prefs.json")
 	if err := os.WriteFile(path, []byte(`{"window_theme":"neon","font_size":99,"future":"kept"}`), 0o644); err != nil {

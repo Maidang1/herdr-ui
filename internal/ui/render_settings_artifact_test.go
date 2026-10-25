@@ -19,21 +19,23 @@ func TestRenderSettingsArtifacts(t *testing.T) {
 	}
 	for _, dark := range []bool{false, true} {
 		w := referenceWindow(t)
-		w.SetInitialSettings(SettingsSnapshot{Theme: "dark", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Toast: ToastSettings{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}})
+		w.SetInitialSettings(SettingsSnapshot{Theme: "dark", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Cursor: "block", CursorBlink: true, CopyOnSelect: true, Toast: ToastSettings{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}})
 		for _, page := range settingsPages {
-			w.settings.page = indexOfPage(page)
-			tester := native.NewTester(w.SettingsView, 720, 520)
-			tester.SetDark(dark)
-			tester.Frame()
-			name := fmt.Sprintf("settings-%s-dark-%t.png", page, dark)
-			file, err := os.Create(filepath.Join(dir, name))
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = png.Encode(file, tester.Image())
-			file.Close()
-			if err != nil {
-				t.Fatal(err)
+			for _, size := range [][2]int{{720, 520}, {1000, 1160}} {
+				w.settings.page = indexOfPage(page)
+				tester := native.NewTester(w.SettingsView, size[0], size[1])
+				tester.SetDark(dark)
+				tester.Frame()
+				name := fmt.Sprintf("settings-%s-%dx%d-dark-%t.png", page, size[0], size[1], dark)
+				file, err := os.Create(filepath.Join(dir, name))
+				if err != nil {
+					t.Fatal(err)
+				}
+				err = png.Encode(file, tester.Image())
+				file.Close()
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 	}

@@ -21,6 +21,21 @@ func (p *pluginInstance) SetCopyOnSelect(c terminal.CopyOnSelect) {
 func (p *pluginInstance) SetMinimumContrast(ratio float32) {
 	p.terminal.SetMinimumContrast(ratio)
 }
+
+// The optional assertions keep ordinary builds compatible with pristine
+// mygo, whose running terminals keep the options they started with.
+func (p *pluginInstance) SetOptionAsAlt(on bool) {
+	if t, ok := any(p.terminal).(interface{ SetOptionAsAlt(bool) }); ok {
+		t.SetOptionAsAlt(on)
+	}
+}
+func (p *pluginInstance) SetCursor(style terminal.CursorStyle, noBlink bool) {
+	if t, ok := any(p.terminal).(interface {
+		SetCursor(terminal.CursorStyle, bool)
+	}); ok {
+		t.SetCursor(style, noBlink)
+	}
+}
 func (p *pluginInstance) Search(text string) { p.terminal.Search(text) }
 func (p *pluginInstance) SearchNext()        { p.terminal.SearchNext() }
 func (p *pluginInstance) SearchPrevious()    { p.terminal.SearchPrevious() }
@@ -53,6 +68,11 @@ func openTerminal(o terminal.Options) (instance, error) {
 	t, err := terminal.New(o)
 	if err != nil {
 		return nil, err
+	}
+	// Herdr's attach client takes the mouse even over a plain shell, so a
+	// drag must select locally rather than go to Herdr, which drops it.
+	if d, ok := any(t).(interface{ SetDragSelects(bool) }); ok {
+		d.SetDragSelects(true)
 	}
 	return &pluginInstance{t}, nil
 }

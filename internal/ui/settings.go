@@ -2,6 +2,7 @@ package ui
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/Maidang1/herdr-ui/internal/design"
 	"github.com/Maidang1/herdr-ui/internal/icons"
@@ -16,7 +17,12 @@ type SettingsSnapshot struct {
 	Font            terminal.Font
 	CopyOnSelect    bool
 	MinimumContrast float32
-	Toast           ToastSettings
+	// OptionAsAlt makes Option the Meta key; Cursor is "block", "bar" or
+	// "underline", and CursorBlink whether it blinks.
+	OptionAsAlt bool
+	Cursor      string
+	CursorBlink bool
+	Toast       ToastSettings
 }
 
 // ToastSettings is how agent notifications reach the user, in the terms of
@@ -32,7 +38,12 @@ var (
 	toastPositions      = []string{"top-left", "top-right", "bottom-left", "bottom-right"}
 	toastPositionLabels = []string{"Top left", "Top right", "Bottom left", "Bottom right"}
 	toastMaxSliderDelay = 10.0
+	cursorStyles        = []string{"block", "bar", "underline"}
+	cursorStyleLabels   = []string{"Block", "Bar", "Underline"}
 )
+
+// systemFontLabel names the family "" picks: the system's monospaced font.
+const systemFontLabel = "System monospaced"
 
 func indexOf(values []string, value string, fallback int) int {
 	for i, v := range values {
@@ -60,6 +71,11 @@ type settingsUI struct {
 	delivery    int
 	position    int
 	delay       float64
+	cursor      int
+	// family mirrors Font.Family for the picker, systemFontLabel for "";
+	// families lists the installed monospaced families, read once.
+	family   string
+	families []string
 }
 
 var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts"}
@@ -80,6 +96,9 @@ func (s *settingsUI) install(snapshot SettingsSnapshot) {
 	if snapshot.MinimumContrast < 1 {
 		snapshot.MinimumContrast = 1
 	}
+	if indexOf(cursorStyles, snapshot.Cursor, -1) < 0 {
+		snapshot.Cursor = "block"
+	}
 	s.snapshot = snapshot
 	s.sizeDefault = snapshot.Font.Size
 	s.resetMirrors()
@@ -94,6 +113,30 @@ func (s *settingsUI) resetMirrors() {
 	s.delivery = indexOf(toastDeliveries, s.snapshot.Toast.Delivery, 0)
 	s.position = indexOf(toastPositions, s.snapshot.Toast.Position, 3)
 	s.delay = float64(s.snapshot.Toast.DelaySeconds)
+	s.cursor = indexOf(cursorStyles, s.snapshot.Cursor, 0)
+	s.family = s.snapshot.Font.Family
+	if s.family == "" {
+		s.family = systemFontLabel
+	}
+}
+
+// fontChoices lists the picker's families: the system's monospaced font,
+// then every installed monospaced family, and the chosen one should it be
+// missing, as an uninstalled font is.
+func (s *settingsUI) fontChoices() []string {
+	if s.families == nil {
+		s.families = []string{}
+		for _, f := range native.FontFamilies() {
+			if f.Monospaced {
+				s.families = append(s.families, f.Name)
+			}
+		}
+	}
+	choices := append([]string{systemFontLabel}, s.families...)
+	if s.family != systemFontLabel && indexOf(choices, s.family, -1) < 0 {
+		choices = append(choices, s.family)
+	}
+	return choices
 }
 
 func themeIndexOf(theme string) int {
@@ -119,20 +162,23 @@ func weightIndexOf(weight int) int {
 	return len(fontWeights) - 1
 }
 
-// The settings window keeps one rhythm, as System Settings does: a fixed
-// label column, every control starting at the same line, sliders of one
-// length with their value beside them, and captions under the rows they
-// explain — never mixed into them.
+// The settings window draws its pages as System Settings does: a centered
+// column of titled groups, each a card whose rows put the setting's name
+// and what it does on the left and its control at the right edge, divided
+// by hairlines. Footnotes sit under the card they explain.
 const (
-	settingsLabelWidth  = 96
-	settingsSliderWidth = 172
-	settingsValueWidth  = 52
-	settingsRowHeight   = 28
+	settingsColumnWidth = 600
+	settingsPagePadding = 32
+	settingsRowHeight   = 44
+	settingsRowPadding  = 14
+	settingsSliderWidth = 160
+	settingsValueWidth  = 44
+	settingsSelectWidth = 220
 )
 
 // SettingsView renders the settings window: a page list on the left, the
-// page's cards on the right, in the System Settings shape Kero and Herdr
-// use. Every change applies immediately through the hooks, which persist.
+// page's groups on the right. Every change applies immediately through the
+// hooks, which persist.
 func (w *Window) SettingsView(c *native.Context) {
 	p := w.appearancePalette(c)
 	s := &w.settings
@@ -164,12 +210,12 @@ func (w *Window) SettingsView(c *native.Context) {
 			}
 		})
 		native.Box(c).Width(1).FillHeight().Shrink(0).Background(p.Border)
-		native.Scroll(c.Key("settings-content")).Grow(1).FillHeight().MinWidth(0).AlignItems(native.Stretch).Children(func() {
-			native.Column(c).Padding(24).Gap(16).FillWidth().MaxWidth(680).Shrink(0).AlignItems(native.Stretch).Children(func() {
-				native.Column(c).Gap(6).Children(func() {
+		native.Scroll(c.Key("settings-content")).Grow(1).FillHeight().MinWidth(0).AlignItems(native.Center).Children(func() {
+			native.Column(c.Key("settings-page")).FillWidth().MaxWidth(settingsColumnWidth+2*settingsPagePadding).Shrink(0).Padding(28, settingsPagePadding, 40, settingsPagePadding).Gap(24).AlignItems(native.Stretch).Children(func() {
+				native.Column(c).Gap(4).Children(func() {
 					native.Text(c, settingsPages[s.page]).FontSize(22).FontWeight(700)
 					descriptions := []string{"Make Herdr feel at home.", "Fine-tune your terminal experience.", "Choose when Herdr gets your attention.", "Keep your workflow close at hand."}
-					native.Text(c, descriptions[s.page]).FontSize(12).TextColor(p.Secondary)
+					native.Text(c, descriptions[s.page]).FontSize(13).TextColor(p.Secondary)
 				})
 				switch s.page {
 				case 0:
@@ -186,64 +232,154 @@ func (w *Window) SettingsView(c *native.Context) {
 	})
 }
 
-// settingsCard is one grouped card: a semibold caption, then rows on a
-// single rhythm.
-func (w *Window) settingsCard(c *native.Context, key, title string, p design.Palette, body func()) {
-	native.Column(c.Key(key)).FillWidth().Shrink(0).Gap(4).Padding(12).Radius(10).Background(p.Elevated).Border(1, p.Border).Children(func() {
-		native.Text(c, title).FontSize(13).FontWeight(600).PaddingY(4)
-		body()
+// settingsGroup builds the rows of one group's card, dividing each from
+// the one before.
+type settingsGroup struct {
+	c    *native.Context
+	p    design.Palette
+	rows int
+}
+
+// settingsSection is one titled group: the title above its card, and the
+// footnote, when there is one, under it.
+func (w *Window) settingsSection(c *native.Context, key, title, footnote string, p design.Palette, rows func(g *settingsGroup)) {
+	native.Column(c.Key(key)).FillWidth().Shrink(0).Gap(8).AlignItems(native.Stretch).Children(func() {
+		native.Text(c, title).FontSize(13).FontWeight(600).PaddingX(4)
+		g := &settingsGroup{c: c, p: p}
+		native.Column(c.Key(key+"-card")).Label(title+" settings").FillWidth().Radius(10).Background(p.Elevated).Border(1, p.Border).Clip().AlignItems(native.Stretch).Children(func() { rows(g) })
+		if footnote != "" {
+			native.Text(c, footnote).FontSize(11).TextColor(p.Tertiary).FillWidth().PaddingX(4)
+		}
 	})
 }
 
-// settingsRow puts one control on the shared grid: label column, then the
-// control starting where every control starts.
-func settingsRow(c *native.Context, label string, control func()) {
-	native.Row(c).FillWidth().Height(settingsRowHeight).AlignItems(native.Center).Gap(10).Children(func() {
-		native.Text(c, label).Width(settingsLabelWidth).Shrink(0).FontSize(12).TextColor(c.Theme().TextMuted)
-		control()
+// divide draws the hairline above every row but the first, inset from the
+// card's leading edge as list separators are.
+func (g *settingsGroup) divide() {
+	if g.rows > 0 {
+		native.Row(g.c).FillWidth().Height(1).Shrink(0).Padding(0, 0, 0, settingsRowPadding).Children(func() {
+			native.Box(g.c).Grow(1).FillHeight().Background(g.p.Border)
+		})
+	}
+	g.rows++
+}
+
+// row lays out one setting: its name, and under it what it does when that
+// needs saying, on the left; the control at the right edge.
+func (g *settingsGroup) row(label, detail string, control func()) {
+	g.divide()
+	c, p := g.c, g.p
+	native.Row(c).FillWidth().MinHeight(settingsRowHeight).Padding(9, settingsRowPadding).Gap(16).AlignItems(native.Center).Children(func() {
+		native.Column(c).Grow(1).Shrink(1).MinWidth(0).Gap(3).Children(func() {
+			native.Text(c, label).FontSize(13)
+			if detail != "" {
+				native.Text(c, detail).FontSize(11).TextColor(p.Secondary).FillWidth()
+			}
+		})
+		native.Row(c).Shrink(0).Gap(10).AlignItems(native.Center).Children(control)
 	})
 }
 
-// settingsCaption explains the row above it, in the smaller muted voice
-// every caption shares.
-func settingsCaption(c *native.Context, p design.Palette, text string) {
-	native.Text(c, text).FontSize(11).TextColor(p.Tertiary).FillWidth().Padding(2, 0, 4, 0)
+// shortcut is a short row of the action reference: the action, its ⌘ key
+// and its prefix chord, "—" when it has neither.
+func (g *settingsGroup) shortcut(label, direct, chord string) {
+	g.divide()
+	c, p := g.c, g.p
+	native.Row(c).FillWidth().Height(32).PaddingX(settingsRowPadding).Gap(12).AlignItems(native.Center).Children(func() {
+		native.Text(c, label).FontSize(12).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
+		if direct != "" {
+			native.Text(c, direct).FontSize(12).Shrink(0)
+		}
+		if chord != "" {
+			native.Text(c, chord).FontSize(12).TextColor(p.Secondary).Shrink(0)
+		}
+		if direct == "" && chord == "" {
+			native.Text(c, "—").FontSize(12).TextColor(p.Tertiary).Shrink(0)
+		}
+	})
 }
 
-// settingsSlider lays a slider and its value with unit on the shared grid.
+// block holds content spanning the card, as the theme choices and the
+// terminal preview.
+func (g *settingsGroup) block(fn func()) {
+	g.divide()
+	native.Column(g.c).FillWidth().Padding(settingsRowPadding).Gap(10).AlignItems(native.Stretch).Children(fn)
+}
+
+// settingsSlider lays a slider and its value, aligned on its figures.
 func settingsSlider(c *native.Context, key string, value *float64, lo, hi float64, format func(float64) string) native.Element {
 	slider := native.Slider(c.Key(key), value, lo, hi).Width(settingsSliderWidth).Shrink(0)
-	native.Text(c, format(*value)).Width(settingsValueWidth).Shrink(0).FontSize(12).TextColor(c.Theme().TextMuted)
+	native.Text(c, format(*value)).Width(settingsValueWidth).Shrink(0).FontSize(12).FontFeatures("tnum").TextAlign(native.End).TextColor(c.Theme().TextMuted)
 	return slider
 }
 
-func (w *Window) settingsAppearance(c *native.Context, p design.Palette, s *settingsUI) {
-	w.settingsCard(c, "settings-theme", "Theme", p, func() {
-		native.Row(c).FillWidth().Gap(12).Children(func() {
-			for i, name := range []string{"System", "Light", "Dark"} {
-				selected := s.themeIndex == i
-				button := native.ButtonBase(c.Key("settings-theme:" + name)).Grow(1).Basis(0).MinWidth(0).Padding(6).Radius(8).Label(name).Selected(selected)
-				button.Border(1, p.Border)
-				w.controlState(button, p)
-				if selected {
-					button.Border(2, p.Accent).Background(p.Accent.Alpha(.06))
+// toggle is a row that is itself a switch, so the whole row takes the
+// click: its name and detail on the left, the switch's look at the right
+// edge, drawn as the theme's Switch draws it.
+func (g *settingsGroup) toggle(key, label, detail string, on *bool) native.Element {
+	g.divide()
+	c, p := g.c, g.p
+	row := native.SwitchBase(c.Key(key), on).Label(label).FillWidth().MinHeight(settingsRowHeight).Padding(9, settingsRowPadding)
+	if row.Hovered() {
+		row.Background(p.Hover)
+	}
+	if row.FocusVisible() {
+		row.Border(2, p.Focus)
+	}
+	knob := float32(0)
+	if *on {
+		knob = 1
+	}
+	knob = row.Animate("knob", knob, 140*time.Millisecond)
+	t := c.Theme()
+	row.Children(func() {
+		native.Row(c).FillWidth().Gap(16).AlignItems(native.Center).Children(func() {
+			native.Column(c).Grow(1).Shrink(1).MinWidth(0).Gap(3).Children(func() {
+				native.Text(c, label).FontSize(13)
+				if detail != "" {
+					native.Text(c, detail).FontSize(11).TextColor(p.Secondary).FillWidth()
 				}
-				button.Children(func() {
-					native.Column(c).FillWidth().Gap(8).Children(func() {
-						settingsThemePreview(c, i, p)
-						native.Text(c, name).FontSize(12).FontWeight(600).TextColor(p.Text)
+			})
+			native.Box(c).Size(t.Space(9), t.Space(5)).Shrink(0).Radius(t.Space(2.5)).Background(t.Border.Mix(t.Text, .15).Mix(t.Accent, knob)).Draw(func(paint *native.Painter, r native.Rect) {
+				in := t.Space(.5)
+				d := r.H - 2*in
+				at := native.Rect{X: r.X + in + knob*(r.W-r.H), Y: r.Y + in, W: d, H: d}
+				paint.Shadow(at, d/2, 0, 1, 3, 0, native.RGBA(0, 0, 0, .25))
+				paint.Fill(at, native.RGB(255, 255, 255), d/2)
+			})
+		})
+	})
+	return row
+}
+
+func (w *Window) settingsAppearance(c *native.Context, p design.Palette, s *settingsUI) {
+	w.settingsSection(c, "settings-theme", "Theme", "System follows your Mac’s light or dark appearance.", p, func(g *settingsGroup) {
+		g.block(func() {
+			native.Row(c).FillWidth().Gap(12).Children(func() {
+				for i, name := range []string{"System", "Light", "Dark"} {
+					selected := s.themeIndex == i
+					button := native.ButtonBase(c.Key("settings-theme:" + name)).Grow(1).Basis(0).MinWidth(0).Padding(6).Radius(8).Label(name).Selected(selected)
+					button.Border(1, p.Border)
+					w.controlState(button, p)
+					if selected {
+						button.Border(2, p.Accent).Background(p.Accent.Alpha(.06))
+					}
+					button.Children(func() {
+						native.Column(c).FillWidth().Gap(8).Children(func() {
+							settingsThemePreview(c, i, p)
+							native.Text(c, name).FontSize(12).FontWeight(600).TextColor(p.Text)
+						})
 					})
-				})
-				if button.Clicked() {
-					s.themeIndex = i
-					s.snapshot.Theme = themeFromIndex(i)
-					if w.hooks.Theme != nil {
-						w.hooks.Theme(s.snapshot.Theme)
+					if button.Clicked() {
+						s.themeIndex = i
+						s.snapshot.Theme = themeFromIndex(i)
+						if w.hooks.Theme != nil {
+							w.hooks.Theme(s.snapshot.Theme)
+						}
 					}
 				}
-			}
+			})
 		})
-		settingsCaption(c, p, "System follows your Mac’s light or dark appearance.")
 	})
 }
 
@@ -296,81 +432,146 @@ func formatMultiple(v float64) string {
 func formatContrast(v float64) string { return strconv.FormatFloat(v, 'f', 1, 64) + "×" }
 
 func (w *Window) settingsTerminal(c *native.Context, p design.Palette, s *settingsUI) {
-	w.settingsCard(c, "settings-font", "Font", p, func() {
-		settingsRow(c, "Size", func() {
-			slider := settingsSlider(c, "settings-font-size", &s.size, 8, 48, formatSize)
-			if slider.Changed() {
+	w.settingsSection(c, "settings-font", "Font", "Running terminals update as you change these.", p, func(g *settingsGroup) {
+		g.block(func() { w.settingsPreview(c, p, s) })
+		g.row("Family", "", func() {
+			if native.Select(c.Key("settings-font-family"), &s.family, s.fontChoices()).Width(settingsSelectWidth).Shrink(0).Changed() {
+				s.snapshot.Font.Family = s.family
+				if s.family == systemFontLabel {
+					s.snapshot.Font.Family = ""
+				}
+				w.pushFont()
+			}
+		})
+		g.row("Size", "", func() {
+			if settingsSlider(c, "settings-font-size", &s.size, 8, 48, formatSize).Changed() {
 				s.snapshot.Font.Size = clampFontSize(float32(s.size))
 				w.pushFont()
 			}
 		})
-		settingsRow(c, "Weight", func() {
-			segment := native.Segmented(c.Key("settings-font-weight"), &s.weightIndex, "Light", "Regular", "Medium", "Semibold").Shrink(0)
-			if segment.Changed() {
+		g.row("Weight", "", func() {
+			if native.Segmented(c.Key("settings-font-weight"), &s.weightIndex, "Light", "Regular", "Medium", "Semibold").Shrink(0).Changed() {
 				s.snapshot.Font.Weight = fontWeights[max(0, min(len(fontWeights)-1, s.weightIndex))]
 				w.pushFont()
 			}
 		})
-		settingsRow(c, "Line height", func() {
-			slider := settingsSlider(c, "settings-line-height", &s.lineHeight, 1, 2, formatMultiple)
-			if slider.Changed() {
+		g.row("Line height", "", func() {
+			if settingsSlider(c, "settings-line-height", &s.lineHeight, 1, 2, formatMultiple).Changed() {
 				s.snapshot.Font.LineHeight = max(1, min(2, float32(s.lineHeight)))
 				w.pushFont()
 			}
 		})
-		settingsCaption(c, p, "The running terminals take each change as you make it.")
 	})
-	w.settingsCard(c, "settings-preview", "Preview", p, func() {
-		native.Text(c, "herdr pane run w1:p1 \"just test\"").Font("monospace").FontSize(s.snapshot.Font.Size)
-		native.Row(c).Gap(6).PaddingY(2).Children(func() {
-			native.Text(c, "ok").Font("monospace").FontSize(s.snapshot.Font.Size).TextColor(p.Success)
-			native.Text(c, "warn").Font("monospace").FontSize(s.snapshot.Font.Size).TextColor(p.Warning)
-			native.Text(c, "error").Font("monospace").FontSize(s.snapshot.Font.Size).TextColor(p.Danger)
-		})
-		settingsCaption(c, p, "Preview at "+strconv.FormatFloat(float64(s.snapshot.Font.Size), 'f', -1, 64)+" pt, weight "+strconv.Itoa(s.snapshot.Font.Weight)+".")
-	})
-	w.settingsCard(c, "settings-selection", "Selection", p, func() {
-		settingsRow(c, "Copy on select", func() {
-			box := native.Checkbox(c.Key("settings-copy-on-select"), &s.snapshot.CopyOnSelect, "Copy a selection to the clipboard as it ends")
-			if box.Changed() && w.hooks.CopyOnSelect != nil {
-				w.hooks.CopyOnSelect(s.snapshot.CopyOnSelect)
+	w.settingsSection(c, "settings-cursor", "Cursor", "Programs that set their own cursor, such as editors, keep theirs.", p, func(g *settingsGroup) {
+		g.row("Shape", "", func() {
+			if native.Segmented(c.Key("settings-cursor-shape"), &s.cursor, cursorStyleLabels...).Shrink(0).Changed() {
+				s.snapshot.Cursor = cursorStyles[max(0, min(len(cursorStyles)-1, s.cursor))]
+				w.pushCursor()
 			}
 		})
+		if g.toggle("settings-cursor-blink", "Blink", "", &s.snapshot.CursorBlink).Changed() {
+			w.pushCursor()
+		}
 	})
-	w.settingsCard(c, "settings-contrast", "Minimum contrast", p, func() {
-		settingsRow(c, "Contrast", func() {
-			slider := settingsSlider(c, "settings-contrast-slider", &s.contrast, 1, 7, formatContrast)
-			if slider.Changed() {
+	w.settingsSection(c, "settings-input", "Input", "", p, func(g *settingsGroup) {
+		if g.toggle("settings-option-as-alt", "Option as Meta", "Sends ⌥B, ⌥F and other Meta shortcuts to the shell and editors. Option then no longer types special characters.", &s.snapshot.OptionAsAlt).Changed() && w.hooks.OptionAsAlt != nil {
+			w.hooks.OptionAsAlt(s.snapshot.OptionAsAlt)
+		}
+		if g.toggle("settings-copy-on-select", "Copy on select", "Copies text to the clipboard as soon as you finish selecting it.", &s.snapshot.CopyOnSelect).Changed() && w.hooks.CopyOnSelect != nil {
+			w.hooks.CopyOnSelect(s.snapshot.CopyOnSelect)
+		}
+	})
+	w.settingsSection(c, "settings-readability", "Readability", "", p, func(g *settingsGroup) {
+		g.row("Minimum contrast", "Adjusts text that would be hard to read over its background. 1× keeps program colors.", func() {
+			if settingsSlider(c, "settings-contrast-slider", &s.contrast, 1, 7, formatContrast).Changed() {
 				s.snapshot.MinimumContrast = max(1, min(7, float32(s.contrast)))
 				if w.hooks.MinimumContrast != nil {
 					w.hooks.MinimumContrast(s.snapshot.MinimumContrast)
 				}
 			}
 		})
-		settingsCaption(c, p, "Keeps text readable over program colors; 1× leaves colors untouched.")
 	})
+}
+
+// settingsPreview shows a few terminal lines on the terminal's own
+// background in the chosen font, weight and line height, ending at the
+// chosen cursor, which blinks when it is set to.
+func (w *Window) settingsPreview(c *native.Context, p design.Palette, s *settingsUI) {
+	f := s.snapshot.Font
+	family := f.Family
+	if family == "" {
+		family = "monospace"
+	}
+	text := func(value string, color native.Color) {
+		native.Text(c, value).Font(family).FontSize(f.Size).FontWeight(f.Weight).LineHeight(f.LineHeight).TextColor(color).SingleLine()
+	}
+	// Words part by one cell, as the terminal spaces them: text drops
+	// trailing spaces.
+	cell := f.Size * .6
+	native.Column(c.Key("settings-preview")).Label("Preview").FillWidth().Padding(12, 14).Gap(2).Radius(8).Background(p.Content).Border(1, p.Border).Clip().Children(func() {
+		native.Row(c).Gap(cell).Children(func() {
+			text("~/herdr", p.Accent)
+			text("❯", p.Tertiary)
+			text("herdr pane run w1:p1 \"just test\"", p.Text)
+		})
+		native.Row(c).Gap(cell).Children(func() {
+			text("ok", p.Success)
+			text("warn", p.Warning)
+			text("error", p.Danger)
+		})
+		native.Row(c).Gap(cell).AlignItems(native.Center).Children(func() {
+			text("~/herdr", p.Accent)
+			text("❯", p.Tertiary)
+			settingsPreviewCursor(c, s.snapshot.Cursor, s.snapshot.CursorBlink, f, p)
+		})
+	})
+}
+
+// cursorBlink is the cursor's half period, as the terminal blinks it.
+const cursorBlink = 600 * time.Millisecond
+
+func settingsPreviewCursor(c *native.Context, style string, blink bool, f terminal.Font, p design.Palette) {
+	cell, height := f.Size*.6, f.Size*1.2*max(1, f.LineHeight)
+	color := p.Text.Alpha(.85)
+	if blink {
+		phase := c.Now().Sub(time.Time{}) % (2 * cursorBlink)
+		c.After(cursorBlink - phase%cursorBlink)
+		if phase >= cursorBlink {
+			color = native.Color{}
+		}
+	}
+	cursor := native.Column(c.Key("settings-preview-cursor")).Size(cell, height).Justify(native.End)
+	switch style {
+	case "bar":
+		cursor.Children(func() { native.Box(c).Width(2).FillHeight().Background(color) })
+	case "underline":
+		cursor.Children(func() { native.Box(c).FillWidth().Height(2).Background(color) })
+	default:
+		cursor.Background(color)
+	}
 }
 
 func (w *Window) settingsNotifications(c *native.Context, p design.Palette, s *settingsUI) {
 	changed := false
-	w.settingsCard(c, "settings-notifications", "Agent notifications", p, func() {
-		settingsRow(c, "Delivery", func() {
+	w.settingsSection(c, "settings-notifications", "Agent notifications", "Starts from Herdr’s own [ui.toast] settings. The Dock badge counts agents waiting for you unless notifications are off.", p, func(g *settingsGroup) {
+		g.row("Delivery", "When an agent needs you or finishes. System posts to Notification Center while you are not watching that tab.", func() {
 			if native.Segmented(c.Key("settings-notifications-delivery"), &s.delivery, toastDeliveryLabels...).Shrink(0).Changed() {
 				s.snapshot.Toast.Delivery = toastDeliveries[max(0, min(len(toastDeliveries)-1, s.delivery))]
 				changed = true
 			}
 		})
-		settingsCaption(c, p, "When an agent needs you or finishes. In-app shows a card in this window; System posts to Notification Center while you are not watching that tab.")
 		if s.snapshot.Toast.Delivery == "herdr" {
-			settingsRow(c, "Position", func() {
-				if native.Segmented(c.Key("settings-notifications-position"), &s.position, toastPositionLabels...).Shrink(0).Changed() {
-					s.snapshot.Toast.Position = toastPositions[max(0, min(len(toastPositions)-1, s.position))]
+			g.row("Position", "Where the in-app card appears.", func() {
+				label := toastPositionLabels[max(0, min(len(toastPositionLabels)-1, s.position))]
+				if native.Select(c.Key("settings-notifications-position"), &label, toastPositionLabels).Width(160).Shrink(0).Changed() {
+					s.position = indexOf(toastPositionLabels, label, 3)
+					s.snapshot.Toast.Position = toastPositions[s.position]
 					changed = true
 				}
 			})
 		}
 		if s.snapshot.Toast.Delivery != "off" {
-			settingsRow(c, "Delay", func() {
+			g.row("Delay", "Holds a notification back, then drops it if the agent has moved on.", func() {
 				// Herdr allows up to an hour; the slider covers the useful range
 				// and leaves a longer configured delay alone until moved.
 				hi := max(toastMaxSliderDelay, float64(s.snapshot.Toast.DelaySeconds))
@@ -380,9 +581,7 @@ func (w *Window) settingsNotifications(c *native.Context, p design.Palette, s *s
 					changed = true
 				}
 			})
-			settingsCaption(c, p, "Holds a notification back, then drops it if the agent has moved on.")
 		}
-		settingsCaption(c, p, "Starts from Herdr’s own [ui.toast] settings. The Dock badge counts agents waiting for you unless notifications are off.")
 	})
 	if changed && w.hooks.Notifications != nil {
 		w.hooks.Notifications(s.snapshot.Toast)
@@ -393,25 +592,20 @@ func formatSeconds(v float64) string { return strconv.Itoa(int(v+.5)) + " s" }
 
 func (w *Window) settingsShortcuts(c *native.Context, p design.Palette) {
 	a := w.controller
-	w.settingsCard(c, "settings-keybindings", "Keybindings", p, func() {
-		native.Text(c, "Prefix chords load from Herdr's own configuration; direct window keys are fixed.").FontSize(12).TextColor(p.Secondary)
+	w.settingsSection(c, "settings-keybindings", "Keybindings", "⌘ keys are fixed, as on any Mac terminal. Prefix chords come from Herdr’s own configuration.", p, func(g *settingsGroup) {
+		source := ""
 		if a != nil {
-			native.Text(c, a.machine.Bindings.Source).FontSize(11).TextColor(p.Tertiary).Selectable()
+			source = a.machine.Bindings.Source
 		}
-		if button := native.Button(c, "Edit Herdr configuration"); button.Clicked() && w.hooks.EditConfig != nil {
-			w.shortcutError(w.hooks.EditConfig())
-		}
-	})
-	w.settingsCard(c, "settings-actions", "Actions", p, func() {
-		for _, action := range Actions {
-			label := keyGlyphs(w.BindingLabel(action.ID))
-			if label == "" {
-				label = "—"
+		g.row("Herdr configuration", source, func() {
+			if native.Button(c, "Edit…").Label("Edit Herdr configuration").Clicked() && w.hooks.EditConfig != nil {
+				w.shortcutError(w.hooks.EditConfig())
 			}
-			native.Row(c.Key("settings-action:" + action.ID)).FillWidth().Height(20).AlignItems(native.Center).Children(func() {
-				native.Text(c, w.ActionLabel(action.ID)).FontSize(12).Grow(1).SingleLine()
-				native.Text(c, label).FontSize(12).TextColor(p.Secondary)
-			})
+		})
+	})
+	w.settingsSection(c, "settings-actions", "Actions", "", p, func(g *settingsGroup) {
+		for _, action := range Actions {
+			g.shortcut(w.ActionLabel(action.ID), directKeyLabel(action.ID), keyGlyphs(w.BindingLabel(action.ID)))
 		}
 	})
 }

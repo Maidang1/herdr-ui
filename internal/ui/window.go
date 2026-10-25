@@ -2,6 +2,8 @@
 package ui
 
 import (
+	"time"
+
 	"strings"
 
 	"github.com/Maidang1/herdr-ui/internal/app"
@@ -44,6 +46,10 @@ type Window struct {
 	settings            settingsUI
 	shape               design.Shape
 	toasts              app.Toasts
+	// copied asks the next frame to show the copy confirmation, which
+	// stays from copiedAt by the frames' clock.
+	copied   bool
+	copiedAt time.Time
 }
 
 func New(a *app.App, retry func()) *Window {
@@ -66,6 +72,12 @@ func (w *Window) SetFontSize(size float32) {
 func (w *Window) pushFont() {
 	if w.hooks.Font != nil {
 		w.hooks.Font(w.settings.snapshot.Font)
+	}
+}
+
+func (w *Window) pushCursor() {
+	if w.hooks.Cursor != nil {
+		w.hooks.Cursor(w.settings.snapshot.Cursor, w.settings.snapshot.CursorBlink)
 	}
 }
 
@@ -185,6 +197,7 @@ func (w *Window) View(c *native.Context) {
 		})
 	})
 	w.notificationToast(c, p)
+	w.copyConfirmation(c, p)
 	if w.referenceOpen() && !w.zen {
 		w.referencePanel(c, p)
 	}

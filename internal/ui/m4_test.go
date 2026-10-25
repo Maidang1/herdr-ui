@@ -207,13 +207,13 @@ func TestShowManuallyHiddenSidebarRevealsItOnFirstClick(t *testing.T) {
 }
 
 func TestShortcutDialogPreservesLayoutAndConfirmation(t *testing.T) {
-	for _, action := range []string{"Confirm action", "Cancel", "Escape", "Backdrop"} {
+	for _, action := range []string{"Close Tab", "Cancel", "Escape", "Backdrop"} {
 		t.Run(action, func(t *testing.T) {
 			w := referenceWindow(t)
 			tester := native.NewTester(w.View, 820, 560)
 			before, _ := tester.Find("Terminal content")
 			submits := 0
-			w.controller.shortcut.prompt = &shortcutPrompt{title: "Close tab?", confirm: true, focus: true, submit: func(string) { submits++ }}
+			w.controller.shortcut.prompt = &shortcutPrompt{title: "Close tab?", action: "Close Tab", destructive: true, confirm: true, focus: true, submit: func(string) { submits++ }}
 			tester.Frame()
 			panel, ok := tester.Find("Action confirmation dialog")
 			if !ok || panel.X != (820-panel.W)/2 || panel.Y != (560-panel.H)/2 {
@@ -238,7 +238,7 @@ func TestShortcutDialogPreservesLayoutAndConfirmation(t *testing.T) {
 				t.Fatal("dialog stayed open")
 			}
 			want := 0
-			if action == "Confirm action" {
+			if action == "Close Tab" {
 				want = 1
 			}
 			if submits != want {

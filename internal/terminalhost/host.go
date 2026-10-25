@@ -58,6 +58,9 @@ type Config struct {
 	// OnSearch reports a pane's search status on the UI thread, while the
 	// binding still owns its terminal.
 	OnSearch func(Binding, terminal.SearchStatus)
+	// OnCopy tells the UI thread that the user copied from a terminal
+	// (Command-C, the context menu, or copy on select).
+	OnCopy func()
 	// Font sizes every new terminal attaches with; a zero Size falls back
 	// to the plugin's own default.
 	Font terminal.Font
@@ -65,6 +68,12 @@ type Config struct {
 	// attach starts with; both have hot setters below.
 	CopyOnSelect    terminal.CopyOnSelect
 	MinimumContrast float32
+	// OptionAsAlt, Cursor and NoBlink are the keyboard and cursor every
+	// attach starts with; their setters below reach running terminals only
+	// with the patched plugin, and new attaches always.
+	OptionAsAlt bool
+	Cursor      terminal.CursorStyle
+	NoBlink     bool
 }
 type instance interface {
 	View(*ui.Context) ui.Element
@@ -395,6 +404,13 @@ func (h *Host) SetOnSearch(fn func(Binding, terminal.SearchStatus)) {
 	h.mu.Unlock()
 }
 
+// SetOnCopy installs Config.OnCopy after construction, as SetOnSearch.
+func (h *Host) SetOnCopy(fn func()) {
+	h.mu.Lock()
+	h.cfg.OnCopy = fn
+	h.mu.Unlock()
+}
+
 // SetCopyOnSelect applies the selection-copy behavior to every attached
 // terminal and remembers it for the next attach, on the UI thread.
 func (h *Host) SetCopyOnSelect(c terminal.CopyOnSelect) {
@@ -416,6 +432,36 @@ func (h *Host) SetMinimumContrast(ratio float32) {
 	h.mu.Unlock()
 	for _, t := range live {
 		t.SetMinimumContrast(ratio)
+	}
+}
+
+// SetOptionAsAlt makes Option the Meta key, or not, for every attached
+// terminal and the next attach, on the UI thread.
+func (h *Host) SetOptionAsAlt(on bool) {
+	h.mu.Lock()
+	h.cfg.OptionAsAlt = on
+	live := h.liveInstances()
+	h.mu.Unlock()
+	for _, t := range live {
+		if s, ok := t.(interface{ SetOptionAsAlt(bool) }); ok {
+			s.SetOptionAsAlt(on)
+		}
+	}
+}
+
+// SetCursor applies the cursor shape and blinking to every attached
+// terminal and the next attach, on the UI thread.
+func (h *Host) SetCursor(style terminal.CursorStyle, noBlink bool) {
+	h.mu.Lock()
+	h.cfg.Cursor, h.cfg.NoBlink = style, noBlink
+	live := h.liveInstances()
+	h.mu.Unlock()
+	for _, t := range live {
+		if s, ok := t.(interface {
+			SetCursor(terminal.CursorStyle, bool)
+		}); ok {
+			s.SetCursor(style, noBlink)
+		}
 	}
 }
 
@@ -467,7 +513,7 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 	if font.Size <= 0 {
 		font.Size = 13
 	}
-	return terminal.Options{Command: cmd, Env: env, Dir: e.spec.CWD, Font: font, CopyOnSelect: h.cfg.CopyOnSelect, MinimumContrast: h.cfg.MinimumContrast, Padding: terminal.Padding{X: 16, Y: 12}, Theme: light, DarkTheme: dark, RightClick: terminal.RightClickCopyOrPaste, ClipboardRead: terminal.ClipboardDeny,
+	return terminal.Options{Command: cmd, Env: env, Dir: e.spec.CWD, Font: font, CopyOnSelect: h.cfg.CopyOnSelect, MinimumContrast: h.cfg.MinimumContrast, OptionAsAlt: h.cfg.OptionAsAlt, Cursor: h.cfg.Cursor, NoBlink: h.cfg.NoBlink, Padding: terminal.Padding{X: 16, Y: 12}, Theme: light, DarkTheme: dark, RightClick: terminal.RightClickCopyOrPaste, ClipboardRead: terminal.ClipboardDeny,
 		OnTitle: func(_ string) { h.post(e, func() {}) },
 		// The plugin only offers printed file paths to OpenLink, already
 		// resolved against the pane's own directory. URLs stay with the
@@ -486,6 +532,16 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 			h.post(e, func() {
 				if h.cfg.OnSearch != nil {
 					h.cfg.OnSearch(e.binding, status)
+				}
+			})
+		},
+		OnCopy: func(_ string, by terminal.CopySource) {
+			if by == terminal.CopyProgram {
+				return
+			}
+			h.post(e, func() {
+				if h.cfg.OnCopy != nil {
+					h.cfg.OnCopy()
 				}
 			})
 		},

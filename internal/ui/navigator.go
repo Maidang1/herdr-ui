@@ -186,6 +186,9 @@ func (w *Window) navigatorRow(c *native.Context, entry navigatorEntry, highlight
 			hint := entry.hint
 			if entry.action != "" {
 				hint = keyGlyphs(hint)
+				if direct := directKeyLabel(entry.action); direct != "" {
+					native.Text(c, direct).FontSize(11).SingleLine().Shrink(0).TextColor(text)
+				}
 			}
 			if hint != "" {
 				native.Text(c, hint).FontSize(11).SingleLine().Shrink(1).MinWidth(0).MaxWidth(220).TextColor(secondary)

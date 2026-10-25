@@ -34,6 +34,7 @@ type terminalPanel struct {
 func (w *Window) ConnectTerminal(host *terminalhost.Host, s *session.Session, ctx context.Context, post func(func())) {
 	w.terminal = &terminalPanel{host: host, session: s, ctx: ctx, post: post, panes: map[string]*terminalPanel{}}
 	host.SetOnSearch(w.SetSearchStatus)
+	host.SetOnCopy(w.ShowCopied)
 }
 
 func (w *Window) DetachTerminal() {
