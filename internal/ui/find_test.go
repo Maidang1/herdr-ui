@@ -174,7 +174,7 @@ func TestUnfocusedCardDimPassesPointer(t *testing.T) {
 	w := New(app.New(), nil)
 	clicked := false
 	tester := native.NewTester(func(c *native.Context) {
-		w.paneCard(c, layout.Rect{W: 300, H: 200}, app.PaneRow{ID: "dimmed", Title: "w13:p8"}, app.View{}, false, true, design.Colors(false), func() {
+		w.paneCard(c, layout.Rect{W: 300, H: 200}, app.PaneRow{ID: "dimmed", Title: "w13:p8"}, app.View{}, false, true, design.Colors(false), layout.Rect{W: 300, H: 200}, func() {
 			if native.Button(c, "Body target").Grow(1).FillWidth().Clicked() {
 				clicked = true
 			}

@@ -65,13 +65,16 @@ func (w *Window) SetInitialSettings(snapshot SettingsSnapshot) {
 // SetFontSize steps the settings' font size and pushes the whole font to
 // every attached terminal through the Font hook, which also persists it.
 func (w *Window) SetFontSize(size float32) {
-	w.settings.snapshot.Font.Size = clampFontSize(size)
+	size = clampFontSize(size)
+	w.settings.snapshot.Font.Size = size
+	w.settings.appliedFont.Size = size
+	w.settings.size = float64(size)
 	w.pushFont()
 }
 
 func (w *Window) pushFont() {
 	if w.hooks.Font != nil {
-		w.hooks.Font(w.settings.snapshot.Font)
+		w.hooks.Font(w.settings.appliedFont)
 	}
 }
 
@@ -247,7 +250,7 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 				}
 				row.Children(func() {
 					native.Row(c).FillWidth().Gap(12).AlignItems(native.Center).Children(func() {
-						native.Icon(c, icons.Agent(pane.Agent)).Size(18, 18).TextColor(p.Secondary)
+						agentMark(c, pane.Agent, 18, p.Secondary)
 						native.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
 							native.Text(c, pane.Title).FontSize(13).SingleLine()
 							if pane.Agent != "" {
@@ -305,18 +308,6 @@ func status(value string, dark bool) (*native.SVG, native.Color, string) {
 		return icons.CircleHelp, p.Idle, label
 	}
 }
-func connection(state session.State, dark bool) (*native.SVG, native.Color, string) {
-	p := design.Colors(dark)
-	switch state {
-	case session.Ready:
-		return icons.CircleCheck, p.Success, "Local connected"
-	case session.Incompatible, session.Closed, session.Disconnected:
-		return icons.Unplug, p.Danger, "Local " + strings.ToLower(string(state))
-	default:
-		return icons.LoaderCircle, p.Warning, "Local " + strings.ToLower(string(state))
-	}
-}
-
 func paneDescription(pane app.PaneRow) string {
 	label := pane.Title
 	if pane.Agent != "" {

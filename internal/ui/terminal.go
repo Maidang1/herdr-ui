@@ -215,7 +215,7 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			if pane.ID == w.find.pane {
 				findDrawn = true
 			}
-			w.paneCard(c, r, pane, v, pane.ID == v.PaneID, multi, p, func() {
+			w.paneCard(c, r, pane, v, pane.ID == v.PaneID, multi, p, viewport, func() {
 				w.drawTerminal(c, v, p, child, pane, valid, requestFocus)
 			})
 		}

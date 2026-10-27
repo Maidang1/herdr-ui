@@ -95,7 +95,7 @@ func (w *Window) paneToolbarControls(c *native.Context, pane app.PaneRow, v app.
 	}
 	if caption != "" {
 		native.Row(c.Key("toolbar-pane-caption")).Shrink(1).MinWidth(0).Gap(6).Padding(0, 8).AlignItems(native.Center).Label("Pane " + caption).Children(func() {
-			native.Icon(c, icons.Agent(pane.Agent)).Size(13, 13).Shrink(0).TextColor(p.Secondary)
+			agentMark(c, pane.Agent, 13, p.Secondary)
 			native.Text(c, caption).FontSize(12).SingleLine().MinWidth(0).TextColor(p.Secondary)
 		})
 	}

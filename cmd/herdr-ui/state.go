@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -219,6 +220,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		}
 		hooks.PostNotification = notifier.Post
 		updatesEnabled := mygo.Updater.Enabled()
+		versions := newVersionWatch()
 		hooks.UpdateSettings = func() view.UpdateSettings {
 			return view.UpdateSettings{
 				Version: mygo.App.Version(), Enabled: updatesEnabled,
@@ -226,14 +228,34 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				LastCheck: updater.LastCheck(),
 			}
 		}
+		hooks.UpdateNotice = versions.notice
 		hooks.CheckForUpdates = updater.CheckForUpdates
-		hooks.AutomaticUpdateChecks = updater.SetAutomaticChecks
+		hooks.AutomaticUpdateChecks = func(on bool) {
+			updater.SetAutomaticChecks(on)
+			versions.poke()
+		}
 		hooks.AutomaticUpdateDownloads = updater.SetAutomaticDownloads
 		offUpdates := updater.OnChange(func() {
+			post(func() {})
 			if settingsWin != nil {
 				settingsWin.Update(func() {})
 			}
 		})
+		go versions.run(ctx, func() bool {
+			return mygo.Updater.Enabled() && updater.AutomaticChecks()
+		}, func(ctx context.Context) (string, error) {
+			up, err := mygo.Updater.Check(ctx)
+			if err != nil {
+				if errors.Is(err, mygo.ErrUpdatesDisabled) {
+					return "", nil
+				}
+				return "", err
+			}
+			if up == nil {
+				return "", nil
+			}
+			return up.Version, nil
+		}, func() { post(func() {}) })
 		screen.SetActionHooks(hooks)
 		go keyboard.run(ctx, target.Socket, func() { post(pumpNotifications) })
 		win.OnBlur(func() { post(func() { screen.SetWindowActive(false) }) })

@@ -51,9 +51,16 @@ type ActionHooks struct {
 	RevealPath func(path string)
 	// Update preferences are persisted by the native updater plugin.
 	UpdateSettings           func() UpdateSettings
+	UpdateNotice             func() UpdateNotice
 	CheckForUpdates          func()
 	AutomaticUpdateChecks    func(bool)
 	AutomaticUpdateDownloads func(bool)
+}
+
+// UpdateNotice is what a background check found. Available is empty when
+// the app is current, updates are off, or a check has not succeeded.
+type UpdateNotice struct {
+	Available string
 }
 
 func (w *Window) SetActionHooks(h ActionHooks) { w.hooks = h }

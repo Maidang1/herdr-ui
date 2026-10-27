@@ -76,12 +76,8 @@ func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
 			})
 		})
 		native.Box(c).Height(1).Shrink(0).FillWidth().Background(p.Border)
-		native.Row(c).Height(36).Shrink(0).Padding(0, 6, 0, 14).AlignItems(native.Center).Gap(2).Children(func() {
-			_, color, label := connection(v.State, c.Theme().Dark)
-			native.Row(c).Grow(1).MinWidth(0).Gap(7).AlignItems(native.Center).Label(label).Children(func() {
-				native.Box(c).Size(7, 7).Shrink(0).Radius(3.5).Background(color)
-				native.Text(c, "Local").FontSize(11).FontWeight(500).TextColor(p.Secondary)
-			})
+		native.Row(c).Height(36).Shrink(0).Padding(0, 6, 0, 10).AlignItems(native.Center).Gap(2).Children(func() {
+			w.sidebarUpdate(c, p)
 			if w.iconButton(c, "keyboard-reference-entry", icons.Keyboard, "Keyboard reference", p).Clicked() {
 				w.Dispatch("help")
 			}
@@ -201,6 +197,32 @@ func (w *Window) newWorkspaceButton(c *native.Context, p design.Palette) {
 	button.Children(func() { native.Icon(c, icons.Plus).Size(14, 14).TextColor(p.Secondary) })
 	if can && button.Clicked() {
 		w.Dispatch("new_workspace")
+	}
+}
+
+// sidebarUpdate replaces the connection status. It stays quiet until a
+// background check finds a newer version, then offers that version.
+func (w *Window) sidebarUpdate(c *native.Context, p design.Palette) {
+	var notice UpdateNotice
+	if w.hooks.UpdateNotice != nil {
+		notice = w.hooks.UpdateNotice()
+	}
+	if notice.Available == "" {
+		native.Box(c).Grow(1)
+		return
+	}
+	label := "Update to " + notice.Available
+	button := native.ButtonBase(c.Key("sidebar-update")).Grow(1).MinWidth(0).Height(26).Radius(8).Padding(0, 8).Label(label)
+	w.controlState(button, p)
+	button.Background(p.Accent.Alpha(.14))
+	button.Children(func() {
+		native.Row(c).FillWidth().MinWidth(0).Gap(6).AlignItems(native.Center).Children(func() {
+			native.Box(c).Size(7, 7).Shrink(0).Radius(3.5).Background(p.Accent)
+			native.Text(c, label).FontSize(11).FontWeight(500).SingleLine().Ellipsis("…").MinWidth(0).TextColor(p.Text)
+		})
+	})
+	if button.Clicked() && w.hooks.CheckForUpdates != nil {
+		w.hooks.CheckForUpdates()
 	}
 }
 
@@ -459,7 +481,7 @@ func (w *Window) agentRow(c *native.Context, row app.AgentRow, p design.Palette)
 		_, color, label := status(row.Status, c.Theme().Dark)
 		native.Row(c).FillWidth().Gap(sidebarGutter).AlignItems(native.Center).Children(func() {
 			native.Box(c).Size(18, 18).Shrink(0).Center().Children(func() {
-				native.Icon(c, icons.Agent(row.Agent)).Size(15, 15).TextColor(p.Secondary)
+				agentMark(c, row.Agent, 15, p.Secondary)
 			})
 			native.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
 				native.Text(c, row.Agent).FontSize(13).FontWeight(500).SingleLine().TextColor(p.Text)

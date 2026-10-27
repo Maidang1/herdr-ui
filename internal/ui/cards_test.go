@@ -34,7 +34,7 @@ func TestCardHeaderOmitsSyntheticTitlesAndUsesRealAgentBadge(t *testing.T) {
 	w := New(app.New(), nil)
 	for _, pane := range []app.PaneRow{{ID: "w13:p8", Title: "w13:p8"}, {ID: "agent", Title: "user@HOST:/repo", Agent: "codex"}} {
 		tester := native.NewTester(func(c *native.Context) {
-			w.paneCard(c, layout.Rect{W: 300, H: 200}, pane, app.View{}, false, true, design.Colors(false), func() { native.Box(c).Grow(1).FillWidth().Label("Terminal viewport") })
+			w.paneCard(c, layout.Rect{W: 300, H: 200}, pane, app.View{}, false, true, design.Colors(false), layout.Rect{W: 300, H: 200}, func() { native.Box(c).Grow(1).FillWidth().Label("Terminal viewport") })
 		}, 300, 200)
 		if tester.HasText(pane.Title) {
 			t.Fatal("synthetic/title metadata returned", pane.Title)
@@ -63,6 +63,22 @@ func TestCardContentAccountsForHeader(t *testing.T) {
 		t.Fatal("single terminal has no positive content after controls")
 	}
 }
+func TestTerminalCornersFollowThePanel(t *testing.T) {
+	area := layout.Rect{W: 800, H: 600}
+	tl, tr, br, bl := terminalCornerRadii(layout.Rect{W: 800, H: 600}, area, 17)
+	if tl != 0 || tr != 0 || bl != 17 || br != 17 {
+		t.Fatalf("full pane corners tl %v tr %v br %v bl %v", tl, tr, br, bl)
+	}
+	_, _, br, bl = terminalCornerRadii(layout.Rect{W: 400, H: 600}, area, 17)
+	if bl != 17 || br != 0 {
+		t.Fatalf("left pane corners br %v bl %v", br, bl)
+	}
+	_, _, br, bl = terminalCornerRadii(layout.Rect{X: 400, W: 400, H: 300}, area, 17)
+	if bl != 0 || br != 0 {
+		t.Fatalf("upper pane took the bottom curve br %v bl %v", br, bl)
+	}
+}
+
 func TestSplitCardRenderArtifacts(t *testing.T) {
 	dir := os.Getenv("HERDR_UI_RENDER_DIR")
 	if dir == "" {
@@ -85,7 +101,7 @@ func TestSplitCardRenderArtifacts(t *testing.T) {
 					panes := []app.PaneRow{{ID: "left-top", Title: "w13:p8"}, {ID: "left-bottom", Agent: "claude"}, {ID: "right", Agent: "codex"}}
 					bounds := []layout.Rect{{W: viewport.W * .45, H: viewport.H * .55}, {Y: viewport.H * .55, W: viewport.W * .45, H: viewport.H * .45}, {X: viewport.W * .45, W: viewport.W * .55, H: viewport.H}}
 					for i, pane := range panes {
-						w.paneCard(c, bounds[i], pane, app.View{}, i == 2, true, p, func() { native.Box(c).Grow(1).FillWidth() })
+						w.paneCard(c, bounds[i], pane, app.View{}, i == 2, true, p, viewport, func() { native.Box(c).Grow(1).FillWidth() })
 					}
 					splitHairlines(c, []layout.SplitRect{{ID: "root", Direction: "right", Ratio: .45, Rect: viewport}, {ID: "left", Direction: "down", Ratio: .55, Rect: layout.Rect{W: viewport.W * .45, H: viewport.H}}}, p)
 				})

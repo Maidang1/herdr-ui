@@ -3,7 +3,6 @@ package ui
 import (
 	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/design"
-	"github.com/Maidang1/herdr-ui/internal/icons"
 	"github.com/Maidang1/herdr-ui/internal/layout"
 	native "github.com/egoist/mygo/ui"
 )
@@ -35,8 +34,31 @@ func hasCardContent(r layout.Rect, multi bool) bool {
 	return r.W > 32 && r.H > 24+header
 }
 
-func (w *Window) paneCard(c *native.Context, r layout.Rect, pane app.PaneRow, frameView app.View, selected, multi bool, p design.Palette, body func()) {
+// terminalCornerRadii rounds the corners of a pane that meet the content
+// panel's outer corners. The GPU rounds only the innermost clip and turns
+// the clips around it into rectangles, so the pane has to carry the curve
+// or its square fill covers the panel's rounded corner.
+func terminalCornerRadii(pane, area layout.Rect, radius float32) (topLeft, topRight, bottomRight, bottomLeft float32) {
+	const edge = 0.5
+	if pane.Y+pane.H < area.H-edge {
+		return
+	}
+	if pane.X <= edge {
+		bottomLeft = radius
+	}
+	if pane.X+pane.W >= area.W-edge {
+		bottomRight = radius
+	}
+	return
+}
+
+func (w *Window) paneCard(c *native.Context, r layout.Rect, pane app.PaneRow, frameView app.View, selected, multi bool, p design.Palette, area layout.Rect, body func()) {
 	frame := native.Column(c.Key("pane-frame:"+pane.ID)).Absolute().Left(float32(r.X)).Top(float32(r.Y)).Size(float32(r.W), float32(r.H)).Clip().AlignItems(native.Stretch)
+	// The panel's border sits outside this frame, so the curve is one
+	// point tighter and shares the window corner's center.
+	if tl, tr, br, bl := terminalCornerRadii(r, area, max(0, w.shape.Panel-1)); tl+tr+br+bl > 0 {
+		frame.Radius(tl, tr, br, bl)
+	}
 	if multi {
 		frame.Background(p.Content)
 	}
@@ -64,7 +86,7 @@ func (w *Window) paneCard(c *native.Context, r layout.Rect, pane app.PaneRow, fr
 					}
 					focus.Children(func() {
 						native.Row(c).FillWidth().MinWidth(0).Gap(7).AlignItems(native.Center).Children(func() {
-							native.Icon(c, icons.Agent(pane.Agent)).Size(14, 14).TextColor(captionColor)
+							agentMark(c, pane.Agent, 14, captionColor)
 							if caption != "" {
 								native.Text(c, caption).FontSize(12).FontWeight(500).SingleLine().MinWidth(0).TextColor(captionColor)
 							}
