@@ -74,6 +74,36 @@ func TestOverCompositesOpaque(t *testing.T) {
 	}
 }
 
+// Muted hues still need readable small text, including on selected rows
+// and tinted attention chips rather than only on a white/black canvas.
+func TestSemanticColorsRemainReadable(t *testing.T) {
+	for _, dark := range []bool{false, true} {
+		p := Colors(dark)
+		for name, color := range map[string]ui.Color{
+			"accent": p.Accent, "working": p.Working, "idle": p.Idle,
+			"warning": p.Warning, "danger": p.Danger, "success": p.Success,
+		} {
+			for _, bg := range []ui.Color{p.Content, p.Elevated, p.Grouped, p.Shell, Over(p.RowSelected, p.Sidebar), Over(p.Selected, p.Shell), Over(p.Hover, p.Sidebar)} {
+				if ratio := contrast(color, bg); ratio < 4.5 {
+					t.Errorf("dark=%t %s on %v: contrast %.2f < 4.5", dark, name, bg, ratio)
+				}
+			}
+		}
+		for _, alpha := range []float32{.14, .18, .22} {
+			bg := Over(p.Warning.Alpha(alpha), p.Sidebar)
+			if ratio := contrast(p.Warning, bg); ratio < 4.5 {
+				t.Errorf("dark=%t warning chip alpha=%.2f: contrast %.2f < 4.5", dark, alpha, ratio)
+			}
+		}
+		theme := NativeTheme(dark, false)
+		for _, bg := range []ui.Color{theme.Accent, theme.AccentHover, theme.AccentPressed} {
+			if ratio := contrast(theme.AccentText, bg); ratio < 4.5 {
+				t.Errorf("dark=%t primary action: contrast %.2f < 4.5", dark, ratio)
+			}
+		}
+	}
+}
+
 func contrast(a, b ui.Color) float64 {
 	la, lb := luminance(a), luminance(b)
 	return (max(la, lb) + .05) / (min(la, lb) + .05)

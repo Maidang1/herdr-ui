@@ -19,18 +19,20 @@ type Palette struct {
 
 // Colors is the window's palette. Surfaces are neutral, as Apple's, so the
 // behind-window material carries the wallpaper's tint rather than fighting
-// it; labels are white or black at an opacity, as AppKit's label colors,
+// it. Semantic accents use a muted Morandi palette, with darker light-mode
+// foregrounds so small status labels remain readable. Labels are white or black
+// at an opacity, as AppKit's label colors,
 // so whatever they sit on reads through them.
 func Colors(dark bool) Palette {
 	if dark {
 		return Palette{
-			Shell: ui.Hex("#2A2A2D"), Top: ui.Hex("#2D2D30"), Middle: ui.Hex("#2A2A2D"), Bottom: ui.Hex("#27272A"), Sidebar: ui.Hex("#2A2A2D"), Content: ui.Hex("#1E1E20"), Inset: ui.Hex("#FFFFFF0F"), Text: ui.Hex("#FFFFFFE0"), Secondary: ui.Hex("#FFFFFFA6"), Tertiary: ui.Hex("#FFFFFF85"), Border: ui.Hex("#FFFFFF14"), Selected: ui.Hex("#FFFFFF1A"), Hover: ui.Hex("#FFFFFF0D"), Accent: ui.Hex("#78B7FF"), Working: ui.Hex("#C4A6EA"), Idle: ui.Hex("#A1A1A8"), Warning: ui.Hex("#E7BF72"), Danger: ui.Hex("#FF9CA5"), Success: ui.Hex("#8EE0AB"),
-			Elevated: ui.Hex("#2C2C2F"), ControlBorder: ui.Hex("#8E8E95"), Focus: ui.Hex("#78B7FF"), InactiveSelected: ui.Hex("#FFFFFF12"), SidebarTint: ui.Hex("#1E1E2026"), ContentShadow: ui.Hex("#00000059"), Disabled: ui.Hex("#6E6E75"), Pressed: ui.Hex("#FFFFFF17"), RowSelected: ui.Hex("#FFFFFF1C"), Highlight: ui.Hex("#FFFFFF12"), Grouped: ui.Hex("#1E1E20"),
+			Shell: ui.Hex("#2A2A2D"), Top: ui.Hex("#2D2D30"), Middle: ui.Hex("#2A2A2D"), Bottom: ui.Hex("#27272A"), Sidebar: ui.Hex("#2A2A2D"), Content: ui.Hex("#1E1E20"), Inset: ui.Hex("#FFFFFF0F"), Text: ui.Hex("#FFFFFFE0"), Secondary: ui.Hex("#FFFFFFA6"), Tertiary: ui.Hex("#FFFFFF85"), Border: ui.Hex("#FFFFFF14"), Selected: ui.Hex("#FFFFFF1A"), Hover: ui.Hex("#FFFFFF0D"), Accent: ui.Hex("#A6BAC8"), Working: ui.Hex("#B8ACC6"), Idle: ui.Hex("#B0B1AB"), Warning: ui.Hex("#CEB58B"), Danger: ui.Hex("#D1A399"), Success: ui.Hex("#A8BCA5"),
+			Elevated: ui.Hex("#2C2C2F"), ControlBorder: ui.Hex("#8E8E95"), Focus: ui.Hex("#A6BAC8"), InactiveSelected: ui.Hex("#FFFFFF12"), SidebarTint: ui.Hex("#1E1E2026"), ContentShadow: ui.Hex("#00000059"), Disabled: ui.Hex("#6E6E75"), Pressed: ui.Hex("#FFFFFF17"), RowSelected: ui.Hex("#FFFFFF1C"), Highlight: ui.Hex("#FFFFFF12"), Grouped: ui.Hex("#1E1E20"),
 		}
 	}
 	return Palette{
-		Shell: ui.Hex("#ECECEF"), Top: ui.Hex("#EFEFF2"), Middle: ui.Hex("#ECECEF"), Bottom: ui.Hex("#E8E8EB"), Sidebar: ui.Hex("#ECECEF"), Content: ui.Hex("#FFFFFF"), Inset: ui.Hex("#0000000A"), Text: ui.Hex("#000000DE"), Secondary: ui.Hex("#000000A8"), Tertiary: ui.Hex("#0000008F"), Border: ui.Hex("#00000014"), Selected: ui.Hex("#00000012"), Hover: ui.Hex("#0000000A"), Accent: ui.Hex("#0057A6"), Working: ui.Hex("#68448F"), Idle: ui.Hex("#5C5C63"), Warning: ui.Hex("#795000"), Danger: ui.Hex("#9F2934"), Success: ui.Hex("#1E7546"),
-		Elevated: ui.Hex("#FFFFFF"), ControlBorder: ui.Hex("#76767D"), Focus: ui.Hex("#0057A6"), InactiveSelected: ui.Hex("#0000000D"), SidebarTint: ui.Hex("#F6F6F840"), ContentShadow: ui.Hex("#0000001A"), Disabled: ui.Hex("#8E8E94"), Pressed: ui.Hex("#00000017"), RowSelected: ui.Hex("#00000014"), Highlight: ui.Hex("#FFFFFF00"), Grouped: ui.Hex("#F0F0F3"),
+		Shell: ui.Hex("#ECECEF"), Top: ui.Hex("#EFEFF2"), Middle: ui.Hex("#ECECEF"), Bottom: ui.Hex("#E8E8EB"), Sidebar: ui.Hex("#ECECEF"), Content: ui.Hex("#FFFFFF"), Inset: ui.Hex("#0000000A"), Text: ui.Hex("#000000DE"), Secondary: ui.Hex("#000000A8"), Tertiary: ui.Hex("#0000008F"), Border: ui.Hex("#00000014"), Selected: ui.Hex("#00000012"), Hover: ui.Hex("#0000000A"), Accent: ui.Hex("#476276"), Working: ui.Hex("#655570"), Idle: ui.Hex("#5D5E5A"), Warning: ui.Hex("#684F2F"), Danger: ui.Hex("#825048"), Success: ui.Hex("#486354"),
+		Elevated: ui.Hex("#FFFFFF"), ControlBorder: ui.Hex("#76767D"), Focus: ui.Hex("#476276"), InactiveSelected: ui.Hex("#0000000D"), SidebarTint: ui.Hex("#F6F6F840"), ContentShadow: ui.Hex("#0000001A"), Disabled: ui.Hex("#8E8E94"), Pressed: ui.Hex("#00000017"), RowSelected: ui.Hex("#00000014"), Highlight: ui.Hex("#FFFFFF00"), Grouped: ui.Hex("#F0F0F3"),
 	}
 }
 
@@ -78,15 +80,15 @@ func NativeTheme(dark, highContrast bool) *ui.Theme {
 	t.FontSize = 13
 	t.Radius = 6
 	if dark {
-		t.AccentText = ui.Hex("#14263A")
-		t.AccentHover = ui.Hex("#92C5FF")
-		t.AccentPressed = ui.Hex("#61A5F1")
-		t.Selection = ui.Hex("#354B66")
+		t.AccentText = ui.Hex("#24323C")
+		t.AccentHover = ui.Hex("#B7C8D2")
+		t.AccentPressed = ui.Hex("#94ACBC")
+		t.Selection = ui.Hex("#3B4A54")
 	} else {
 		t.AccentText = ui.Hex("#FFFFFF")
-		t.AccentHover = ui.Hex("#00529D")
-		t.AccentPressed = ui.Hex("#004587")
-		t.Selection = ui.Hex("#DCEAF8")
+		t.AccentHover = ui.Hex("#3E576A")
+		t.AccentPressed = ui.Hex("#344B5C")
+		t.Selection = ui.Hex("#E2E9ED")
 	}
 	return t
 }

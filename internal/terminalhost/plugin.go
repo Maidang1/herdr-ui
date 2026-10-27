@@ -85,13 +85,13 @@ func terminalThemes() (*terminal.Theme, *terminal.Theme) {
 	light.Foreground = design.Over(lp.Text, lp.Content)
 	light.Cursor = light.Foreground
 	light.CursorText = light.Background
-	light.Selection = ui.Hex("#DCEAF8")
+	light.Selection = design.NativeTheme(false, false).Selection
 	light.SelectionText = light.Foreground
 	dark.Background = dp.Content
 	dark.Foreground = design.Over(dp.Text, dp.Content)
 	dark.Cursor = dark.Foreground
 	dark.CursorText = dark.Background
-	dark.Selection = ui.Hex("#354B66")
+	dark.Selection = design.NativeTheme(true, false).Selection
 	dark.SelectionText = dark.Foreground
 	return &light, &dark
 }

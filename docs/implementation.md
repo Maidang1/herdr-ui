@@ -530,13 +530,13 @@ JSON重连保留当前目标仍存活的插件实例；新快照映射不符再�
 | `row.selected` | `#7A55A82B` | `#C4A6EA2E` | 侧栏选中行（窗口激活时），取外壳的淡紫色相而非操作蓝；窗口失焦时退回中性 `selected` |
 | `row.selected` | `#FFFFFFFF` | `#40394AFF` | 选中工作区，无蓝色大底 |
 | `row.selected.inactive` | `#FFFFFFB8` | `#37313FFF` | 窗口失焦时的选中项 |
-| `action.accent` | `#0057A6FF` | `#78B7FFFF` | 链接、可操作项与强调图标 |
-| `action.primary.background` | `#0057A6FF` | `#78B7FFFF` | 单个主要动作实底 |
-| `action.primary.hover` | `#00529DFF` | `#92C5FFFF` | 主要动作 hover |
-| `action.primary.pressed` | `#004587FF` | `#61A5F1FF` | 主要动作按下 |
-| `action.primary.foreground` | `#FFFFFFFF` | `#14263AFF` | 主要动作文字和图标 |
-| `focus.ring` | `#0057A6FF` | `#78B7FFFF` | 键盘焦点环，2px，外扩 2px |
-| `selection.background` | `#DCEAF8FF` | `#354B66FF` | 普通 UI 文本选区；工作区行使用 row.selected |
+| `action.accent` | `#476276FF` | `#A6BAC8FF` | 链接、可操作项与强调图标 |
+| `action.primary.background` | `#476276FF` | `#A6BAC8FF` | 单个主要动作实底 |
+| `action.primary.hover` | `#3E576AFF` | `#B7C8D2FF` | 主要动作 hover |
+| `action.primary.pressed` | `#344B5CFF` | `#94ACBCFF` | 主要动作按下 |
+| `action.primary.foreground` | `#FFFFFFFF` | `#24323CFF` | 主要动作文字和图标 |
+| `focus.ring` | `#476276FF` | `#A6BAC8FF` | 键盘焦点环，2px，外扩 2px |
+| `selection.background` | `#E2E9EDFF` | `#3B4A54FF` | 普通 UI 文本选区；工作区行使用 row.selected |
 
 列表状态优先级：disabled → selected → pressed → hover → default。选中项 hover/pressed 仍使用 `row.selected`；键盘焦点环独立叠加。secondary、tertiary 颜色不额外乘 alpha。窗口失焦只切换选中底色，保留文字颜色。
 
@@ -544,13 +544,15 @@ JSON重连保留当前目标仍存活的插件实例；新快照映射不符再�
 
 ### 9.4 Herdr 状态色
 
+状态前景采用低饱和的莫兰迪色：完成为灰豆绿、工作中为灰紫、等待为柔和赭色、错误为陶土红、空闲为暖灰。操作强调与焦点环采用雾霾蓝。浅色模式使用较深的同色系前景，暗色模式提高明度；状态文字在普通及选中表面上保持至少 4.5:1 对比度。运行时色值以 `internal/design/palette.go` 为准，保留原生中性材质背景。
+
 | Token | 亮色 | 暗色 | 语义 |
 |---|---|---|---|
-| `status.success` | `#1E7546FF` | `#8EE0ABFF` | 已连接、成功、任务完成 |
-| `status.warning` | `#795000FF` | `#E7BF72FF` | 正在连接、等待用户处理 |
-| `status.danger` | `#9F2934FF` | `#FF9CA5FF` | 连接失败、运行失败 |
-| `status.working` | `#68448FFF` | `#C4A6EAFF` | 代理正在工作 |
-| `status.idle` | `#5D5866FF` | `#B0A7BDFF` | 空闲、退出后保留的记录 |
+| `status.success` | `#486354FF` | `#A8BCA5FF` | 已连接、成功、任务完成 |
+| `status.warning` | `#684F2FFF` | `#CEB58BFF` | 正在连接、等待用户处理 |
+| `status.danger` | `#825048FF` | `#D1A399FF` | 连接失败、运行失败 |
+| `status.working` | `#655570FF` | `#B8ACC6FF` | 代理正在工作 |
+| `status.idle` | `#5D5E5AFF` | `#B0B1ABFF` | 空闲、退出后保留的记录 |
 | `status.success.background` | `#EDF5EFFF` | `#27382EFF` | 成功状态的浅底 |
 | `status.warning.background` | `#FAF2DFFF` | `#3C3222FF` | 等待状态的浅底 |
 | `status.danger.background` | `#FBEFF0FF` | `#3B292FFF` | 错误提示浅底 |
@@ -568,7 +570,7 @@ JSON重连保留当前目标仍存活的插件实例；新快照映射不符再�
 | `terminal.foreground` | `#252329FF` | `#F2EFF5FF` | 进程未指定颜色时的默认前景 |
 | `terminal.cursor` | `#252329FF` | `#F2EFF5FF` | 默认光标 |
 | `terminal.cursor.text` | `#FFFFFFFF` | `#211F25FF` | 块光标下的字符 |
-| `terminal.selection.background` | `#DCEAF8FF` | `#354B66FF` | 终端选区 |
+| `terminal.selection.background` | `#E2E9EDFF` | `#3B4A54FF` | 终端选区 |
 | `terminal.selection.foreground` | `#252329FF` | `#F2EFF5FF` | 选区文字 |
 
 终端背景与主面板背景保持一致。第一版沿用 mygo 终端插件随亮暗主题提供的 ANSI 调色板，仅覆盖表中默认背景、前景、光标与选区；不把 UI 的蓝色或状态色映射成 ANSI 色。终端内容的 16/256/RGB 显式颜色继续交给终端插件处理；UI 文字的对比度结论不适用于任意终端输出。
