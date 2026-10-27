@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.8
+
+- Draw agent marks in their brand colors in the sidebar, tabs, split cards, pane list, and command palette.
+- Add marks for Pi, Devin, Kilo, Qwen, Antigravity, and Grok. GitHub Copilot uses its multicolor mark. Black ink turns white in a dark window.
+- Keep the content panel's corner radius on terminal cards that meet those corners.
+- Keep font changes in the settings preview until Apply. Keyboard zoom still applies immediately.
+- Replace the sidebar connection chip with an Update to x.y.z button when a newer release is available.
+
 ## 0.0.7
 
 - Add native automatic updates: check after launch and daily while the app runs.
