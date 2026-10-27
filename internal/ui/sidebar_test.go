@@ -97,6 +97,27 @@ func TestSidebarAgentSortToggleFlattensGroups(t *testing.T) {
 	}
 }
 
+func TestSidebarUpdatePromptReplacesTheConnectionStatus(t *testing.T) {
+	w := workspaceSidebarFixture(t)
+	checks := 0
+	w.SetActionHooks(ActionHooks{UpdateNotice: func() UpdateNotice { return UpdateNotice{Available: "0.0.8"} }, CheckForUpdates: func() { checks++ }})
+	tester := native.NewTester(func(c *native.Context) { w.sidebar(c, w.currentView(), design.Colors(false)) }, 248, 800)
+	if tester.HasText("Local") {
+		t.Fatal("connection status still occupies the sidebar footer")
+	}
+	if err := tester.Click("Update to 0.0.8"); err != nil {
+		t.Fatal(err)
+	}
+	if checks != 1 {
+		t.Fatalf("update prompt checked %d times", checks)
+	}
+	w.SetActionHooks(ActionHooks{})
+	tester.Frame()
+	if tester.HasText("Update to 0.0.8") {
+		t.Fatal("an up-to-date app still prompts")
+	}
+}
+
 func TestSidebarMenuOpensWindowCommands(t *testing.T) {
 	w := workspaceSidebarFixture(t)
 	tester := native.NewTester(func(c *native.Context) { w.sidebar(c, w.currentView(), design.Colors(false)) }, 248, 800)

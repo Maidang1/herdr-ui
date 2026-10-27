@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"math"
 	"strconv"
 	"time"
 
@@ -76,6 +77,9 @@ type settingsUI struct {
 	// families lists the installed monospaced families, read once.
 	family   string
 	families []string
+	// appliedFont is the font every terminal is using. The snapshot is the
+	// draft the preview shows; Apply copies it here.
+	appliedFont terminal.Font
 }
 
 var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts", "Updates"}
@@ -87,6 +91,7 @@ func (s *settingsUI) install(snapshot SettingsSnapshot) {
 	if snapshot.Font.Size <= 0 {
 		snapshot.Font.Size = 13
 	}
+	snapshot.Font.Size = float32(math.Round(float64(snapshot.Font.Size)))
 	if snapshot.Font.Weight <= 0 {
 		snapshot.Font.Weight = 400
 	}
@@ -100,8 +105,15 @@ func (s *settingsUI) install(snapshot SettingsSnapshot) {
 		snapshot.Cursor = "block"
 	}
 	s.snapshot = snapshot
+	s.appliedFont = snapshot.Font
 	s.sizeDefault = snapshot.Font.Size
 	s.resetMirrors()
+}
+
+// fontPending reports that the preview's font is not the one terminals use.
+func (s *settingsUI) fontPending() bool {
+	a, b := s.appliedFont, s.snapshot.Font
+	return a.Family != b.Family || a.Size != b.Size || a.Weight != b.Weight || a.LineHeight != b.LineHeight
 }
 
 func (s *settingsUI) resetMirrors() {
@@ -172,15 +184,15 @@ const (
 	settingsRowHeight   = 44
 	settingsRowPadding  = 14
 	settingsSliderWidth = 160
-	settingsValueWidth  = 44
+	settingsValueWidth  = 56
 	settingsSelectWidth = 220
 )
 
 // SettingsView renders the settings window as System Settings: a page
 // list on the window's sidebar material on the left, under the traffic
 // lights of its hidden title bar, and the page's groups on an opaque page
-// on the right. Every change applies immediately through the hooks, which
-// persist.
+// on the right. Changes apply immediately through the hooks, which
+// persist, except the terminal font: that stays in the preview until Apply.
 func (w *Window) SettingsView(c *native.Context) {
 	p := w.appearancePalette(c)
 	s := &w.settings
@@ -347,8 +359,15 @@ func (g *settingsGroup) block(fn func()) {
 
 // settingsSlider lays a slider and its value, aligned on its figures.
 func settingsSlider(c *native.Context, key string, value *float64, lo, hi float64, format func(float64) string) native.Element {
+	return settingsSliderStep(c, key, value, lo, hi, 0, format)
+}
+
+func settingsSliderStep(c *native.Context, key string, value *float64, lo, hi, step float64, format func(float64) string) native.Element {
 	slider := native.Slider(c.Key(key), value, lo, hi).Width(settingsSliderWidth).Shrink(0)
-	native.Text(c, format(*value)).Width(settingsValueWidth).Shrink(0).FontSize(12).FontFeatures("tnum").TextAlign(native.End).TextColor(c.Theme().TextMuted)
+	if step > 0 {
+		slider.Step(step)
+	}
+	native.Text(c, format(*value)).Width(settingsValueWidth).Shrink(0).FontSize(12).FontFeatures("tnum").TextAlign(native.End).SingleLine().TextColor(c.Theme().TextMuted)
 	return slider
 }
 
@@ -453,7 +472,7 @@ func settingsThemePreview(c *native.Context, mode int, p design.Palette) {
 	})
 }
 
-func formatSize(v float64) string { return strconv.FormatFloat(v, 'f', -1, 64) + " pt" }
+func formatSize(v float64) string { return strconv.Itoa(int(math.Round(v))) + " pt" }
 
 // formatMultiple trims trailing zeros, so 1 shows as "1×" and 1.2 as "1.20×".
 func formatMultiple(v float64) string {
@@ -471,7 +490,7 @@ func formatMultiple(v float64) string {
 func formatContrast(v float64) string { return strconv.FormatFloat(v, 'f', 1, 64) + "×" }
 
 func (w *Window) settingsTerminal(c *native.Context, p design.Palette, s *settingsUI) {
-	w.settingsSection(c, "settings-font", "Font", "Running terminals update as you change these.", p, func(g *settingsGroup) {
+	w.settingsSection(c, "settings-font", "Font", "The preview follows these. Apply sends them to every terminal.", p, func(g *settingsGroup) {
 		g.block(func() { w.settingsPreview(c, p, s) })
 		g.row("Family", "", func() {
 			if native.Select(c.Key("settings-font-family"), &s.family, s.fontChoices()).Width(settingsSelectWidth).Shrink(0).Changed() {
@@ -479,24 +498,29 @@ func (w *Window) settingsTerminal(c *native.Context, p design.Palette, s *settin
 				if s.family == systemFontLabel {
 					s.snapshot.Font.Family = ""
 				}
-				w.pushFont()
 			}
 		})
 		g.row("Size", "", func() {
-			if settingsSlider(c, "settings-font-size", &s.size, 8, 48, formatSize).Changed() {
-				s.snapshot.Font.Size = clampFontSize(float32(s.size))
-				w.pushFont()
+			if settingsSliderStep(c, "settings-font-size", &s.size, 8, 48, 1, formatSize).Changed() {
+				s.snapshot.Font.Size = clampFontSize(float32(math.Round(s.size)))
+				s.size = float64(s.snapshot.Font.Size)
 			}
 		})
 		g.row("Weight", "", func() {
 			if native.Segmented(c.Key("settings-font-weight"), &s.weightIndex, "Light", "Regular", "Medium", "Semibold").Shrink(0).Changed() {
 				s.snapshot.Font.Weight = fontWeights[max(0, min(len(fontWeights)-1, s.weightIndex))]
-				w.pushFont()
 			}
 		})
 		g.row("Line height", "", func() {
 			if settingsSlider(c, "settings-line-height", &s.lineHeight, 1, 2, formatMultiple).Changed() {
 				s.snapshot.Font.LineHeight = max(1, min(2, float32(s.lineHeight)))
+			}
+		})
+		g.divide()
+		native.Row(c).FillWidth().MinHeight(settingsRowHeight).Padding(8, settingsRowPadding).AlignItems(native.Center).Justify(native.End).Children(func() {
+			apply := native.Button(c, "Apply").Label("Apply font to every terminal").Disabled(!s.fontPending())
+			if apply.Clicked() {
+				s.appliedFont = s.snapshot.Font
 				w.pushFont()
 			}
 		})

@@ -31,14 +31,22 @@
     "RotateCw": "rotate-cw",
     "Palette": "palette"
   },
-  "lobe": {
-    "ClaudeCode": "claudecode",
+  "color": {
+    "ClaudeCode": "claude",
     "Codex": "codex",
-    "GeminiCLI": "geminicli",
+    "GeminiCLI": "gemini",
     "Opencode": "opencode",
-    "GithubCopilot": "githubcopilot",
+    "GithubCopilot": "github-copilot",
     "Cursor": "cursor",
     "Kimi": "kimi",
+    "Grok": "grok",
+    "Pi": "pi",
+    "Devin": "devin",
+    "Kilo": "kilo-code",
+    "Qwen": "qwen",
+    "Antigravity": "antigravity"
+  },
+  "lobe": {
     "RepositoryGithub": "github"
   }
 }

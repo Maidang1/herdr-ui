@@ -10,7 +10,7 @@ import (
 )
 
 type navigatorEntry struct {
-	label, pane, workspace, action, hint string
+	label, pane, workspace, action, hint, agent string
 }
 
 // navigatorEntries mixes the session's destinations with the command
@@ -20,11 +20,11 @@ type navigatorEntry struct {
 func (w *Window) navigatorEntries(query string) []navigatorEntry {
 	var entries []navigatorEntry
 	query = strings.ToLower(strings.TrimSpace(query))
-	add := func(label, pane, workspace, action, hint string, weight int) {
+	add := func(label, pane, workspace, action, hint, agent string, weight int) {
 		if !strings.Contains(strings.ToLower(label+" "+hint), query) {
 			return
 		}
-		entries = append(entries, navigatorEntry{label: label, pane: pane, workspace: workspace, action: action, hint: hint})
+		entries = append(entries, navigatorEntry{label: label, pane: pane, workspace: workspace, action: action, hint: hint, agent: agent})
 	}
 	if snapshot := w.app.Publication().Snapshot; snapshot != nil {
 		for _, workspace := range snapshot.Workspaces() {
@@ -32,7 +32,7 @@ func (w *Window) navigatorEntries(query string) []navigatorEntry {
 			if name == "" {
 				name = workspace.ID
 			}
-			add(name, "", workspace.ID, "", workspace.CheckoutPath, 0)
+			add(name, "", workspace.ID, "", workspace.CheckoutPath, "", 0)
 			for _, tab := range snapshot.Tabs(workspace.ID) {
 				for _, pane := range snapshot.Panes(tab.ID) {
 					label := name
@@ -43,7 +43,7 @@ func (w *Window) navigatorEntries(query string) []navigatorEntry {
 					if pane.Agent != "" {
 						label += " · " + pane.Agent
 					}
-					add(label, pane.ID, workspace.ID, "", pane.CWD, 0)
+					add(label, pane.ID, workspace.ID, "", pane.CWD, pane.Agent, 0)
 				}
 			}
 		}
@@ -51,7 +51,7 @@ func (w *Window) navigatorEntries(query string) []navigatorEntry {
 	for _, action := range Actions {
 		hint := w.BindingLabel(action.ID)
 		label := w.ActionLabel(action.ID)
-		add(label, "", "", action.ID, hint, 0)
+		add(label, "", "", action.ID, hint, "", 0)
 	}
 	// Frecency: chosen entries climb, recent choices above older ones, so
 	// the palette learns the workflow without a settings surface.
@@ -182,7 +182,11 @@ func (w *Window) navigatorRow(c *native.Context, entry navigatorEntry, highlight
 	}
 	button.Children(func() {
 		native.Row(c).FillWidth().Gap(10).AlignItems(native.Center).Children(func() {
-			native.Icon(c, navigatorIcon(entry)).Size(15, 15).Shrink(0).TextColor(secondary)
+			if entry.pane != "" {
+				agentMark(c, entry.agent, 15, secondary)
+			} else {
+				native.Icon(c, navigatorIcon(entry)).Size(15, 15).Shrink(0).TextColor(secondary)
+			}
 			native.Text(c, entry.label).FontSize(13).SingleLine().Grow(1).MinWidth(0).TextColor(text)
 			hint := entry.hint
 			if entry.action != "" {
@@ -202,11 +206,8 @@ func (w *Window) navigatorRow(c *native.Context, entry navigatorEntry, highlight
 }
 
 func navigatorIcon(entry navigatorEntry) *native.SVG {
-	switch {
-	case entry.action != "":
+	if entry.action != "" {
 		return icons.ChevronRight
-	case entry.pane != "":
-		return icons.Terminal
 	}
 	return icons.Folder
 }

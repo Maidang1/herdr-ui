@@ -94,6 +94,32 @@ func TestSettingsCursorAndOptionKeyCallHooks(t *testing.T) {
 	}
 }
 
+func TestFontStaysInThePreviewUntilApply(t *testing.T) {
+	w := settingsWindow(t)
+	var pushed []float32
+	w.SetActionHooks(ActionHooks{Font: func(f terminal.Font) { pushed = append(pushed, f.Size) }})
+	w.settings.snapshot.Font.Size = 18
+	tester := native.NewTester(w.SettingsView, 720, 900)
+	if err := tester.Click("Terminal"); err != nil {
+		t.Fatal(err)
+	}
+	if !tester.HasText("18 pt") {
+		t.Fatalf("size is not a whole number of points: %v", tester.Texts())
+	}
+	if len(pushed) != 0 {
+		t.Fatal("changing the preview pushed the font to terminals")
+	}
+	if err := tester.Click("Apply"); err != nil {
+		t.Fatal(err)
+	}
+	if len(pushed) != 1 || pushed[0] != 18 {
+		t.Fatalf("apply sent %+v", pushed)
+	}
+	if w.settings.fontPending() {
+		t.Fatal("apply left the draft pending")
+	}
+}
+
 func TestSettingsZoomSharesTheFontHook(t *testing.T) {
 	w := populatedChromeWindow(t)
 	w.SetInitialSettings(SettingsSnapshot{Theme: "system", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Toast: ToastSettings{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}})
