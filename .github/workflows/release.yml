@@ -46,7 +46,16 @@ jobs:
         run: make test
 
       - name: Build the universal app and disk image
-        run: make dmg
+        env:
+          MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$MYGO_UPDATER_PRIVATE_KEY" ]; then
+            echo "::error::MYGO_UPDATER_PRIVATE_KEY is required to publish signed updates"
+            exit 1
+          fi
+          make dmg
+          test -s dist/darwin-universal/update-darwin-universal.json
 
       - name: Name the disk image
         id: dmg
@@ -59,7 +68,11 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.dmg.outputs.name }}
-          path: dist/${{ steps.dmg.outputs.name }}*
+          path: |
+            dist/${{ steps.dmg.outputs.name }}*
+            dist/darwin-universal/update-*.json
+            dist/darwin-universal/*.tar.gz
+            dist/darwin-universal/*.delta
 
       - name: Publish the release
         if: github.ref_type == 'tag'
@@ -67,8 +80,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           DMG: dist/${{ steps.dmg.outputs.name }}
         run: |
+          shopt -s nullglob
+          updates=(dist/darwin-universal/*.tar.gz dist/darwin-universal/*.delta dist/darwin-universal/update-*.json)
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "$DMG" "$DMG.sha256" --clobber
+            gh release upload "$GITHUB_REF_NAME" "$DMG" "$DMG.sha256" "${updates[@]}" --clobber
           else
             cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
           The app is signed ad hoc, not with a Developer ID, so Gatekeeper blocks it on first launch. After dragging it to Applications, run:
@@ -79,7 +94,7 @@ jobs:
 
           Herdr UI attaches to a running Herdr; install and start Herdr first.
           NOTES
-            gh release create "$GITHUB_REF_NAME" "$DMG" "$DMG.sha256" \
+            gh release create "$GITHUB_REF_NAME" "$DMG" "$DMG.sha256" "${updates[@]}" \
               --verify-tag --title "Herdr UI $GITHUB_REF_NAME" \
               --notes-file "$RUNNER_TEMP/notes.md" --generate-notes
           fi

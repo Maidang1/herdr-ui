@@ -78,9 +78,9 @@ type settingsUI struct {
 	families []string
 }
 
-var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts"}
+var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts", "Updates"}
 
-var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.MessageCircle, icons.Keyboard}
+var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.MessageCircle, icons.Keyboard, icons.RotateCw}
 
 // install seeds the working copy from the persisted values.
 func (s *settingsUI) install(snapshot SettingsSnapshot) {
@@ -246,7 +246,7 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 		native.Column(c.Key("settings-page")).FillWidth().MaxWidth(settingsColumnWidth+2*settingsPagePadding).Shrink(0).Padding(top, settingsPagePadding, 40, settingsPagePadding).Gap(24).AlignItems(native.Stretch).Children(func() {
 			native.Column(c).Gap(4).Children(func() {
 				native.Text(c, settingsPages[s.page]).FontSize(22).FontWeight(700)
-				descriptions := []string{"Make Herdr feel at home.", "Fine-tune your terminal experience.", "Choose when Herdr gets your attention.", "Keep your workflow close at hand."}
+				descriptions := []string{"Make Herdr feel at home.", "Fine-tune your terminal experience.", "Choose when Herdr gets your attention.", "Keep your workflow close at hand.", "Keep Herdr UI up to date."}
 				native.Text(c, descriptions[s.page]).FontSize(13).TextColor(p.Secondary)
 			})
 			switch s.page {
@@ -256,6 +256,8 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 				w.settingsTerminal(c, p, s)
 			case 2:
 				w.settingsNotifications(c, p, s)
+			case 4:
+				w.settingsUpdates(c, p)
 			default:
 				w.settingsShortcuts(c, p)
 			}

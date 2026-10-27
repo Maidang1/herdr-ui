@@ -1,9 +1,17 @@
 {
   "name": "Herdr UI",
   "identifier": "dev.herdr.ui",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "icon": "assets/app/icon.png",
   "main": "./cmd/herdr-ui",
   "out": "dist",
-  "resources": ["internal/icons/LICENSE-lucide", "internal/icons/LICENSE-lobe", "assets/icons/NOTICE.md"]
+  "resources": [
+    "internal/icons/LICENSE-lucide",
+    "internal/icons/LICENSE-lobe",
+    "assets/icons/NOTICE.md"
+  ],
+  "updates": {
+    "publicKey": "wxS8IPnKAsClT2jm8fQBLI2AkiVFZFSOLC64H+OIZSw=",
+    "github": "Maidang1/herdr-ui"
+  }
 }

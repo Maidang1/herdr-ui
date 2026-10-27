@@ -19,6 +19,9 @@ func TestRenderSettingsArtifacts(t *testing.T) {
 	}
 	for _, dark := range []bool{false, true} {
 		w := referenceWindow(t)
+		w.SetActionHooks(ActionHooks{UpdateSettings: func() UpdateSettings {
+			return UpdateSettings{Version: "0.0.7", Enabled: true, AutomaticChecks: true}
+		}})
 		w.SetInitialSettings(SettingsSnapshot{Theme: "dark", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Cursor: "block", CursorBlink: true, CopyOnSelect: true, Toast: ToastSettings{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}})
 		for _, page := range settingsPages {
 			for _, size := range [][2]int{{720, 520}, {1000, 1160}} {

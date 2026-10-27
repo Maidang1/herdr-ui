@@ -23,6 +23,7 @@ import (
 	view "github.com/Maidang1/herdr-ui/internal/ui"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
+	"github.com/egoist/mygo/plugins/updater"
 	native "github.com/egoist/mygo/ui"
 )
 
@@ -217,6 +218,22 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			post(pumpNotifications)
 		}
 		hooks.PostNotification = notifier.Post
+		updatesEnabled := mygo.Updater.Enabled()
+		hooks.UpdateSettings = func() view.UpdateSettings {
+			return view.UpdateSettings{
+				Version: mygo.App.Version(), Enabled: updatesEnabled,
+				AutomaticChecks: updater.AutomaticChecks(), AutomaticDownloads: updater.AutomaticDownloads(),
+				LastCheck: updater.LastCheck(),
+			}
+		}
+		hooks.CheckForUpdates = updater.CheckForUpdates
+		hooks.AutomaticUpdateChecks = updater.SetAutomaticChecks
+		hooks.AutomaticUpdateDownloads = updater.SetAutomaticDownloads
+		offUpdates := updater.OnChange(func() {
+			if settingsWin != nil {
+				settingsWin.Update(func() {})
+			}
+		})
 		screen.SetActionHooks(hooks)
 		go keyboard.run(ctx, target.Socket, func() { post(pumpNotifications) })
 		win.OnBlur(func() { post(func() { screen.SetWindowActive(false) }) })
@@ -286,7 +303,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		}
 		sections["Tab"] = append(sections["Tab"], &mygo.MenuItem{Type: mygo.MenuItemSeparator}, &mygo.MenuItem{Label: "Select Tab", Submenu: tabNumbers})
 		helpItems := []*mygo.MenuItem{commandItem("help")}
-		appItems := []*mygo.MenuItem{{Role: mygo.RoleAbout}, {Type: mygo.MenuItemSeparator}, commandItem("settings"), {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleServices}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleHide}, {Role: mygo.RoleHideOthers}, {Role: mygo.RoleUnhide}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleQuit}}
+		appItems := []*mygo.MenuItem{{Role: mygo.RoleAbout}, updater.MenuItem(), {Type: mygo.MenuItemSeparator}, commandItem("settings"), {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleServices}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleHide}, {Role: mygo.RoleHideOthers}, {Role: mygo.RoleUnhide}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleQuit}}
 		appearanceItems := []*mygo.MenuItem{}
 		for _, choice := range []struct {
 			label  string
@@ -322,6 +339,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		})
 		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Label: "Herdr", Submenu: appItems}, {Role: mygo.RoleEditMenu}, {Label: "Workspace", Submenu: sections["Workspace"]}, {Label: "Tab", Submenu: sections["Tab"]}, {Label: "Pane", Submenu: sections["Pane"]}, {Label: "Go", Submenu: sections["Go"]}, {Label: "View", Submenu: sections["View"]}, {Role: mygo.RoleWindowMenu}, {Label: "Help", Submenu: helpItems}}))
 		win.OnClosed(func() {
+			offUpdates()
 			offAppearance()
 			screen.CloseCommandSurface()
 			screen.DetachTerminal()

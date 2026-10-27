@@ -13,6 +13,7 @@
 .vscode/
 
 # Local secrets.
+mygo-update.key
 .env
 .env.*
 

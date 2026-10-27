@@ -49,6 +49,11 @@ type ActionHooks struct {
 	EditConfig func() error
 	// RevealPath shows a workspace's directory in Finder.
 	RevealPath func(path string)
+	// Update preferences are persisted by the native updater plugin.
+	UpdateSettings           func() UpdateSettings
+	CheckForUpdates          func()
+	AutomaticUpdateChecks    func(bool)
+	AutomaticUpdateDownloads func(bool)
 }
 
 func (w *Window) SetActionHooks(h ActionHooks) { w.hooks = h }

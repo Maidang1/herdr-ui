@@ -17,6 +17,7 @@ import (
 	"github.com/Maidang1/herdr-ui/internal/shellenv"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
+	updatenative "github.com/egoist/mygo/plugins/updater/native"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -33,6 +34,7 @@ func main() {
 		log.Printf("PATH: %v", err)
 	}
 	if !*local && *terminalID == "" {
+		mygo.Use(updatenative.Plugin)
 		runStateWindow(*socket, *binary, *closeAfter)
 		return
 	}
