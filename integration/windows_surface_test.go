@@ -120,11 +120,11 @@ func TestWindowsNativeSurface(t *testing.T) {
 		}
 		waitWindows(t, 10*time.Second, func() bool { s := client.Latest(); return s.Connected && s.Snapshot != nil })
 		for _, action := range []func() error{
+			func() error { return client.ResizeSurface(connectionCtx, 100, 32) },
+			func() error { return client.SetSurfaceActive(connectionCtx, true) },
 			func() error { return client.FocusTab(connectionCtx, pane.TabID) },
 			func() error { return client.FocusPane(connectionCtx, pane.PaneID) },
-			func() error { return client.ResizeSurface(connectionCtx, 100, 32) },
 			func() error { return client.FocusSurface(connectionCtx, true) },
-			func() error { return client.SetSurfaceActive(connectionCtx, true) },
 		} {
 			if err := action(); err != nil {
 				client.Close()

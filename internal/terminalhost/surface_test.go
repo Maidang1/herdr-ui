@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -171,6 +172,17 @@ func (f *fakeSurfaceEndpoint) serve(c net.Conn) {
 		return
 	}
 	f.messages <- b
+	helloPayload := b[1:]
+	if hostReadString(&helloPayload) != "endpoint.hello.v1" {
+		return
+	}
+	var hello struct {
+		Active bool `json:"surface_active"`
+	}
+	if json.Unmarshal([]byte(hostReadString(&helloPayload)), &hello) != nil {
+		return
+	}
+	active := hello.Active
 	f.control("endpoint.welcome.v1", map[string]any{"generation": 1, "snapshot_codec": "shell.snapshot.v1", "surface_codec": "shell.surface.v1", "input_codec": "shell.input.semantic.v1", "blob_codec": "shell.blob.v1", "methods": []string{"client_shell.surface.set", "tab.focus", "pane.focus"}, "capabilities": []string{"surface_interest"}})
 	f.control("shell.snapshot.v1", map[string]any{"boot_id": "boot", "revision": 7, "focused_tab_id": "tab", "focused_pane_id": "pane"})
 	select {
@@ -195,7 +207,13 @@ func (f *fakeSurfaceEndpoint) serve(c net.Conn) {
 			if json.Unmarshal([]byte(raw), &req) != nil {
 				return
 			}
-			if req.Method == "tab.focus" {
+			if req.Method == "client_shell.surface.set" {
+				active, _ = req.Params["active"].(bool)
+			}
+			// Authoritative server/headless/endpoint_requests.rs:72 rejects every
+			// ordinary endpoint API while passive; only surface.set bypasses it.
+			inactive := req.Method != "client_shell.surface.set" && !active
+			if req.Method == "tab.focus" && !inactive {
 				if f.holdFocus != nil && req.Params["tab_id"] == f.holdTab {
 					select {
 					case f.focusSeen <- struct{}{}:
@@ -209,7 +227,11 @@ func (f *fakeSurfaceEndpoint) serve(c net.Conn) {
 				}
 				f.control("shell.snapshot.v1", map[string]any{"boot_id": "boot", "revision": 7, "focused_tab_id": req.Params["tab_id"], "focused_pane_id": "pane"})
 			}
-			data, _ := json.Marshal(map[string]any{"id": req.ID, "result": map[string]any{"ok": true}})
+			response := map[string]any{"id": req.ID, "result": map[string]any{"ok": true}}
+			if inactive {
+				response = map[string]any{"id": req.ID, "error": map[string]any{"code": "surface_inactive", "message": "this method requires an active client shell surface"}}
+			}
+			data, _ := json.Marshal(response)
 			reply := hostString(hostString([]byte{18}, boot), req.ID)
 			reply = append(reply, 1)
 			reply = append(hostUint(reply, uint64(len(data))), data...)
@@ -319,10 +341,6 @@ func TestNativeSurfaceEndpointRenderAndSemanticInput(t *testing.T) {
 	if hv["surface_active"] != false || hv["surface_reuse"] == true || hv["surface_delta"] == true {
 		t.Fatalf("unsafe native negotiation %+v", hv)
 	}
-	method, p := hostRequest(t, f.next(t, 15))
-	if method != "tab.focus" || p["tab_id"] != "tab" {
-		t.Fatalf("selection %s %+v", method, p)
-	}
 	resize := f.next(t, 12)
 	want := h.surface.selection()
 	expected := hostUint(hostUint([]byte{12, 0, 0}, uint64(want.cols)), uint64(want.rows))
@@ -330,13 +348,17 @@ func TestNativeSurfaceEndpointRenderAndSemanticInput(t *testing.T) {
 	if !bytes.Equal(resize, expected) {
 		t.Fatalf("resize got %x want %x", resize, expected)
 	}
+	method, p := hostRequest(t, f.next(t, 15))
+	if method != "client_shell.surface.set" || p["active"] != true {
+		t.Fatalf("activation %s %+v", method, p)
+	}
+	method, p = hostRequest(t, f.next(t, 15))
+	if method != "tab.focus" || p["tab_id"] != "tab" {
+		t.Fatalf("selection %s %+v", method, p)
+	}
 	method, p = hostRequest(t, f.next(t, 15))
 	if method != "pane.focus" || p["pane_id"] != "pane" {
 		t.Fatalf("pane focus %s %+v", method, p)
-	}
-	method, p = hostRequest(t, f.next(t, 15))
-	if method != "client_shell.surface.set" || p["active"] != true {
-		t.Fatalf("activation %s %+v", method, p)
 	}
 	if got := f.next(t, 18); !bytes.Equal(got, []byte{18, 1}) {
 		t.Fatalf("host focus %x", got)
@@ -883,5 +905,48 @@ func TestNativeSurfacePreciseScrollAccumulatesWithoutAmplification(t *testing.T)
 	}
 	if remainder != 0 {
 		t.Fatalf("opposite motion left remainder %g", remainder)
+	}
+}
+
+func TestFakeSurfaceEndpointRejectsFocusWhileInactive(t *testing.T) {
+	f := newFakeSurfaceEndpoint(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	client := endpoint.NewSurface(f.socket)
+	defer client.Close()
+	if err := client.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	surfaceWait(t, nil, func() bool { return client.Latest().Snapshot != nil })
+	for _, focus := range []struct {
+		name string
+		call func() error
+	}{
+		{"tab", func() error { return client.FocusTab(ctx, "tab") }},
+		{"pane", func() error { return client.FocusPane(ctx, "pane") }},
+	} {
+		if err := focus.call(); err == nil || !strings.Contains(err.Error(), "surface_inactive") {
+			t.Fatalf("passive %s focus should fail surface_inactive: %v", focus.name, err)
+		}
+	}
+	// Resize is a direct protocol message and remains permitted before the
+	// activation barrier, so the server receives actual geometry first.
+	if err := client.ResizeSurface(ctx, 90, 30); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.SetSurfaceActive(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.FocusTab(ctx, "tab"); err != nil {
+		t.Fatalf("active tab focus: %v", err)
+	}
+	if err := client.FocusPane(ctx, "pane"); err != nil {
+		t.Fatalf("active pane focus: %v", err)
+	}
+	if err := client.SetSurfaceActive(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.FocusTab(ctx, "tab"); err == nil || !strings.Contains(err.Error(), "surface_inactive") {
+		t.Fatalf("deactivated focus should fail surface_inactive: %v", err)
 	}
 }

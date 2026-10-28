@@ -156,23 +156,28 @@ func (s *surfaceBackend) connected(c *endpoint.Client) error {
 		}
 		want := s.selection()
 		if state.Snapshot != nil && want.tab != "" && want.cols > 0 && want.rows > 0 && want != applied {
+			if applied.tab == "" {
+				// Passive clients may set geometry, but the daemon requires an
+				// active surface before accepting per-window focus requests.
+				if err := c.ResizeSurface(s.ctx, want.cols, want.rows); err != nil {
+					return err
+				}
+				if err := c.SetSurfaceActive(s.ctx, true); err != nil {
+					return err
+				}
+			}
 			if applied.tab != want.tab {
 				if err := c.FocusTab(s.ctx, want.tab); err != nil {
 					return err
 				}
 			}
-			if applied.cols != want.cols || applied.rows != want.rows {
+			if applied.tab != "" && (applied.cols != want.cols || applied.rows != want.rows) {
 				if err := c.ResizeSurface(s.ctx, want.cols, want.rows); err != nil {
 					return err
 				}
 			}
 			if applied.pane != want.pane && want.pane != "" {
 				if err := c.FocusPane(s.ctx, want.pane); err != nil {
-					return err
-				}
-			}
-			if applied.tab == "" {
-				if err := c.SetSurfaceActive(s.ctx, true); err != nil {
 					return err
 				}
 			}
