@@ -454,6 +454,8 @@ func (c *Client) send(ctx context.Context, b []byte) error {
 	return err
 }
 func (c *Client) request(ctx context.Context, method string, params any) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	c.mu.Lock()
 	if c.state.Snapshot == nil {
 		c.mu.Unlock()

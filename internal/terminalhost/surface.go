@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -205,7 +206,11 @@ func (s *surfaceBackend) connected(c *endpoint.Client) error {
 			if !valid || state.Snapshot == nil || state.Snapshot.BootID != input.boot || state.Snapshot.FocusedTabID != applied.tab {
 				continue
 			}
-			if input.popup && (state.Snapshot.FocusedPaneID != applied.pane || state.Surface == nil || state.Surface.Popup == nil || state.Surface.Popup.TerminalID != input.target) {
+			hasPopup := state.Surface != nil && state.Surface.Popup != nil
+			if hasPopup != input.popup {
+				continue
+			}
+			if input.popup && (state.Snapshot.FocusedPaneID != applied.pane || state.Surface.Popup.TerminalID != input.target) {
 				continue
 			}
 			if err := c.SendPaneEvent(s.ctx, input.boot, input.target, input.event, input.popup); err != nil {
@@ -229,6 +234,10 @@ func (h *Host) ConfigureSurface(tab, pane string, width, height float32, focused
 }
 
 type surfaceInstance struct {
+	windowsTextKeys bool
+	suppressText    bool
+	scrollRemainder float32
+	pendingTextKey  *surfacePendingKey
 	backend         *surfaceBackend
 	entry           *entry
 	view            *surfaceview.View
@@ -238,9 +247,14 @@ type surfaceInstance struct {
 	closed          atomic.Bool
 	mouseButton     int
 }
+type surfacePendingKey struct {
+	event      ui.InputEvent
+	selection  surfaceSelection
+	connection *endpoint.Client
+}
 
 func (s *surfaceBackend) open(e *entry, o terminal.Options) instance {
-	p := &surfaceInstance{backend: s, entry: e, mouseButton: -1}
+	p := &surfaceInstance{backend: s, entry: e, mouseButton: -1, windowsTextKeys: runtime.GOOS == "windows"}
 	p.view = surfaceview.New(surfaceview.Config{Font: o.Font, Theme: o.Theme, DarkTheme: o.DarkTheme, CopyOnSelect: o.CopyOnSelect, MinimumContrast: o.MinimumContrast,
 		OnInput: p.input,
 		OnPaste: func(text string) bool { p.eventText(text, true); return true },
@@ -284,7 +298,12 @@ func (p *surfaceInstance) View(c *ui.Context) ui.Element {
 		p.frameConnection = nil
 		p.view.SetFrame(endpoint.SurfaceFrame{}, p.entry.spec.PaneID)
 	}
-	return p.view.View(c)
+	el := p.view.View(c)
+	if !el.Focused() || p.view.Composing() {
+		p.pendingTextKey = nil
+		p.suppressText = false
+	}
+	return el
 }
 func (p *surfaceInstance) enqueue(event endpoint.PaneEvent) {
 	if p.closed.Load() || len(event) == 0 || p.frame == nil {
@@ -326,14 +345,36 @@ func (p *surfaceInstance) input(ev ui.InputEvent) bool {
 	s := p.backend
 	switch ev.Kind {
 	case ui.InputText:
+		p.pendingTextKey = nil
+		if p.suppressText {
+			p.suppressText = false
+			return true
+		}
 		p.eventText(ev.Text, false)
 		return true
+	case ui.InputKeyUp:
+		if p.pendingTextKey != nil && ev.Key == p.pendingTextKey.event.Key {
+			p.flushTextKey()
+			return true
+		}
 	case ui.InputKeyDown:
+		p.flushTextKey()
+		p.suppressText = false
 		if s.h.cfg.OnKey != nil && !p.view.Composing() {
 			result := s.h.cfg.OnKey(p.entry.binding, ev.Mods, ev.Key, p.InputState())
 			if result.Consumed {
+				p.suppressText = true
 				if len(result.Send) > 0 {
-					p.Send(result.Send)
+					code, char, fn, ok := surfaceKey(ev.Key)
+					if code == 10 && ev.Mods&ui.Shift != 0 {
+						code = 11
+					}
+					if ok {
+						event, err := endpoint.KeyEvent(code, char, fn, surfaceModifiers(ev.Mods), ev.Repeat)
+						if err == nil {
+							p.enqueue(event)
+						}
+					}
 				}
 				return true
 			}
@@ -342,10 +383,19 @@ func (p *surfaceInstance) input(ev ui.InputEvent) bool {
 		if !ok {
 			return false
 		}
+		if code == 10 && ev.Mods&ui.Shift != 0 {
+			code = 11
+		}
 		// Printable characters arrive through InputText after the input
 		// method has resolved the keyboard layout and composition.
 		if code == 15 && ev.Mods&(ui.Ctrl|ui.Alt|ui.Super) == 0 {
 			return false
+		}
+		// Windows reports AltGr as Ctrl+Alt, before the committed WM_CHAR.
+		// Wait for that text; a genuine chord with no text is sent on release.
+		if p.windowsTextKeys && code == 15 && ev.Mods&(ui.Ctrl|ui.Alt|ui.Super) == ui.Ctrl|ui.Alt {
+			p.pendingTextKey = &surfacePendingKey{event: ev, selection: p.frameSelection, connection: p.frameConnection}
+			return true
 		}
 		event, err := endpoint.KeyEvent(code, char, fn, surfaceModifiers(ev.Mods), ev.Repeat)
 		if err == nil {
@@ -353,22 +403,51 @@ func (p *surfaceInstance) input(ev ui.InputEvent) bool {
 		}
 		return true
 	case ui.InputScroll:
-		pane := p.pane()
-		if pane != nil && (pane.MouseReporting || pane.AlternateScreenActive) {
-			p.mouse(ev)
+		_, height := surfaceview.CellMetrics(s.h.cfg.Font)
+		rows := surfaceScrollRows(ev, height, &p.scrollRemainder)
+		if rows == 0 {
 			return true
 		}
-		if s.h.cfg.OnScroll != nil {
-			s.h.cfg.OnScroll(p.entry.binding, int(math.Copysign(max(1, math.Abs(float64(ev.DY))), float64(ev.DY))))
+		pane := p.pane()
+		popup := p.frame != nil && p.frame.Popup != nil && pane != nil && pane.Focused
+		reporting := pane != nil && (pane.MouseReporting || pane.AlternateScreenActive)
+		if popup {
+			reporting = p.frame.Popup.MouseReporting
+		}
+		if reporting {
+			p.mouseWithLines(ev, rows)
+			return true
+		}
+		if s.h.cfg.OnScroll != nil && ev.DY != 0 {
+			s.h.cfg.OnScroll(p.entry.binding, rows)
 		}
 		return true
 	case ui.InputPointerDown, ui.InputPointerUp, ui.InputPointerMove:
-		if pane := p.pane(); pane != nil && pane.MouseReporting && ev.Mods&ui.Shift == 0 {
+		pane := p.pane()
+		reporting := pane != nil && pane.MouseReporting
+		if p.frame != nil && p.frame.Popup != nil && pane != nil && pane.Focused {
+			reporting = p.frame.Popup.MouseReporting
+		}
+		if reporting && (ev.Mods&ui.Shift == 0 || p.mouseButton >= 0) {
 			p.mouse(ev)
 			return true
 		}
 	}
 	return false
+}
+func (p *surfaceInstance) flushTextKey() {
+	pending := p.pendingTextKey
+	p.pendingTextKey = nil
+	if pending == nil || p.view.Composing() || pending.selection != p.frameSelection || pending.connection != p.frameConnection {
+		return
+	}
+	code, char, fn, ok := surfaceKey(pending.event.Key)
+	if ok {
+		event, err := endpoint.KeyEvent(code, char, fn, surfaceModifiers(pending.event.Mods), pending.event.Repeat)
+		if err == nil {
+			p.enqueue(event)
+		}
+	}
 }
 func (p *surfaceInstance) pane() *endpoint.SurfacePane {
 	if p.frame != nil {
@@ -381,6 +460,9 @@ func (p *surfaceInstance) pane() *endpoint.SurfacePane {
 	return nil
 }
 func (p *surfaceInstance) mouse(ev ui.InputEvent) {
+	p.mouseWithLines(ev, 0)
+}
+func (p *surfaceInstance) mouseWithLines(ev ui.InputEvent, scrollRows int) {
 	w, h := surfaceview.CellMetrics(p.backend.h.cfg.Font)
 	cols, rows := 1, 1
 	if pane := p.pane(); pane != nil {
@@ -415,10 +497,16 @@ func (p *surfaceInstance) mouse(ev ui.InputEvent) {
 		if ev.DY < 0 {
 			kind = 4
 		}
+		if ev.DY == 0 {
+			kind = 7
+			if ev.DX < 0 {
+				kind = 6
+			}
+		}
 	}
 	lines := uint16(0)
 	if ev.Kind == ui.InputScroll {
-		lines = uint16(min(1000, max(1, int(math.Abs(float64(ev.DY))))))
+		lines = uint16(min(1000, max(1, int(math.Abs(float64(scrollRows))))))
 	}
 	event, err := endpoint.MouseEvent(kind, button, col, row, surfaceModifiers(ev.Mods), lines)
 	if err == nil {

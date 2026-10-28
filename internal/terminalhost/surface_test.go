@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"github.com/Maidang1/herdr-ui/internal/endpoint"
 	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/Maidang1/herdr-ui/internal/localipc"
+	"github.com/Maidang1/herdr-ui/internal/surfaceview"
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
 )
@@ -674,7 +676,212 @@ func TestNativeSurfacePopupInputRequiresCurrentSnapshotFocus(t *testing.T) {
 		if !bytes.Equal(got, expected) {
 			t.Fatalf("unfocused pane input routed to popup: %x", got)
 		}
-	case <-time.After(time.Second):
-		t.Fatal("unfocused pane semantic input missing")
+	case <-time.After(100 * time.Millisecond):
+		// The dispatcher may reject all pane input while a popup is active.
+	}
+}
+
+func renderedSurfaceInputHost(t *testing.T) (*fakeSurfaceEndpoint, *Host, *surfaceInstance, *ui.Tester, chan func()) {
+	t.Helper()
+	f := newFakeSurfaceEndpoint(t)
+	h, b, posts, _ := surfaceHost(t, f)
+	f.next(t, 18)
+	f.fixture(t, hostSurfaceGolden)
+	surfaceWait(t, posts, func() bool { return h.surface.snapshot().Surface != nil })
+	tt := ui.NewTester(func(c *ui.Context) { h.View(c, b).Fill().AutoFocus() }, 180, 70)
+	h.mu.Lock()
+	p := h.lookup(b).owned.(*surfaceInstance)
+	h.mu.Unlock()
+	if p.frame == nil {
+		t.Fatal("surface input has no rendered source frame")
+	}
+	return f, h, p, tt, posts
+}
+func paneTextPayload(text string) []byte {
+	b := hostString([]byte{13}, "pane")
+	b = append(b, 1, 1)
+	return hostString(b, text)
+}
+func TestNativeWindowsAltGrCommitsTextWithoutControlChord(t *testing.T) {
+	f, _, p, _, _ := renderedSurfaceInputHost(t)
+	p.windowsTextKeys = true
+	p.input(ui.InputEvent{Kind: ui.InputKeyDown, Key: ui.KeyQ, Mods: ui.Ctrl | ui.Alt})
+	p.input(ui.InputEvent{Kind: ui.InputText, Text: "@"})
+	p.input(ui.InputEvent{Kind: ui.InputKeyUp, Key: ui.KeyQ, Mods: ui.Ctrl | ui.Alt})
+	p.eventText("after", false)
+	for _, text := range []string{"@", "after"} {
+		if got := f.next(t, 13); !bytes.Equal(got, paneTextPayload(text)) {
+			t.Fatalf("AltGr emitted chord or duplicate: got %x want text %q", got, text)
+		}
+	}
+}
+func TestNativeWindowsCtrlAltChordWithoutTextSendsOnRelease(t *testing.T) {
+	f, _, p, _, _ := renderedSurfaceInputHost(t)
+	p.windowsTextKeys = true
+	p.input(ui.InputEvent{Kind: ui.InputKeyDown, Key: ui.KeyQ, Mods: ui.Ctrl | ui.Alt})
+	timer := time.NewTimer(20 * time.Millisecond)
+	select {
+	case got := <-f.messages:
+		timer.Stop()
+		t.Fatalf("ambiguous CtrlAlt key sent before text resolution: %x", got)
+	case <-timer.C:
+	}
+	p.input(ui.InputEvent{Kind: ui.InputKeyUp, Key: ui.KeyQ, Mods: ui.Ctrl | ui.Alt})
+	// Rust Key{Char('q'),modifiers:6,kind:Press,repeat_count:1, all
+	// optional fields None,tracks_release:false} inside one pane-input event.
+	expected, _ := hex.DecodeString("0d0470616e6501000f710600010000000000")
+	if got := f.next(t, 13); !bytes.Equal(got, expected) {
+		t.Fatalf("CtrlAlt release got %x want %x", got, expected)
+	}
+	p.eventText("after", false)
+	if got := f.next(t, 13); !bytes.Equal(got, paneTextPayload("after")) {
+		t.Fatalf("CtrlAlt key duplicated after release: %x", got)
+	}
+}
+func TestNativeConsumedPrefixLetterDoesNotLeakCommittedText(t *testing.T) {
+	f, h, p, _, _ := renderedSurfaceInputHost(t)
+	h.cfg.OnKey = func(_ Binding, _ ui.Modifiers, key ui.Key, _ InputState) KeyResult {
+		return KeyResult{Consumed: key == ui.KeyH}
+	}
+	if !p.input(ui.InputEvent{Kind: ui.InputKeyDown, Key: ui.KeyH}) {
+		t.Fatal("prefix letter not consumed")
+	}
+	p.input(ui.InputEvent{Kind: ui.InputText, Text: "h"})
+	p.input(ui.InputEvent{Kind: ui.InputKeyUp, Key: ui.KeyH})
+	p.input(ui.InputEvent{Kind: ui.InputKeyDown, Key: ui.KeyA})
+	p.input(ui.InputEvent{Kind: ui.InputText, Text: "a"})
+	p.input(ui.InputEvent{Kind: ui.InputKeyUp, Key: ui.KeyA})
+	if got := f.next(t, 13); !bytes.Equal(got, paneTextPayload("a")) {
+		t.Fatalf("consumed prefix text leaked or following text lost: %x", got)
+	}
+	p.eventText("after", false)
+	if got := f.next(t, 13); !bytes.Equal(got, paneTextPayload("after")) {
+		t.Fatalf("consumed prefix caused extra input: %x", got)
+	}
+}
+func TestNativePaneInputQueuedBeforePopupAppearsIsDropped(t *testing.T) {
+	f, h, p, tt, posts := renderedSurfaceInputHost(t)
+	f.fixture(t, hostPopupGolden)
+	surfaceWait(t, posts, func() bool { s := h.surface.snapshot(); return s.Surface != nil && s.Surface.Popup != nil })
+	// The latest server state has a popup, but the last rendered frame did
+	// not. Its input must not slip underneath the new popup into the pane.
+	p.eventText("stale-pane", false)
+	timer := time.NewTimer(100 * time.Millisecond)
+	select {
+	case got := <-f.messages:
+		timer.Stop()
+		t.Fatalf("old pane accepted input beneath new popup: %x", got)
+	case <-timer.C:
+	}
+	tt.Frame()
+	p.eventText("current-popup", false)
+	expected := hostString([]byte{14}, "popup")
+	expected = append(expected, 1, 1)
+	expected = hostString(expected, "current-popup")
+	if got := f.next(t, 14); !bytes.Equal(got, expected) {
+		t.Fatalf("current popup input missing: %x", got)
+	}
+}
+
+func TestNativeSurfaceShiftTabEncodesBackTab(t *testing.T) {
+	f, _, p, _, _ := renderedSurfaceInputHost(t)
+	p.input(ui.InputEvent{Kind: ui.InputKeyDown, Key: ui.KeyTab, Mods: ui.Shift})
+	// ClientPaneInputEvent::Key, ClientKeyCode::BackTab=11, Shift=1,
+	// Press=0, repeat_count=1, with no generated/physical/Windows fields.
+	expected, _ := hex.DecodeString("0d0470616e6501000b0100010000000000")
+	if got := f.next(t, 13); !bytes.Equal(got, expected) {
+		t.Fatalf("ShiftTab got %x want BackTab %x", got, expected)
+	}
+}
+func TestNativeSurfacePopupMouseReportingOverridesUnderlyingPane(t *testing.T) {
+	f, h, p, tt, posts := renderedSurfaceInputHost(t)
+	popup, _ := hex.DecodeString(hostPopupGolden)
+	popup[83] = 0
+	popup[152] = 1
+	decoded, err := endpoint.DecodeSurfaceFrame(popup)
+	if err != nil || decoded.Panes[0].MouseReporting || !decoded.Popup.MouseReporting {
+		t.Fatalf("popup reporting fixture: %v", err)
+	}
+	if err = f.write(popup); err != nil {
+		t.Fatal(err)
+	}
+	surfaceWait(t, posts, func() bool { s := h.surface.snapshot(); return s.Surface != nil && s.Surface.Popup != nil })
+	tt.Frame()
+	fallback := 0
+	h.cfg.OnScroll = func(Binding, int) { fallback++ }
+	_, height := surfaceview.CellMetrics(h.cfg.Font)
+	events := []struct {
+		input ui.InputEvent
+		wire  []byte
+	}{
+		{ui.InputEvent{Kind: ui.InputPointerDown, Button: 0, X: 5, Y: 3}, []byte{2, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{ui.InputEvent{Kind: ui.InputPointerMove, X: 5, Y: 3, Mods: ui.Shift}, []byte{2, 2, 0, 0, 0, 0, 0, 1, 0}},
+		{ui.InputEvent{Kind: ui.InputPointerUp, Button: 0, X: 5, Y: 3}, []byte{2, 1, 0, 0, 0, 0, 0, 0, 0}},
+		{ui.InputEvent{Kind: ui.InputScroll, DY: height * 2, Precise: true}, []byte{2, 5, 0, 0, 0, 0, 0, 2}},
+	}
+	for _, tc := range events {
+		if !p.input(tc.input) {
+			t.Fatalf("popup did not consume mouse kind %v", tc.input.Kind)
+		}
+		expected := hostString([]byte{14}, "popup")
+		expected = append(expected, 1)
+		expected = append(expected, tc.wire...)
+		if got := f.next(t, 14); !bytes.Equal(got, expected) {
+			t.Fatalf("popup mouse kind %v: got %x want %x", tc.input.Kind, got, expected)
+		}
+	}
+	if fallback != 0 {
+		t.Fatal("popup wheel fell through to underlying pane scrollback")
+	}
+}
+func TestNativeSurfaceScrollNormalization(t *testing.T) {
+	for _, tc := range []struct {
+		name, platform string
+		event          ui.InputEvent
+		height         float32
+		want           int
+	}{
+		{"windows-default", "windows", ui.InputEvent{DY: 99}, 20, 3},
+		{"windows-user-setting", "windows", ui.InputEvent{DY: 165}, 20, 5},
+		{"windows-negative", "windows", ui.InputEvent{DY: -99}, 20, -3},
+		{"unix-notch", "darwin", ui.InputEvent{DY: 40}, 20, 3},
+		{"unix-negative", "linux", ui.InputEvent{DY: -40}, 20, -3},
+		{"horizontal", "linux", ui.InputEvent{DX: 40}, 20, 3},
+		{"precise-cells", "windows", ui.InputEvent{DY: 40, Precise: true}, 20, 2},
+		{"cap-positive", "windows", ui.InputEvent{DY: 3300000}, 20, 1000},
+		{"cap-negative", "windows", ui.InputEvent{DY: -3300000}, 20, -1000},
+		{"zero", "windows", ui.InputEvent{}, 20, 0},
+		{"nan", "windows", ui.InputEvent{DY: float32(math.NaN())}, 20, 0},
+		{"infinite", "windows", ui.InputEvent{DY: float32(math.Inf(1))}, 20, 0},
+		{"invalid-height", "windows", ui.InputEvent{DY: 99}, 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var remainder float32
+			if got := surfaceScrollRowsFor(tc.platform, tc.event, tc.height, &remainder); got != tc.want {
+				t.Fatalf("rows got %d want %d, remainder %g", got, tc.want, remainder)
+			}
+		})
+	}
+}
+func TestNativeSurfacePreciseScrollAccumulatesWithoutAmplification(t *testing.T) {
+	var remainder float32
+	for i, want := range []int{0, 0, 0, 1} {
+		if got := surfaceScrollRowsFor("windows", ui.InputEvent{DY: 5, Precise: true}, 20, &remainder); got != want {
+			t.Fatalf("sub-row event %d: got %d want %d", i, got, want)
+		}
+	}
+	if remainder != 0 {
+		t.Fatalf("whole row left remainder %g", remainder)
+	}
+	for i, tc := range []struct {
+		dy   float32
+		want int
+	}{{15, 0}, {-5, 0}, {-10, 0}, {-20, -1}} {
+		if got := surfaceScrollRowsFor("darwin", ui.InputEvent{DY: tc.dy, Precise: true}, 20, &remainder); got != tc.want {
+			t.Fatalf("sign reversal %d: got %d want %d", i, got, tc.want)
+		}
+	}
+	if remainder != 0 {
+		t.Fatalf("opposite motion left remainder %g", remainder)
 	}
 }

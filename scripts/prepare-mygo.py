@@ -128,13 +128,13 @@ def patch_option_as_alt(staged):
     files = []
     for name, before, after in edits:
         path = staged / name
-        path.write_text(replace_once(path.read_text(), before, after, path))
+        path.write_text(replace_once(path.read_text(encoding="utf-8"), before, after, path), encoding="utf-8")
         files.append(path)
     return files
 
 
 def prepare_locked():
-    match = re.search(r"^\s*github\.com/egoist/mygo\s+(v[^\s]+)\s*$", (ROOT / "go.mod").read_text(), re.M)
+    match = re.search(r"^\s*github\.com/egoist/mygo\s+(v[^\s]+)\s*$", (ROOT / "go.mod").read_text(encoding="utf-8"), re.M)
     if not match:
         raise RuntimeError("go.mod must pin exactly one mygo version")
     version = match.group(1)
@@ -144,9 +144,9 @@ def prepare_locked():
     stamp = {"version": version, "patch_sha256": hashlib.sha256(Path(__file__).read_bytes() + theme_patch.read_bytes()).hexdigest()}
     stamp_path = dest / ".herdr-ui-patch.json"
     work = build / "go.work"
-    go_version = re.search(r"^go\s+(\S+)", (ROOT / "go.mod").read_text(), re.M).group(1)
+    go_version = re.search(r"^go\s+(\S+)", (ROOT / "go.mod").read_text(encoding="utf-8"), re.M).group(1)
     workspace = f"go {go_version}\n\nuse (\n\t..\n\t./mygo\n)\n"
-    if stamp_path.exists() and json.loads(stamp_path.read_text()) == stamp and work.exists() and work.read_text() == workspace:
+    if stamp_path.exists() and json.loads(stamp_path.read_text(encoding="utf-8")) == stamp and work.exists() and work.read_text(encoding="utf-8") == workspace:
         return
     env = dict(os.environ, GOWORK="off")
     metadata = json.loads(subprocess.check_output(["go", "mod", "download", "-json", f"{MODULE}@{version}"], cwd=ROOT, env=env))
@@ -163,13 +163,13 @@ def prepare_locked():
                 path = Path(directory) / file
                 path.chmod(path.stat().st_mode | 0o200)
         terminal = staged / "plugins/terminal/terminal.go"
-        source = terminal.read_text()
+        source = terminal.read_text(encoding="utf-8")
         source = replace_once(source, "\tcode     atomic.Int64", "\tcode     atomic.Int64\n\tcomposing atomic.Bool\n\tdragSelects atomic.Bool\n\tfollowThemeColors atomic.Bool", terminal)
         source = replace_once(source, "// gridSize is the size of the screen in cells and of a cell in pixels.", "// Composing reports whether the view has active input-method preedit text.\n// It is safe to call concurrently with terminal input and rendering.\nfunc (t *Terminal) Composing() bool { return t.composing.Load() }\n\n" + DRAG_SELECTS_METHOD + "\n// gridSize is the size of the screen in cells and of a cell in pixels.", terminal)
         source = replace_once(source, "// SetMinimumContrast changes the least contrast of text with its", SETTERS + "// SetMinimumContrast changes the least contrast of text with its", terminal)
-        terminal.write_text(source)
+        terminal.write_text(source, encoding="utf-8")
         view = staged / "plugins/terminal/view.go"
-        source = view.read_text()
+        source = view.read_text(encoding="utf-8")
         source = replace_once(source, "case ui.InputCompose:\n\t\tv.preedit,", "case ui.InputCompose:\n\t\tv.t.composing.Store(ev.Text != \"\")\n\t\tv.preedit,", view)
         source = replace_once(source, "func (v *view) typed(text string) {\n\tv.preedit = \"\"", "func (v *view) typed(text string) {\n\tv.t.composing.Store(false)\n\tv.preedit = \"\"", view)
         source = replace_once(source, "\t\t\tv.preedit, v.pending = \"\", nil", "\t\t\tt.composing.Store(false)\n\t\t\tv.preedit, v.pending = \"\", nil", view)
@@ -179,23 +179,23 @@ def prepare_locked():
         source = replace_once(source, "// pointerEvent reports the pointer to the program that takes the mouse, or\n", POINTER_INPUT + "\n// pointerEvent reports the pointer to the program that takes the mouse, or\n", view)
         source = replace_once(source, "\te.TextCaret(v.caret())\n", "\te.TextCaret(v.caret())\n\te.OptionAsAlt(t.opts.OptionAsAlt)\n", view)
         source = replace_once(source, "\ttheme   *Theme\n", "\tcanvasBackground vt.Color\n\ttheme   *Theme\n", view)
-        view.write_text(source)
+        view.write_text(source, encoding="utf-8")
         paint = staged / "plugins/terminal/paint.go"
-        source = paint.read_text()
+        source = paint.read_text(encoding="utf-8")
         source = replace_once(source, "\tcolors := rs.Colors()\n", "\tcolors := rs.Colors()\n\tif t.followThemeColors.Load() {\n\t\tcolors.Foreground = rgb(v.theme.Foreground)\n\t\tcolors.Background = rgb(v.theme.Background)\n\t}\n", paint)
         source = replace_once(source, "\tfull := rs.Dirty()", "\toldCanvas := v.canvasBackground\n\tif t.followThemeColors.Load() && rs.Dirty() != vt.Clean {\n\t\tif canvas := attachCanvasBackground(rs); canvas.Kind != 0 {\n\t\t\tv.canvasBackground = canvas\n\t\t}\n\t}\n\tfull := oldCanvas != v.canvasBackground || rs.Dirty()", paint)
         source = replace_once(source, "\tr.bg, r.hasBg = col(s.BG, v.colors.Background)\n", "\tr.bg, r.hasBg = col(s.BG, v.colors.Background)\n\tif v.t.followThemeColors.Load() && s.BG.Kind == 2 && s.BG == v.canvasBackground {\n\t\tr.bg, r.hasBg = color(v.colors.Background), false\n\t}\n", paint)
         source = replace_once(source, "\t\t\tst.bg, st.hasBg = color(bg), true\n", "\t\t\tst.bg, st.hasBg = color(bg), true\n\t\t\tif v.t.followThemeColors.Load() && !c.Palette && v.canvasBackground.Kind == 2 && bg == v.canvasBackground.RGB {\n\t\t\t\tst.bg, st.hasBg = color(v.colors.Background), false\n\t\t\t}\n", paint)
-        paint.write_text(source)
+        paint.write_text(source, encoding="utf-8")
         theme_source = staged / "plugins/terminal/herdr_theme_colors.go"
         theme_source.write_bytes(theme_patch.read_bytes())
         patched = [terminal, view, paint, theme_source] + patch_option_as_alt(staged)
         subprocess.run(["gofmt", "-w", *map(str, patched)], check=True, env=env)
-        (staged / ".herdr-ui-patch.json").write_text(json.dumps(stamp, sort_keys=True) + "\n")
+        (staged / ".herdr-ui-patch.json").write_text(json.dumps(stamp, sort_keys=True) + "\n", encoding="utf-8")
         if dest.exists():
             shutil.rmtree(dest)
         staged.rename(dest)
-    work.write_text(workspace)
+    work.write_text(workspace, encoding="utf-8")
 
 
 def prepare():

@@ -14,7 +14,7 @@ var DirectKeys = directKeysForPlatform(runtime.GOOS)
 
 func directKeysForPlatform(platform string) map[string]string {
 	if platform != "darwin" {
-		return map[string]string{
+		keys := map[string]string{
 			"new_tab": "Ctrl+Shift+T", "close_pane": "Ctrl+Shift+W",
 			"split_vertical": "Ctrl+Shift+D", "split_horizontal": "Ctrl+Alt+D",
 			"previous_tab": "Ctrl+PageUp", "next_tab": "Ctrl+PageDown",
@@ -26,6 +26,19 @@ func directKeysForPlatform(platform string) map[string]string {
 			"find": "Ctrl+Shift+F", "find_next": "Ctrl+Shift+G", "find_previous": "Ctrl+Alt+G",
 			"clear_pane": "Ctrl+Shift+K", "zen": "Ctrl+Shift+Z", "settings": "Ctrl+Shift+,", "goto": "Ctrl+Shift+P",
 		}
+		if platform == "windows" {
+			// Windows reports AltGr as Ctrl+Alt. Keep every global accelerator
+			// away from that modifier pair so layout text reaches the widget.
+			keys["split_horizontal"] = "Ctrl+Shift+E"
+			keys["cycle_pane_previous"] = "Ctrl+Shift+PageUp"
+			keys["cycle_pane_next"] = "Ctrl+Shift+PageDown"
+			keys["focus_pane_left"] = "Ctrl+Shift+Left"
+			keys["focus_pane_right"] = "Ctrl+Shift+Right"
+			keys["focus_pane_up"] = "Ctrl+Shift+Up"
+			keys["focus_pane_down"] = "Ctrl+Shift+Down"
+			keys["find_previous"] = "Ctrl+Shift+H"
+		}
+		return keys
 	}
 	return map[string]string{
 		"new_tab": "CmdOrCtrl+T", "close_pane": "CmdOrCtrl+W",
@@ -50,6 +63,8 @@ func tabNumberAccelerator(platform string, n int) string {
 	modifier := "Ctrl+Alt+"
 	if platform == "darwin" {
 		modifier = "Cmd+"
+	} else if platform == "windows" {
+		modifier = "Ctrl+Shift+"
 	}
 	return modifier + strconv.Itoa(n)
 }
@@ -118,6 +133,9 @@ func acceleratorLabel(accelerator, platform string) string {
 func shortcutProfileDescription() string {
 	if runtime.GOOS == "darwin" {
 		return "⌘ keys are fixed, as on any Mac terminal. Prefix chords come from Herdr’s own configuration."
+	}
+	if runtime.GOOS == "windows" {
+		return "App commands use Ctrl+Shift, tabs use Ctrl+PageUp/PageDown, and pane focus uses Ctrl+Shift+arrows. Ctrl+Alt remains available for AltGr text. Terminal control keys and Herdr’s configured prefix chords remain available."
 	}
 	return "App commands use Ctrl+Shift, tabs use Ctrl+PageUp/PageDown, and pane focus uses Ctrl+Alt+arrows. Terminal control keys and Herdr’s configured prefix chords remain available."
 }

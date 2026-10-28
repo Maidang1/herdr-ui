@@ -42,6 +42,7 @@ type View struct {
 	services                     ui.Services
 	theme                        *terminal.Theme
 	focused, selecting, selected bool
+	reportingPointer             bool
 	anchor, head                 int
 	preedit                      string
 	preeditCaret                 int
@@ -62,6 +63,7 @@ func (v *View) SetFrame(f endpoint.SurfaceFrame, paneID string) {
 	if v.frame.BootID != f.BootID || v.pane.PaneID != paneID {
 		v.selected = false
 		v.preedit = ""
+		v.reportingPointer = false
 	}
 	v.frame = f
 	v.present = false
@@ -292,8 +294,19 @@ func (v *View) input(ev ui.InputEvent) bool {
 			}
 		}
 	case ui.InputPointerDown, ui.InputPointerMove, ui.InputPointerUp:
+		if v.reportingPointer && ev.Kind != ui.InputPointerDown {
+			taken := v.forward(ev)
+			if ev.Kind == ui.InputPointerUp {
+				v.reportingPointer = false
+			}
+			return taken
+		}
 		if v.pane.MouseReporting && ev.Mods&ui.Shift == 0 && !v.selecting {
-			return v.forward(ev)
+			taken := v.forward(ev)
+			if taken && ev.Kind == ui.InputPointerDown {
+				v.reportingPointer = true
+			}
+			return taken
 		}
 		switch ev.Kind {
 		case ui.InputPointerDown:

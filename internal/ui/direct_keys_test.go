@@ -2,6 +2,7 @@ package ui
 
 import (
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -41,6 +42,10 @@ func TestDirectKeyLabelsUseMenuOrder(t *testing.T) {
 	wantLabels := map[string]string{"split_horizontal": "⇧⌘D", "new_tab": "⌘T", "focus_pane_left": "⌥⌘←", "next_tab": "⇧⌘]", "zen": "⌃⌘Z", "rename_tab": ""}
 	if runtime.GOOS != "darwin" {
 		wantLabels = map[string]string{"split_horizontal": "Ctrl+Alt+D", "new_tab": "Ctrl+Shift+T", "focus_pane_left": "Ctrl+Alt+Left", "next_tab": "Ctrl+PageDown", "zen": "Ctrl+Shift+Z", "rename_tab": ""}
+	}
+	if runtime.GOOS == "windows" {
+		wantLabels["split_horizontal"] = "Ctrl+Shift+E"
+		wantLabels["focus_pane_left"] = "Ctrl+Shift+Left"
 	}
 	for id, want := range wantLabels {
 		if got := directKeyLabel(id); got != want {
@@ -92,7 +97,12 @@ func TestDirectKeyProfilesPreserveTerminalControlKeys(t *testing.T) {
 				t.Errorf("%s label uses Mac symbols: %s", platform, key)
 			}
 		}
-		for action, want := range map[string]string{"new_tab": "Ctrl+Shift+T", "split_vertical": "Ctrl+Shift+D", "split_horizontal": "Ctrl+Alt+D", "previous_tab": "Ctrl+PageUp", "next_tab": "Ctrl+PageDown", "focus_pane_left": "Ctrl+Alt+Left"} {
+		wantKeys := map[string]string{"new_tab": "Ctrl+Shift+T", "split_vertical": "Ctrl+Shift+D", "split_horizontal": "Ctrl+Alt+D", "previous_tab": "Ctrl+PageUp", "next_tab": "Ctrl+PageDown", "focus_pane_left": "Ctrl+Alt+Left"}
+		if platform == "windows" {
+			wantKeys["split_horizontal"] = "Ctrl+Shift+E"
+			wantKeys["focus_pane_left"] = "Ctrl+Shift+Left"
+		}
+		for action, want := range wantKeys {
 			if keys[action] != want {
 				t.Errorf("%s %s=%q", platform, action, keys[action])
 			}
@@ -112,10 +122,44 @@ func TestTabNumberAcceleratorMatchesPlatform(t *testing.T) {
 			prefix := "Ctrl+Alt+"
 			if platform == "darwin" {
 				prefix = "Cmd+"
+			} else if platform == "windows" {
+				prefix = "Ctrl+Shift+"
 			}
 			if !strings.HasPrefix(got, prefix) {
 				t.Fatalf("%s tab %d: %s", platform, n, got)
 			}
 		}
+	}
+}
+
+func TestWindowsGlobalAcceleratorsLeaveAltGrTextAvailable(t *testing.T) {
+	keys := directKeysForPlatform("windows")
+	for action, want := range map[string]string{
+		"split_horizontal": "Ctrl+Shift+E", "cycle_pane_previous": "Ctrl+Shift+PageUp", "cycle_pane_next": "Ctrl+Shift+PageDown",
+		"focus_pane_left": "Ctrl+Shift+Left", "focus_pane_right": "Ctrl+Shift+Right", "focus_pane_up": "Ctrl+Shift+Up", "focus_pane_down": "Ctrl+Shift+Down",
+		"find_previous": "Ctrl+Shift+H", "zen": "Ctrl+Shift+Z",
+	} {
+		if keys[action] != want {
+			t.Errorf("%s=%s, want %s", action, keys[action], want)
+		}
+	}
+	for n := 1; n <= 9; n++ {
+		keys["tab-number-"+strconv.Itoa(n)] = tabNumberAccelerator("windows", n)
+	}
+	seen := map[string]string{}
+	for action, key := range keys {
+		parts := strings.Split(key, "+")
+		ctrl, alt := false, false
+		for _, part := range parts[:len(parts)-1] {
+			ctrl = ctrl || part == "Ctrl"
+			alt = alt || part == "Alt"
+		}
+		if ctrl && alt {
+			t.Errorf("%s intercepts AltGr with %s", action, key)
+		}
+		if previous := seen[key]; previous != "" {
+			t.Errorf("%s collides with %s at %s", action, previous, key)
+		}
+		seen[key] = action
 	}
 }

@@ -35,7 +35,9 @@ The integration test creates its own temporary config, state directories, logica
 
 ## Shortcuts and paths
 
-On Windows and Linux, app commands use Ctrl+Shift so ordinary terminal Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+D and Ctrl+T remain available. Horizontal split uses Ctrl+Alt+D, tabs use Ctrl+PageUp/PageDown, tab numbers use Ctrl+Alt+1 through Ctrl+Alt+9, and pane focus uses Ctrl+Alt+arrows. Herdr's configured prefix chords remain available. Windows shortcuts do not use the Win/Super key. macOS retains its existing Command shortcuts.
+On Windows, app commands use Ctrl+Shift so ordinary terminal Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+D and Ctrl+T remain available. Vertical split uses Ctrl+Shift+D and horizontal split uses Ctrl+Shift+E. Tabs use Ctrl+PageUp/PageDown; tab numbers use Ctrl+Shift+1 through Ctrl+Shift+9. Pane focus uses Ctrl+Shift+arrows, pane cycling uses Ctrl+Shift+PageUp/PageDown, previous search match uses Ctrl+Shift+H, and Zen mode uses Ctrl+Shift+Z. Windows global app accelerators avoid Ctrl+Alt because Windows reports AltGr text input with those modifiers. They also avoid the Win/Super key.
+
+On Linux, horizontal split uses Ctrl+Alt+D, tab numbers use Ctrl+Alt+1 through Ctrl+Alt+9, and pane focus uses Ctrl+Alt+arrows. Herdr's configured prefix chords remain available on both platforms. macOS retains its existing Command shortcuts.
 
 Configuration follows the daemon's path rules: `HERDR_CONFIG_PATH` overrides the file; otherwise `XDG_CONFIG_HOME` wins, followed on Windows by `APPDATA`, then `USERPROFILE/AppData/Roaming`, with the shared fallback rules used by the application. Session and socket overrides are resolved independently of the config file override.
 
