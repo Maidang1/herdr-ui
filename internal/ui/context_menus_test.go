@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"runtime"
 	"slices"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestWorkspaceContextMenuCopiesPathAndOpensRow(t *testing.T) {
 	}
 	tester.Frame()
 	menu := tester.Menu()
-	for _, item := range []string{"Open", "New Tab", "Rename Workspace…", "New Worktree…", "Copy Path", "Reveal in Finder", "Close Workspace…"} {
+	for _, item := range []string{"Open", "New Tab", "Rename Workspace…", "New Worktree…", "Copy Path", revealPathLabel(runtime.GOOS), "Close Workspace…"} {
 		if !slices.Contains(menu, item) {
 			t.Fatalf("workspace menu lacks %q: %v", item, menu)
 		}
@@ -125,5 +126,13 @@ func TestMenuBarCarriesEveryMenuCommandOnce(t *testing.T) {
 	}
 	if got := w.MenuTitle("rename_tab"); got != "Rename Tab…" {
 		t.Errorf("prompting command lacks its ellipsis: %q", got)
+	}
+}
+
+func TestRevealPathLabelMatchesPlatform(t *testing.T) {
+	for platform, want := range map[string]string{"darwin": "Reveal in Finder", "windows": "Reveal in File Manager", "linux": "Reveal in File Manager"} {
+		if got := revealPathLabel(platform); got != want {
+			t.Fatalf("%s: %s", platform, got)
+		}
 	}
 }

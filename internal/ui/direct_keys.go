@@ -1,25 +1,57 @@
 package ui
 
 import (
+	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/Maidang1/herdr-ui/internal/app"
 )
 
-// DirectKeys are the window commands' Mac key equivalents, as Terminal,
-// iTerm2, Ghostty and Kero give them; Herdr's prefix chords stay beneath.
-// Selecting a tab by number (⌘1–⌘9) is SelectTabNumber.
-var DirectKeys = map[string]string{
-	"new_tab": "CmdOrCtrl+T", "close_pane": "CmdOrCtrl+W",
-	"split_vertical": "CmdOrCtrl+D", "split_horizontal": "CmdOrCtrl+Shift+D",
-	"previous_tab": "CmdOrCtrl+Shift+[", "next_tab": "CmdOrCtrl+Shift+]",
-	"cycle_pane_previous": "CmdOrCtrl+[", "cycle_pane_next": "CmdOrCtrl+]",
-	"focus_pane_left": "CmdOrCtrl+Alt+Left", "focus_pane_right": "CmdOrCtrl+Alt+Right",
-	"focus_pane_up": "CmdOrCtrl+Alt+Up", "focus_pane_down": "CmdOrCtrl+Alt+Down",
-	"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0",
-	"toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J",
-	"find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G",
-	"clear_pane": "CmdOrCtrl+K", "zen": "Ctrl+Cmd+Z", "settings": "CmdOrCtrl+,", "goto": "CmdOrCtrl+P",
+// DirectKeys are native application shortcuts. Terminal control keys remain
+// available to the shell on Windows and Linux; Herdr prefix chords stay beneath.
+var DirectKeys = directKeysForPlatform(runtime.GOOS)
+
+func directKeysForPlatform(platform string) map[string]string {
+	if platform != "darwin" {
+		return map[string]string{
+			"new_tab": "Ctrl+Shift+T", "close_pane": "Ctrl+Shift+W",
+			"split_vertical": "Ctrl+Shift+D", "split_horizontal": "Ctrl+Alt+D",
+			"previous_tab": "Ctrl+PageUp", "next_tab": "Ctrl+PageDown",
+			"cycle_pane_previous": "Ctrl+Shift+[", "cycle_pane_next": "Ctrl+Shift+]",
+			"focus_pane_left": "Ctrl+Alt+Left", "focus_pane_right": "Ctrl+Alt+Right",
+			"focus_pane_up": "Ctrl+Alt+Up", "focus_pane_down": "Ctrl+Alt+Down",
+			"zoom_in": "Ctrl+Shift+=", "zoom_out": "Ctrl+Shift+-", "zoom_reset": "Ctrl+Shift+0",
+			"toggle_sidebar": "Ctrl+Shift+B", "attention": "Ctrl+Shift+J",
+			"find": "Ctrl+Shift+F", "find_next": "Ctrl+Shift+G", "find_previous": "Ctrl+Alt+G",
+			"clear_pane": "Ctrl+Shift+K", "zen": "Ctrl+Shift+Z", "settings": "Ctrl+Shift+,", "goto": "Ctrl+Shift+P",
+		}
+	}
+	return map[string]string{
+		"new_tab": "CmdOrCtrl+T", "close_pane": "CmdOrCtrl+W",
+		"split_vertical": "CmdOrCtrl+D", "split_horizontal": "CmdOrCtrl+Shift+D",
+		"previous_tab": "CmdOrCtrl+Shift+[", "next_tab": "CmdOrCtrl+Shift+]",
+		"cycle_pane_previous": "CmdOrCtrl+[", "cycle_pane_next": "CmdOrCtrl+]",
+		"focus_pane_left": "CmdOrCtrl+Alt+Left", "focus_pane_right": "CmdOrCtrl+Alt+Right",
+		"focus_pane_up": "CmdOrCtrl+Alt+Up", "focus_pane_down": "CmdOrCtrl+Alt+Down",
+		"zoom_in": "CmdOrCtrl+=", "zoom_out": "CmdOrCtrl+-", "zoom_reset": "CmdOrCtrl+0",
+		"toggle_sidebar": "CmdOrCtrl+B", "attention": "CmdOrCtrl+J",
+		"find": "CmdOrCtrl+F", "find_next": "CmdOrCtrl+G", "find_previous": "CmdOrCtrl+Shift+G",
+		"clear_pane": "CmdOrCtrl+K", "zen": "Ctrl+Cmd+Z", "settings": "CmdOrCtrl+,", "goto": "CmdOrCtrl+P",
+	}
+}
+
+// TabNumberAccelerator returns the native shortcut for tabs 1 through 9.
+func TabNumberAccelerator(n int) string { return tabNumberAccelerator(runtime.GOOS, n) }
+func tabNumberAccelerator(platform string, n int) string {
+	if n < 1 || n > 9 {
+		return ""
+	}
+	modifier := "Ctrl+Alt+"
+	if platform == "darwin" {
+		modifier = "Cmd+"
+	}
+	return modifier + strconv.Itoa(n)
 }
 
 // SelectTabNumber selects the nth tab of the workspace, from 1; 9 is the
@@ -59,12 +91,16 @@ func focusedAgent(v app.View) string {
 	return ""
 }
 
-// directKeyLabel is a command's direct key in the Mac's symbols, modifiers
-// in the order menus show them (⌃⌥⇧⌘), or "" without one.
+// directKeyLabel uses the platform's native shortcut notation.
 func directKeyLabel(id string) string {
-	accelerator := DirectKeys[id]
+	return acceleratorLabel(DirectKeys[id], runtime.GOOS)
+}
+func acceleratorLabel(accelerator, platform string) string {
 	if accelerator == "" {
 		return ""
+	}
+	if platform != "darwin" {
+		return accelerator
 	}
 	parts := strings.Split(accelerator, "+")
 	key := parts[len(parts)-1]
@@ -77,4 +113,11 @@ func directKeyLabel(id string) string {
 		}
 	}
 	return mods.String() + keyGlyphs(key)
+}
+
+func shortcutProfileDescription() string {
+	if runtime.GOOS == "darwin" {
+		return "⌘ keys are fixed, as on any Mac terminal. Prefix chords come from Herdr’s own configuration."
+	}
+	return "App commands use Ctrl+Shift, tabs use Ctrl+PageUp/PageDown, and pane focus uses Ctrl+Alt+arrows. Terminal control keys and Herdr’s configured prefix chords remain available."
 }

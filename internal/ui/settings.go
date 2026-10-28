@@ -414,7 +414,7 @@ func (g *settingsGroup) toggle(key, label, detail string, on *bool) native.Eleme
 }
 
 func (w *Window) settingsAppearance(c *native.Context, p design.Palette, s *settingsUI) {
-	w.settingsSection(c, "settings-theme", "Theme", "System follows your Mac’s light or dark appearance.", p, func(g *settingsGroup) {
+	w.settingsSection(c, "settings-theme", "Theme", "System follows your system’s light or dark appearance.", p, func(g *settingsGroup) {
 		g.block(func() {
 			native.Row(c).FillWidth().Gap(12).Children(func() {
 				for i, name := range []string{"System", "Light", "Dark"} {
@@ -620,7 +620,7 @@ func settingsPreviewCursor(c *native.Context, style string, blink bool, f termin
 func (w *Window) settingsNotifications(c *native.Context, p design.Palette, s *settingsUI) {
 	changed := false
 	w.settingsSection(c, "settings-notifications", "Agent notifications", "Starts from Herdr’s own [ui.toast] settings. The Dock badge counts agents waiting for you unless notifications are off.", p, func(g *settingsGroup) {
-		g.row("Delivery", "When an agent needs you or finishes. System posts to Notification Center while you are not watching that tab.", func() {
+		g.row("Delivery", "When an agent needs you or finishes. System uses native notifications while you are not watching that tab.", func() {
 			if native.Segmented(c.Key("settings-notifications-delivery"), &s.delivery, toastDeliveryLabels...).Shrink(0).Changed() {
 				s.snapshot.Toast.Delivery = toastDeliveries[max(0, min(len(toastDeliveries)-1, s.delivery))]
 				changed = true
@@ -658,7 +658,7 @@ func formatSeconds(v float64) string { return strconv.Itoa(int(v+.5)) + " s" }
 
 func (w *Window) settingsShortcuts(c *native.Context, p design.Palette) {
 	a := w.controller
-	w.settingsSection(c, "settings-keybindings", "Keybindings", "⌘ keys are fixed, as on any Mac terminal. Prefix chords come from Herdr’s own configuration.", p, func(g *settingsGroup) {
+	w.settingsSection(c, "settings-keybindings", "Keybindings", shortcutProfileDescription(), p, func(g *settingsGroup) {
 		source := ""
 		if a != nil {
 			source = a.machine.Bindings.Source

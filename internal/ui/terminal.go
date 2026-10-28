@@ -127,6 +127,7 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 	area := native.Box(c.Key("terminal-area")).Grow(1).FillWidth().MinHeight(0).Clip()
 	area.Children(func() {
 		bounds := area.Bounds()
+		t.host.ConfigureSurface(v.TabID, v.PaneID, bounds.W, bounds.H, w.appearance.active)
 		if bounds.W <= 0 || bounds.H <= 0 {
 			c.After(time.Millisecond)
 			return

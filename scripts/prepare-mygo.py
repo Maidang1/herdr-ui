@@ -12,7 +12,6 @@ otherwise typed the Option character after the Meta key.
 SetFollowThemeColors keeps the default foreground and background on the
 window's theme when an attach stream replays another terminal's OSC colors.
 """
-import fcntl
 import hashlib
 import json
 import os
@@ -205,8 +204,22 @@ def prepare():
     # Serialize the stamp check and publication across build/package/test
     # invocations. The lock is local to this generated workspace.
     with (build / "prepare.lock").open("a") as lock:
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        prepare_locked()
+        if os.name == "nt":
+            import msvcrt
+            if lock.tell() == 0:
+                lock.write(" ")
+                lock.flush()
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                prepare_locked()
+            finally:
+                lock.seek(0)
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            prepare_locked()
 
 
 if __name__ == "__main__":

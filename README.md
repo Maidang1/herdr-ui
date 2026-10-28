@@ -1,6 +1,6 @@
 # Herdr UI
 
-Herdr 的原生桌面客户端，第一版面向本机 macOS，使用 **Go + mygo 原生 UI与内置终端插件**。展示已有工作区、工作树、代理状态与终端，支持标签、分屏和 Herdr prefix 模式。
+Herdr 的原生桌面客户端，使用 **Go + mygo 原生 UI**。展示已有工作区、工作树、代理状态与终端，支持标签、分屏和 Herdr prefix 模式。macOS 使用内置终端插件；Windows x64 使用命名管道和原生 endpoint 单元格渲染，不依赖 `herdr terminal attach`。Windows 的构建、验证命令和当前限制见 [Windows 支持说明](docs/windows-support.md)。
 
 目前已实现 M4 原生收尾：当前标签的多窗格终端支持分屏、方向选择、zoom 与比例调整；精简的终端内容区、可调整侧栏和右侧快捷键参考面板适配最小 820×560 窗口。原生菜单提供 System / Light / Dark，外壳跟随减少透明度与增加对比度偏好。阶段证据见 [M0](docs/m0-validation.md)、[M1](docs/m1-validation.md)、[M2](docs/m2-validation.md)、[M3](docs/m3-validation.md)、[M4 验收记录](docs/m4-validation.md)。系统 IME、真实鼠标和 VoiceOver 等交互仍需实机验收。
 

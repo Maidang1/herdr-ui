@@ -10,6 +10,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/Maidang1/herdr-ui/internal/localipc"
 )
 
 type ProtocolError struct{ Reason string }
@@ -41,7 +43,7 @@ type Client struct {
 func Dial(ctx context.Context, target Target) (*Client, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	conn, err := (&net.Dialer{}).DialContext(ctx, "unix", target.Socket)
+	conn, err := localipc.DialContext(ctx, target.Socket)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +89,7 @@ func (c *Client) Call(ctx context.Context, method string, params any, out any) e
 	c.mu.Unlock()
 	if conn == nil {
 		var err error
-		conn, err = (&net.Dialer{}).DialContext(ctx, "unix", c.target.Socket)
+		conn, err = localipc.DialContext(ctx, c.target.Socket)
 		if err != nil {
 			c.Close()
 			return err
@@ -196,7 +198,7 @@ type Stream struct {
 func Subscribe(ctx context.Context, target Target, subscriptions []Subscription) (*Stream, error) {
 	handshake, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	conn, err := (&net.Dialer{}).DialContext(handshake, "unix", target.Socket)
+	conn, err := localipc.DialContext(handshake, target.Socket)
 	if err != nil {
 		return nil, err
 	}

@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,6 +28,7 @@ func main() {
 	terminalID := flag.String("terminal", "", "existing terminal ID (never a pane ID)")
 	local := flag.Bool("local-fixture", false, "run /bin/cat for local IME/copy/paste verification; does not connect to Herdr")
 	closeAfter := flag.Duration("close-after", 0, "close the test window after a duration")
+	nativeSurface := flag.Bool("native-surface", runtime.GOOS == "windows", "render Herdr endpoint cells directly (always enabled on Windows)")
 	flag.Parse()
 	// Opened from Finder or the Dock, the app has launchd's PATH, without
 	// the directory herdr is installed in.
@@ -35,14 +37,20 @@ func main() {
 	}
 	if !*local && *terminalID == "" {
 		mygo.Use(updatenative.Plugin)
-		runStateWindow(*socket, *binary, *closeAfter)
+		runStateWindow(*socket, *binary, *closeAfter, *nativeSurface)
 		return
 	}
 	var command, env []string
 	if *local {
 		command = []string{"/bin/cat"}
+		if runtime.GOOS == "windows" {
+			command = []string{"cmd.exe", "/Q"}
+		}
 		env = os.Environ()
 	} else {
+		if runtime.GOOS == "windows" {
+			log.Fatal("-terminal is the legacy Unix attach harness; open the normal native-surface window on Windows")
+		}
 		home, err := os.UserHomeDir()
 		if err != nil {
 			log.Fatal(err)

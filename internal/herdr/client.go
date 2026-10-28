@@ -5,8 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"time"
+
+	"github.com/Maidang1/herdr-ui/internal/localipc"
 )
 
 const MaxLineBytes = 16 * 1024 * 1024
@@ -16,7 +17,7 @@ const MaxLineBytes = 16 * 1024 * 1024
 func Call(ctx context.Context, target Target, method string, params any, out any) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	conn, err := (&net.Dialer{}).DialContext(ctx, "unix", target.Socket)
+	conn, err := localipc.DialContext(ctx, target.Socket)
 	if err != nil {
 		return fmt.Errorf("%s: %w", method, err)
 	}

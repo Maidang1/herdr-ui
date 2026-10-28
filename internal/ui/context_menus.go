@@ -3,6 +3,7 @@ package ui
 import (
 	"github.com/Maidang1/herdr-ui/internal/app"
 	native "github.com/egoist/mygo/ui"
+	"runtime"
 )
 
 // The context menus bring Herdr's keyboard-only commands to the pointer,
@@ -39,7 +40,7 @@ func (w *Window) workspaceMenu(m *native.Menu, row app.WorkspaceRow) {
 		if m.Item("Copy Path").Disabled(w.hooks.WriteClipboard == nil).Chosen() {
 			w.shortcutError(w.hooks.WriteClipboard(row.Path))
 		}
-		if m.Item("Reveal in Finder").Disabled(w.hooks.RevealPath == nil).Chosen() {
+		if m.Item(revealPathLabel(runtime.GOOS)).Disabled(w.hooks.RevealPath == nil).Chosen() {
 			w.hooks.RevealPath(row.Path)
 		}
 	}
@@ -85,4 +86,11 @@ func (w *Window) paneMenu(m *native.Menu, paneID string) {
 	w.menuAction(m, "Clear", "clear_pane", selectPane)
 	m.Separator()
 	w.menuAction(m, "Close Pane", "close_pane", selectPane)
+}
+
+func revealPathLabel(platform string) string {
+	if platform == "darwin" {
+		return "Reveal in Finder"
+	}
+	return "Reveal in File Manager"
 }

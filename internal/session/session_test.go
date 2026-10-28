@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Maidang1/herdr-ui/internal/localipc"
 	"net"
 	"os"
 	"path/filepath"
@@ -43,13 +44,13 @@ type fakeServer struct {
 }
 
 func (f *fakeServer) target(t *testing.T) herdr.Target {
-	dir, err := os.MkdirTemp("/tmp", "herdr-session-")
+	dir, err := os.MkdirTemp("", "herdr-session-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(dir) })
 	path := filepath.Join(dir, "s")
-	l, err := net.Listen("unix", path)
+	l, err := localipc.Listen(path)
 	if err != nil {
 		t.Fatal(err)
 	}
