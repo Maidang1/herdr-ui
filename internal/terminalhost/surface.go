@@ -37,16 +37,17 @@ type surfaceInput struct {
 // and geometry belong to that connection; no attach subprocess or PTY exists.
 // A single worker serializes input and selection changes without blocking UI.
 type surfaceBackend struct {
-	h       *Host
-	ctx     context.Context
-	cancel  context.CancelFunc
-	done    chan struct{}
-	wake    chan struct{}
-	inputs  chan surfaceInput
-	mu      sync.Mutex
-	client  *endpoint.Client
-	desired surfaceSelection
-	err     error
+	h        *Host
+	ctx      context.Context
+	cancel   context.CancelFunc
+	done     chan struct{}
+	wake     chan struct{}
+	inputs   chan surfaceInput
+	mu       sync.Mutex
+	client   *endpoint.Client
+	desired  surfaceSelection
+	geometry surfaceGeometryState
+	err      error
 }
 
 func newSurfaceBackend(h *Host) *surfaceBackend {
@@ -224,18 +225,6 @@ func (s *surfaceBackend) connected(c *endpoint.Client) error {
 		}
 	}
 	return s.ctx.Err()
-}
-
-// ConfigureSurface sizes the entire server canvas, including split topology.
-// The native cards still crop and display their corresponding inner panes.
-func (h *Host) ConfigureSurface(tab, pane string, width, height float32, focused bool) {
-	if h.surface == nil || width <= 32 || height <= 24 {
-		return
-	}
-	w, ch := surfaceview.CellMetrics(h.cfg.Font)
-	cols := uint16(max(1, min(1000, int((width-32)/w))))
-	rows := uint16(max(1, min(1000, int((height-24)/ch))))
-	h.surface.update(surfaceSelection{tab: tab, pane: pane, cols: cols, rows: rows, focused: focused})
 }
 
 type surfaceInstance struct {

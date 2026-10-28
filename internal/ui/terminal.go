@@ -127,7 +127,6 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 	area := native.Box(c.Key("terminal-area")).Grow(1).FillWidth().MinHeight(0).Clip()
 	area.Children(func() {
 		bounds := area.Bounds()
-		t.host.ConfigureSurface(v.TabID, v.PaneID, bounds.W, bounds.H, w.appearance.active)
 		if bounds.W <= 0 || bounds.H <= 0 {
 			c.After(time.Millisecond)
 			return
@@ -138,12 +137,14 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			return
 		}
 		geometry := v.Layout
+		surfaceSplits := v.Layout.Splits // Preserve raw ratios before gridDividers rounds them.
 		geometry.Splits = gridDividers(geometry.Splits)
 		w.updateDrag(v)
 		var previewDrag *ratioDrag
 		if w.controller != nil && w.controller.drag != nil && w.controller.drag.ready {
 			previewDrag = w.controller.drag
 			geometry.Panes, geometry.Splits = preview(previewDrag.root, geometry.Area)
+			surfaceSplits = geometry.Splits // Preview trees also retain their unrounded ratios.
 		}
 		viewport := layout.Rect{W: float64(bounds.W), H: float64(bounds.H)}
 		projection, err := layout.Project(geometry.Area, geometry.Panes, geometry.Splits, viewport)
@@ -153,6 +154,11 @@ func (w *Window) terminalContent(c *native.Context, v app.View, p design.Palette
 			return
 		}
 		multi := len(projection.Panes) > 1
+		header := float32(0)
+		if multi {
+			header = float32(cardHeaderHeight)
+		}
+		t.host.ConfigureSurfaceLayout(v.TabID, v.PaneID, bounds.W, bounds.H, w.appearance.active, projection.Panes, header, surfaceSplits...)
 		cards := make([]layout.PaneRect, len(projection.Panes))
 		copy(cards, projection.Panes)
 		latest := t.session.Latest()

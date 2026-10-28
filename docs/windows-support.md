@@ -2,7 +2,7 @@
 
 The Windows frontend keeps the existing mygo interface and renders the real Herdr daemon's native endpoint surface. It sends semantic key, Unicode text, paste, mouse and resize events to that endpoint. It does not start a terminal attach process or feed rendered screen characters back into a shell.
 
-The implementation targets Windows x64 and Herdr 0.9.5. The Windows workflow runs on `windows-2025`; a successful workflow run is the evidence for native Windows runtime support. Cross-compilation on macOS or Linux alone does not establish that the Windows UI, named pipes, IME or ConPTY work. This document does not claim a live Windows result before that workflow completes.
+The implementation targets Windows x64 and Herdr 0.9.5. The [Windows workflow](https://github.com/Maidang1/herdr-ui/actions/workflows/windows.yml) runs on `windows-2025`. Native tests, vet, executable compilation, the real-daemon integration test, installer packaging and portable ZIP creation first passed together in [run 40747889447](https://github.com/Maidang1/herdr-ui/actions/runs/40747889447). This validates the automated Windows transport and terminal path; physical desktop UI and IME checks remain listed below.
 
 ## Build and test
 

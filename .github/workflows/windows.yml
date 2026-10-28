@@ -53,6 +53,9 @@ jobs:
           New-Item -ItemType Directory -Force $portable | Out-Null
           Get-ChildItem dist/windows-amd64 | Where-Object { $_.Name -notmatch ' Setup |\.tar\.gz$|\.delta$|^update-' } | Copy-Item -Destination $portable -Recurse
           Compress-Archive -Path "$portable/*" -DestinationPath artifacts/herdr-ui-windows-amd64.zip
+          $installers = @(Get-ChildItem dist/windows-amd64/*Setup*.exe -File)
+          if ($installers.Count -eq 0) { throw 'Windows installer was not produced' }
+          $installers | Copy-Item -Destination artifacts
           $files = @(Get-ChildItem artifacts -File)
           foreach ($file in $files) {
             $hash = (Get-FileHash -Algorithm SHA256 $file.FullName).Hash.ToLowerInvariant()
@@ -64,4 +67,3 @@ jobs:
           if-no-files-found: error
           path: |
             artifacts/*
-            dist/windows-amd64/*Setup*.exe
