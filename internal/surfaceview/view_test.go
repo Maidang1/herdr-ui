@@ -101,6 +101,33 @@ func TestMouseReportingAndShiftSelection(t *testing.T) {
 	}
 }
 
+func TestReportedDragKeepsReleaseAfterShiftChanges(t *testing.T) {
+	for _, popup := range []bool{false, true} {
+		var forwarded []ui.InputEvent
+		v := New(Config{OnInput: func(e ui.InputEvent) bool { forwarded = append(forwarded, e); return true }})
+		frame := fixture()
+		frame.Panes[0].MouseReporting = !popup
+		frame.Panes[0].Focused = true
+		if popup {
+			frame.Popup = &endpoint.SurfacePopup{TerminalID: "popup", MouseReporting: true, Frame: frame.Frame}
+		}
+		v.SetFrame(frame, "p")
+		_ = ui.NewTester(func(c *ui.Context) { v.View(c).Fill() }, 120, 60)
+		// Exercise the widget's handler, including its local-selection gate,
+		// rather than calling the downstream transport handler directly.
+		for _, event := range []ui.InputEvent{
+			{Kind: ui.InputPointerDown, Button: 0, X: 1, Y: 1},
+			{Kind: ui.InputPointerMove, Button: 0, X: 20, Y: 1, Mods: ui.Shift},
+			{Kind: ui.InputPointerUp, Button: 0, X: 20, Y: 1, Mods: ui.Shift},
+		} {
+			v.input(event)
+		}
+		if len(forwarded) != 3 || forwarded[1].Kind != ui.InputPointerMove || forwarded[2].Kind != ui.InputPointerUp || v.selecting || v.reportingPointer {
+			t.Fatalf("popup=%v: reported drag lost release or became selection: %+v", popup, forwarded)
+		}
+	}
+}
+
 func TestPopupAndGraphicsCapability(t *testing.T) {
 	v := New(Config{})
 	f := fixture()
