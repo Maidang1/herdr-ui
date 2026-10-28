@@ -111,6 +111,12 @@ func TestWindowsNativeSurface(t *testing.T) {
 	connect := func() *endpoint.Client {
 		t.Helper()
 		client := endpoint.NewSurface(target.Socket)
+		t.Cleanup(func() {
+			if t.Failed() {
+				state := client.Latest()
+				t.Logf("endpoint snapshot=%+v surface projection=%+v error=%v\nvisible surface:\n%s", state.Snapshot, state.SurfaceSnapshot, state.Err, windowsSurfaceText(state.Surface))
+			}
+		})
 		t.Cleanup(func() { _ = client.Close() })
 		connectionCtx, stop := context.WithTimeout(context.Background(), 10*time.Second)
 		defer stop()
@@ -170,7 +176,28 @@ func TestWindowsNativeSurface(t *testing.T) {
 	defer reconnected.Close()
 	waitWindows(t, 10*time.Second, func() bool {
 		s := reconnected.Latest()
-		return s.Snapshot != nil && s.Snapshot.BootID == boot && strings.Contains(windowsSurfaceText(s.Surface), marker)
+		return s.Connected && s.Snapshot != nil && s.Snapshot.BootID == boot && s.Surface != nil && s.SurfaceSnapshot != nil && s.SurfaceSnapshot.FocusedTabID == pane.TabID
+	})
+	// Resizing a PowerShell/PSReadLine viewport can move old output into
+	// scrollback. Persistence is a history assertion, not a fixed-screen one.
+	var history struct {
+		Text string `json:"text"`
+	}
+	if err := herdr.Call(ctx, target, "pane.read", map[string]any{"pane_id": pane.PaneID, "source": "recent_unwrapped", "format": "text", "lines": 200}, &history); err != nil || !strings.Contains(history.Text, marker) {
+		t.Fatalf("reconnected pane lost output: %v\n%s", err, history.Text)
+	}
+	continued, err := endpoint.TextEvent("Write-Output ('RECONNECT_'+'EXECUTED')", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reconnected.SendPaneEvent(ctx, boot, pane.PaneID, continued, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := reconnected.SendPaneEvent(ctx, boot, pane.PaneID, enter, false); err != nil {
+		t.Fatal(err)
+	}
+	waitWindows(t, 20*time.Second, func() bool {
+		return strings.Contains(windowsSurfaceText(reconnected.Latest().Surface), "RECONNECT_EXECUTED")
 	})
 	// Closing a frontend connection must leave its own daemon and child pane alive.
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
