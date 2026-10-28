@@ -9,7 +9,7 @@ import (
 
 func fixture() endpoint.SurfaceFrame {
 	return endpoint.SurfaceFrame{BootID: "boot", Frame: endpoint.SurfaceGrid{Width: 6, Height: 2, Cells: []endpoint.SurfaceCell{
-		{Symbol: "border"}, {Symbol: "你", BG: 0x02010203}, {Skip: true}, {Symbol: "a"}, {Symbol: " "}, {Symbol: "border"},
+		{Symbol: "border"}, {Symbol: "你", BG: 0x02010203}, {Symbol: " ", BG: 0x02eeeeee}, {Symbol: "a"}, {Symbol: " "}, {Symbol: "border"},
 		{Symbol: "border"}, {Symbol: "b"}, {Symbol: "c"}, {Symbol: "d"}, {Symbol: " "}, {Symbol: "border"},
 	}}, Panes: []endpoint.SurfacePane{{PaneID: "p", InnerRect: endpoint.SurfaceRect{X: 1, Width: 4, Height: 2}}}}
 }
@@ -145,5 +145,60 @@ func TestPopupAndGraphicsCapability(t *testing.T) {
 	}
 	if tt.Image().Bounds().Dx() != 120 {
 		t.Fatal("render failed")
+	}
+}
+
+func TestBlankTailGraphemesCopySearchAndPointer(t *testing.T) {
+	v := New(Config{})
+	frame := endpoint.SurfaceFrame{BootID: "unicode", Frame: endpoint.SurfaceGrid{Width: 12, Height: 1, Cells: []endpoint.SurfaceCell{
+		{Symbol: "汉"}, {Symbol: " "}, {Symbol: "字"}, {Symbol: " "}, {Symbol: "_"}, {Symbol: "😀"}, {Symbol: " "}, {Symbol: "_"}, {Symbol: "👩‍💻"}, {Symbol: " "}, {Symbol: "X"}, {Symbol: " "},
+	}}, Panes: []endpoint.SurfacePane{{PaneID: "p", InnerRect: endpoint.SurfaceRect{Width: 12, Height: 1}}}}
+	v.SetFrame(frame, "p")
+	_ = ui.NewTester(func(c *ui.Context) { v.View(c).Fill() }, 240, 60)
+	v.selectAll()
+	if got := v.SelectedText(); got != "汉字_😀_👩‍💻X" {
+		t.Fatalf("wide tail cells leaked into copied text: %q", got)
+	}
+	cw, _ := CellMetrics(terminal.Font{})
+	for tail, want := range map[int]int{1: 0, 3: 2, 6: 5, 9: 8} {
+		if got := v.point((float32(tail)+.5)*cw, 1); got != want {
+			t.Errorf("tail %d maps to %d, want lead %d", tail, got, want)
+		}
+	}
+	for query, want := range map[string]span{"汉字_": {0, 5}, "😀": {5, 7}, "👩‍💻X": {8, 11}} {
+		v.Search(query)
+		if len(v.matches) != 1 || v.matches[0] != want {
+			t.Errorf("query %q mapped to %+v, want %+v", query, v.matches, want)
+		}
+	}
+	// A selection intersecting either half includes the whole grapheme once.
+	v.anchor, v.head, v.selected = 6, 7, true
+	if got := v.SelectedText(); got != "😀_" {
+		t.Fatalf("partial wide selection %q", got)
+	}
+}
+
+func TestSkipIsPaintSuppressionNotCharacterWidth(t *testing.T) {
+	theme := terminal.LightTheme()
+	v := New(Config{Theme: theme, DarkTheme: theme})
+	frame := endpoint.SurfaceFrame{BootID: "skip", Frame: endpoint.SurfaceGrid{Width: 3, Height: 1, Cells: []endpoint.SurfaceCell{
+		{Symbol: "X", BG: 0x02010203}, {Symbol: "Q", BG: 0x02ff0000, Skip: true}, {Symbol: "Y", BG: 0x02040506},
+	}}, Panes: []endpoint.SurfacePane{{PaneID: "p", InnerRect: endpoint.SurfaceRect{Width: 3, Height: 1}}}}
+	v.SetFrame(frame, "p")
+	tt := ui.NewTester(func(c *ui.Context) { v.View(c).Fill() }, 120, 60)
+	cw, ch := CellMetrics(terminal.Font{})
+	if got := tt.Image().RGBAAt(int(cw)+1, int(ch)-2); got.R != theme.Background.R || got.G != theme.Background.G || got.B != theme.Background.B {
+		t.Fatalf("skip cell painted or previous narrow cell expanded: %v", got)
+	}
+	if got := v.point(1.5*cw, 1); got != 1 {
+		t.Fatalf("skip cell treated as wide tail: %d", got)
+	}
+	v.selectAll()
+	if got := v.SelectedText(); got != "XQY" {
+		t.Fatalf("paint suppression discarded source text: %q", got)
+	}
+	v.Search("QY")
+	if len(v.matches) != 1 || v.matches[0] != (span{1, 3}) {
+		t.Fatalf("paint flag changed search text: %+v", v.matches)
 	}
 }

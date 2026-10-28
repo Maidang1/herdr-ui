@@ -114,7 +114,7 @@ func TestWindowsNativeSurface(t *testing.T) {
 		t.Cleanup(func() {
 			if t.Failed() {
 				state := client.Latest()
-				t.Logf("endpoint snapshot=%+v surface projection=%+v error=%v\nvisible surface:\n%s", state.Snapshot, state.SurfaceSnapshot, state.Err, windowsSurfaceText(state.Surface))
+				t.Logf("endpoint error=%v\nvisible surface:\n%s", state.Err, windowsSurfaceText(state.Surface))
 			}
 		})
 		t.Cleanup(func() { _ = client.Close() })
@@ -181,10 +181,12 @@ func TestWindowsNativeSurface(t *testing.T) {
 	// Resizing a PowerShell/PSReadLine viewport can move old output into
 	// scrollback. Persistence is a history assertion, not a fixed-screen one.
 	var history struct {
-		Text string `json:"text"`
+		Read struct {
+			Text string `json:"text"`
+		} `json:"read"`
 	}
-	if err := herdr.Call(ctx, target, "pane.read", map[string]any{"pane_id": pane.PaneID, "source": "recent_unwrapped", "format": "text", "lines": 200}, &history); err != nil || !strings.Contains(history.Text, marker) {
-		t.Fatalf("reconnected pane lost output: %v\n%s", err, history.Text)
+	if err := herdr.Call(ctx, target, "pane.read", map[string]any{"pane_id": pane.PaneID, "source": "recent_unwrapped", "format": "text", "lines": 200}, &history); err != nil || !strings.Contains(history.Read.Text, marker) {
+		t.Fatalf("reconnected pane lost output: %v\n%s", err, history.Read.Text)
 	}
 	continued, err := endpoint.TextEvent("Write-Output ('RECONNECT_'+'EXECUTED')", false)
 	if err != nil {

@@ -8,11 +8,11 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/Maidang1/herdr-ui/internal/endpoint"
 	"github.com/egoist/mygo/plugins/terminal"
 	"github.com/egoist/mygo/ui"
+	"github.com/rivo/uniseg"
 )
 
 type Config struct {
@@ -172,6 +172,22 @@ func (v *View) cell(x, y int) endpoint.SurfaceCell {
 	}
 	return g.Cells[i]
 }
+
+// cellColumns derives continuation cells from grapheme display width. Skip is
+// Herdr's render-diff flag and carries no character-width information.
+func (v *View) cellColumns(x, y int) int {
+	return min(max(1, uniseg.StringWidth(v.cell(x, y).Symbol)), int(v.pane.InnerRect.Width)-x)
+}
+func (v *View) leadingColumn(col, row int) int {
+	for x := 0; x < int(v.pane.InnerRect.Width); {
+		columns := v.cellColumns(x, row)
+		if col < x+columns {
+			return x
+		}
+		x += columns
+	}
+	return col
+}
 func (v *View) caret() ui.Rect {
 	cw, ch := CellMetrics(v.cfg.Font)
 	r := v.pane.InnerRect
@@ -248,9 +264,7 @@ func (v *View) point(x, y float32) int {
 	}
 	col := max(0, min(w-1, int(math.Floor(float64(x/cw)))))
 	row := max(0, min(h-1, int(math.Floor(float64(y/ch)))))
-	if v.cell(col, row).Skip && col > 0 {
-		col--
-	}
+	col = v.leadingColumn(col, row)
 	return row*w + col
 }
 func (v *View) input(ev ui.InputEvent) bool {
@@ -354,19 +368,19 @@ func (v *View) SelectedText() string {
 	var out strings.Builder
 	for row := a / w; row <= b/w; row++ {
 		var line strings.Builder
-		for x := 0; x < w; x++ {
+		for x := 0; x < w; {
+			columns := v.cellColumns(x, row)
 			i := row*w + x
-			if i < a || i > b {
+			cell := v.cell(x, row)
+			x += columns
+			if i+columns-1 < a || i > b {
 				continue
 			}
-			cell := v.cell(x, row)
-			if !cell.Skip {
-				s := cell.Symbol
-				if s == "" {
-					s = " "
-				}
-				line.WriteString(s)
+			symbol := cell.Symbol
+			if symbol == "" {
+				symbol = " "
 			}
+			line.WriteString(symbol)
 		}
 		out.WriteString(strings.TrimRight(line.String(), " "))
 		if row < b/w {
@@ -411,20 +425,20 @@ func (v *View) research() {
 	if v.query != "" {
 		for y := 0; y < h; y++ {
 			var text strings.Builder
-			var positions []int
-			for x := 0; x < w; x++ {
+			var positions, ends []int
+			for x := 0; x < w; {
 				cell := v.cell(x, y)
-				if cell.Skip {
-					continue
+				columns := v.cellColumns(x, y)
+				symbol := cell.Symbol
+				if symbol == "" {
+					symbol = " "
 				}
-				s := cell.Symbol
-				if s == "" {
-					s = " "
-				}
-				text.WriteString(s)
-				for range len(s) {
+				text.WriteString(symbol)
+				for range len(symbol) {
 					positions = append(positions, y*w+x)
+					ends = append(ends, y*w+x+columns)
 				}
+				x += columns
 			}
 			s := text.String()
 			for off := 0; off < len(s); {
@@ -434,7 +448,7 @@ func (v *View) research() {
 				}
 				a := off + i
 				b := a + len(v.query) - 1
-				v.matches = append(v.matches, span{positions[a], positions[b] + 1})
+				v.matches = append(v.matches, span{positions[a], ends[b]})
 				off = b + 1
 			}
 		}
@@ -492,7 +506,10 @@ func (v *View) paint(p *ui.Painter, r ui.Rect) {
 	h = min(h, int(math.Ceil(float64(r.H/ch))))
 	w = min(w, int(math.Ceil(float64(r.W/cw))))
 	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
+		for col := 0; col < w; {
+			x := col
+			columns := v.cellColumns(x, y)
+			col += columns
 			cell := v.cell(x, y)
 			fg, bg := v.colors(cell)
 			i := y*int(v.pane.InnerRect.Width) + x
@@ -504,7 +521,7 @@ func (v *View) paint(p *ui.Painter, r ui.Rect) {
 					bg = ui.RGB(255, 145, 65)
 				}
 			}
-			if v.selected && i >= min(v.anchor, v.head) && i <= max(v.anchor, v.head) {
+			if v.selected && i+columns-1 >= min(v.anchor, v.head) && i <= max(v.anchor, v.head) {
 				bg = v.theme.Selection
 				if bg.A == 0 {
 					bg = ui.RGB(60, 100, 160)
@@ -517,9 +534,7 @@ func (v *View) paint(p *ui.Painter, r ui.Rect) {
 			if cell.Skip {
 				continue
 			}
-			if x+1 < w && v.cell(x+1, y).Skip {
-				box.W = 2 * cw
-			}
+			box.W = float32(columns) * cw
 			p.Fill(box, bg, 0)
 			blink := cell.Modifier&(16|32) != 0
 			if blink {
@@ -535,10 +550,7 @@ func (v *View) paint(p *ui.Painter, r ui.Rect) {
 			if cell.Modifier&128 != 0 {
 				continue
 			}
-			width := cw
-			if x+1 < w && v.cell(x+1, y).Skip {
-				width = 2 * cw
-			}
+			width := float32(columns) * cw
 			box.W = width
 			p.Clip(box, 0, func() { p.Glyphs(v.shape(cell.Symbol, cell.Modifier), box.X, box.Y+baseline, fg) })
 			if cell.Modifier&8 != 0 {
@@ -610,8 +622,8 @@ func (v *View) paint(p *ui.Painter, r ui.Rect) {
 		cr.X += r.X - v.offsetX
 		cr.Y += r.Y - v.offsetY
 		g := v.shape(v.preedit, 0)
-		p.Fill(ui.Rect{X: cr.X, Y: cr.Y, W: cw * float32(utf8.RuneCountInString(v.preedit)), H: ch}, v.theme.Background, 0)
+		p.Fill(ui.Rect{X: cr.X, Y: cr.Y, W: cw * float32(uniseg.StringWidth(v.preedit)), H: ch}, v.theme.Background, 0)
 		p.Glyphs(g, cr.X, cr.Y+baseline, v.theme.Foreground)
-		p.Line(cr.X, cr.Y+ch-1, cr.X+cw*float32(utf8.RuneCountInString(v.preedit)), cr.Y+ch-1, 1, v.theme.Foreground)
+		p.Line(cr.X, cr.Y+ch-1, cr.X+cw*float32(uniseg.StringWidth(v.preedit)), cr.Y+ch-1, 1, v.theme.Foreground)
 	}
 }

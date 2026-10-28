@@ -6,6 +6,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/egoist/mygo v0.6.3-0.20261021150203-80afe0af6f9d
 	github.com/pelletier/go-toml/v2 v2.2.4
+	github.com/rivo/uniseg v0.4.7
 	golang.org/x/sys v0.48.0
 )
 
