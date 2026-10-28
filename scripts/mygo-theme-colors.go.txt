@@ -1,0 +1,53 @@
+package terminal
+
+import "github.com/egoist/mygo/plugins/terminal/internal/vt"
+
+// attachCanvasBackground recognizes a neutral canvas flattened into RGB
+// cells by a remote frame encoder. The stream no longer distinguishes that
+// canvas from explicit backgrounds. Require the same neutral RGB on blank
+// cells covering over half the viewport; never choose a colored highlight
+// or a small neutral panel. Keep other RGB and indexed colors untouched.
+func attachCanvasBackground(rs *vt.RenderState) vt.Color {
+	cols, rows := rs.Size()
+	counts := make(map[vt.RGB]int)
+	styles := make(map[uint16]vt.Style)
+	rs.Rows()
+	for rs.NextRow() {
+		for x, cell := range rs.RowCells() {
+			if cell.Grapheme || (cell.Codepoint != 0 && cell.Codepoint != ' ') {
+				continue
+			}
+			var style vt.Style
+			if cell.Style != 0 {
+				var ok bool
+				style, ok = styles[cell.Style]
+				if !ok {
+					style = rs.CellStyle(x)
+					styles[cell.Style] = style
+				}
+			}
+			if style.Inverse {
+				continue
+			}
+			bg := style.BG
+			if cell.HasBackground {
+				if cell.Palette {
+					continue
+				}
+				bg = vt.Color{Kind: 2, RGB: cell.Background}
+			}
+			if bg.Kind != 2 {
+				continue
+			}
+			c := bg.RGB
+			if int(max(c.R, c.G, c.B))-int(min(c.R, c.G, c.B)) > 24 {
+				continue
+			}
+			counts[c]++
+			if counts[c] > cols*rows/2 {
+				return bg
+			}
+		}
+	}
+	return vt.Color{}
+}

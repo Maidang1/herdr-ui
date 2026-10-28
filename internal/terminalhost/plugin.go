@@ -12,9 +12,17 @@ import (
 
 type pluginInstance struct{ terminal *terminal.Terminal }
 
-func (p *pluginInstance) View(c *ui.Context) ui.Element { return terminal.View(c, p.terminal) }
-func (p *pluginInstance) Send(b []byte)                 { p.terminal.Send(b) }
-func (p *pluginInstance) SetFont(f terminal.Font)       { p.terminal.SetFont(f) }
+func (p *pluginInstance) View(c *ui.Context) ui.Element {
+	// Attach may replay OSC colors or flatten the canvas into RGB cells.
+	// Follow this window's theme while retaining local highlights. The
+	// assertion supports pristine mygo.
+	if t, ok := any(p.terminal).(interface{ SetFollowThemeColors(bool) }); ok {
+		t.SetFollowThemeColors(true)
+	}
+	return terminal.View(c, p.terminal)
+}
+func (p *pluginInstance) Send(b []byte)           { p.terminal.Send(b) }
+func (p *pluginInstance) SetFont(f terminal.Font) { p.terminal.SetFont(f) }
 func (p *pluginInstance) SetCopyOnSelect(c terminal.CopyOnSelect) {
 	p.terminal.SetCopyOnSelect(c)
 }

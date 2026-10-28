@@ -121,7 +121,10 @@ func TestSidebarUpdatePromptReplacesTheConnectionStatus(t *testing.T) {
 func TestSidebarMenuOpensWindowCommands(t *testing.T) {
 	w := workspaceSidebarFixture(t)
 	tester := native.NewTester(func(c *native.Context) { w.sidebar(c, w.currentView(), design.Colors(false)) }, 248, 800)
-	for _, text := range []string{"Settings", "Reload configuration", "Detach window"} {
+	if !tester.HasText("Settings") {
+		t.Fatal("footer settings shortcut is missing")
+	}
+	for _, text := range []string{"Reload configuration", "Detach window"} {
 		if tester.HasText(text) {
 			t.Fatal("menu content visible while closed", text)
 		}

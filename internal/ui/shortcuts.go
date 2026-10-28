@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Maidang1/herdr-ui/internal/app"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/Maidang1/herdr-ui/internal/input"
 	"github.com/Maidang1/herdr-ui/internal/session"
 	"github.com/egoist/mygo/plugins/terminal"
@@ -55,6 +56,9 @@ type ActionHooks struct {
 	CheckForUpdates          func()
 	AutomaticUpdateChecks    func(bool)
 	AutomaticUpdateDownloads func(bool)
+	// Integration callbacks run asynchronously and complete on the UI thread.
+	Integrations      func(done func([]herdr.Integration, error))
+	IntegrationChange func(action, target string, done func([]string, error))
 }
 
 // UpdateNotice is what a background check found. Available is empty when

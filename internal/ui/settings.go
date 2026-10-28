@@ -59,8 +59,9 @@ func indexOf(values []string, value string, fallback int) int {
 // working copy of every value, with the float64 mirrors the sliders bind
 // to.
 type settingsUI struct {
-	page     int
-	snapshot SettingsSnapshot
+	integrations integrationSettings
+	page         int
+	snapshot     SettingsSnapshot
 	// sizeDefault is the size Actual Size and the settings' reset return
 	// to: what the persisted file held at launch.
 	sizeDefault float32
@@ -82,9 +83,9 @@ type settingsUI struct {
 	appliedFont terminal.Font
 }
 
-var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts", "Updates"}
+var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts", "Updates", "Integrations"}
 
-var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.MessageCircle, icons.Keyboard, icons.RotateCw}
+var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.MessageCircle, icons.Keyboard, icons.RotateCw, icons.Agent("agent")}
 
 // install seeds the working copy from the persisted values.
 func (s *settingsUI) install(snapshot SettingsSnapshot) {
@@ -258,7 +259,7 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 		native.Column(c.Key("settings-page")).FillWidth().MaxWidth(settingsColumnWidth+2*settingsPagePadding).Shrink(0).Padding(top, settingsPagePadding, 40, settingsPagePadding).Gap(24).AlignItems(native.Stretch).Children(func() {
 			native.Column(c).Gap(4).Children(func() {
 				native.Text(c, settingsPages[s.page]).FontSize(22).FontWeight(700)
-				descriptions := []string{"Make Herdr feel at home.", "Fine-tune your terminal experience.", "Choose when Herdr gets your attention.", "Keep your workflow close at hand.", "Keep Herdr UI up to date."}
+				descriptions := []string{"Make Herdr feel at home.", "Fine-tune your terminal experience.", "Choose when Herdr gets your attention.", "Keep your workflow close at hand.", "Keep Herdr UI up to date.", "Connect your coding agents to Herdr."}
 				native.Text(c, descriptions[s.page]).FontSize(13).TextColor(p.Secondary)
 			})
 			switch s.page {
@@ -270,6 +271,8 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 				w.settingsNotifications(c, p, s)
 			case 4:
 				w.settingsUpdates(c, p)
+			case 5:
+				w.settingsIntegrations(c, p)
 			default:
 				w.settingsShortcuts(c, p)
 			}

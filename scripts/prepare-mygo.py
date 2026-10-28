@@ -9,6 +9,8 @@ does not, so without it the pointer could never select. SetOptionAsAlt and
 SetCursor let settings change those options on running terminals, and an
 OptionAsAlt element property keeps Option keys from macOS input methods, which
 otherwise typed the Option character after the Meta key.
+SetFollowThemeColors keeps the default foreground and background on the
+window's theme when an attach stream replays another terminal's OSC colors.
 """
 import fcntl
 import hashlib
@@ -28,7 +30,17 @@ DRAG_SELECTS_METHOD = """// SetDragSelects has a drag select while the program t
 func (t *Terminal) SetDragSelects(on bool) { t.dragSelects.Store(on) }
 """
 
-SETTERS = """// SetOptionAsAlt changes Options.OptionAsAlt, as when the user changes a
+SETTERS = """// SetFollowThemeColors makes the view use its theme's default foreground
+// and background even when the program sets OSC 10/11 colors or an attach
+// encoder flattens a neutral canvas into RGB cells. Other cell backgrounds
+// and the ANSI palette remain the program's.
+func (t *Terminal) SetFollowThemeColors(on bool) {
+	if t.followThemeColors.Swap(on) != on {
+		t.redraw()
+	}
+}
+
+// SetOptionAsAlt changes Options.OptionAsAlt, as when the user changes a
 // setting: the next key takes it.
 func (t *Terminal) SetOptionAsAlt(on bool) {
 	t.mu.Lock()
@@ -129,7 +141,8 @@ def prepare_locked():
     version = match.group(1)
     build = ROOT / ".build"
     dest = build / "mygo"
-    stamp = {"version": version, "patch_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    theme_patch = ROOT / "scripts/mygo-theme-colors.go.txt"
+    stamp = {"version": version, "patch_sha256": hashlib.sha256(Path(__file__).read_bytes() + theme_patch.read_bytes()).hexdigest()}
     stamp_path = dest / ".herdr-ui-patch.json"
     work = build / "go.work"
     go_version = re.search(r"^go\s+(\S+)", (ROOT / "go.mod").read_text(), re.M).group(1)
@@ -152,7 +165,7 @@ def prepare_locked():
                 path.chmod(path.stat().st_mode | 0o200)
         terminal = staged / "plugins/terminal/terminal.go"
         source = terminal.read_text()
-        source = replace_once(source, "\tcode     atomic.Int64", "\tcode     atomic.Int64\n\tcomposing atomic.Bool\n\tdragSelects atomic.Bool", terminal)
+        source = replace_once(source, "\tcode     atomic.Int64", "\tcode     atomic.Int64\n\tcomposing atomic.Bool\n\tdragSelects atomic.Bool\n\tfollowThemeColors atomic.Bool", terminal)
         source = replace_once(source, "// gridSize is the size of the screen in cells and of a cell in pixels.", "// Composing reports whether the view has active input-method preedit text.\n// It is safe to call concurrently with terminal input and rendering.\nfunc (t *Terminal) Composing() bool { return t.composing.Load() }\n\n" + DRAG_SELECTS_METHOD + "\n// gridSize is the size of the screen in cells and of a cell in pixels.", terminal)
         source = replace_once(source, "// SetMinimumContrast changes the least contrast of text with its", SETTERS + "// SetMinimumContrast changes the least contrast of text with its", terminal)
         terminal.write_text(source)
@@ -166,8 +179,18 @@ def prepare_locked():
         source = replace_once(source, "\tif v.tracking && mods&ui.Shift != 0 {", "\tif v.tracking && (mods&ui.Shift != 0 || v.t.dragSelects.Load()) {", view)
         source = replace_once(source, "// pointerEvent reports the pointer to the program that takes the mouse, or\n", POINTER_INPUT + "\n// pointerEvent reports the pointer to the program that takes the mouse, or\n", view)
         source = replace_once(source, "\te.TextCaret(v.caret())\n", "\te.TextCaret(v.caret())\n\te.OptionAsAlt(t.opts.OptionAsAlt)\n", view)
+        source = replace_once(source, "\ttheme   *Theme\n", "\tcanvasBackground vt.Color\n\ttheme   *Theme\n", view)
         view.write_text(source)
-        patched = [terminal, view] + patch_option_as_alt(staged)
+        paint = staged / "plugins/terminal/paint.go"
+        source = paint.read_text()
+        source = replace_once(source, "\tcolors := rs.Colors()\n", "\tcolors := rs.Colors()\n\tif t.followThemeColors.Load() {\n\t\tcolors.Foreground = rgb(v.theme.Foreground)\n\t\tcolors.Background = rgb(v.theme.Background)\n\t}\n", paint)
+        source = replace_once(source, "\tfull := rs.Dirty()", "\toldCanvas := v.canvasBackground\n\tif t.followThemeColors.Load() && rs.Dirty() != vt.Clean {\n\t\tif canvas := attachCanvasBackground(rs); canvas.Kind != 0 {\n\t\t\tv.canvasBackground = canvas\n\t\t}\n\t}\n\tfull := oldCanvas != v.canvasBackground || rs.Dirty()", paint)
+        source = replace_once(source, "\tr.bg, r.hasBg = col(s.BG, v.colors.Background)\n", "\tr.bg, r.hasBg = col(s.BG, v.colors.Background)\n\tif v.t.followThemeColors.Load() && s.BG.Kind == 2 && s.BG == v.canvasBackground {\n\t\tr.bg, r.hasBg = color(v.colors.Background), false\n\t}\n", paint)
+        source = replace_once(source, "\t\t\tst.bg, st.hasBg = color(bg), true\n", "\t\t\tst.bg, st.hasBg = color(bg), true\n\t\t\tif v.t.followThemeColors.Load() && !c.Palette && v.canvasBackground.Kind == 2 && bg == v.canvasBackground.RGB {\n\t\t\t\tst.bg, st.hasBg = color(v.colors.Background), false\n\t\t\t}\n", paint)
+        paint.write_text(source)
+        theme_source = staged / "plugins/terminal/herdr_theme_colors.go"
+        theme_source.write_bytes(theme_patch.read_bytes())
+        patched = [terminal, view, paint, theme_source] + patch_option_as_alt(staged)
         subprocess.run(["gofmt", "-w", *map(str, patched)], check=True, env=env)
         (staged / ".herdr-ui-patch.json").write_text(json.dumps(stamp, sort_keys=True) + "\n")
         if dest.exists():

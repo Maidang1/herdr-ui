@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Maidang1/herdr-ui/internal/design"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/egoist/mygo/plugins/terminal"
 	native "github.com/egoist/mygo/ui"
 )
@@ -19,9 +20,21 @@ func TestRenderSettingsArtifacts(t *testing.T) {
 	}
 	for _, dark := range []bool{false, true} {
 		w := referenceWindow(t)
-		w.SetActionHooks(ActionHooks{UpdateSettings: func() UpdateSettings {
-			return UpdateSettings{Version: "0.0.7", Enabled: true, AutomaticChecks: true}
-		}})
+		w.SetActionHooks(ActionHooks{
+			UpdateSettings: func() UpdateSettings {
+				return UpdateSettings{Version: "0.0.7", Enabled: true, AutomaticChecks: true}
+			},
+			Integrations: func(done func([]herdr.Integration, error)) {
+				done([]herdr.Integration{
+					{Target: "codex", Label: "codex", Available: true, State: "current"},
+					{Target: "claude", Label: "claude", Available: true, State: "outdated"},
+					{Target: "pi", Label: "pi", Available: true, State: "not_installed"},
+					{Target: "omp", Label: "omp", State: "not_installed"},
+					{Target: "kimi", Label: "kimi", State: "current"},
+				}, nil)
+			},
+			IntegrationChange: func(string, string, func([]string, error)) {},
+		})
 		w.SetInitialSettings(SettingsSnapshot{Theme: "dark", Font: terminal.Font{Size: 13, Weight: 400, LineHeight: 1}, MinimumContrast: 1, Cursor: "block", CursorBlink: true, CopyOnSelect: true, Toast: ToastSettings{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}})
 		for _, page := range settingsPages {
 			for _, size := range [][2]int{{720, 520}, {1000, 1160}} {

@@ -150,7 +150,7 @@ func keyboardHooks(ctx context.Context, s *session.Session, k *keyboardEndpoint,
 				})
 			}()
 		},
-		Notices: k.notices,
+		Notices: func() []app.Notice { return k.notices(s.Latest().Snapshot) },
 	}
 }
 func configPath() string {
@@ -227,7 +227,7 @@ func matchCommand(state endpoint.State, b input.Bindings, index int) (string, er
 
 // notices returns the notifications received since the last call. A new
 // connection starts its own sequence, so its whole backlog is new.
-func (k *keyboardEndpoint) notices() []app.Notice {
+func (k *keyboardEndpoint) notices(snapshot *session.Snapshot) []app.Notice {
 	client := k.current()
 	if client == nil {
 		return nil
@@ -245,7 +245,8 @@ func (k *keyboardEndpoint) notices() []app.Notice {
 			continue
 		}
 		k.consumedNotification = n.ID
-		fresh = append(fresh, app.Notice{Kind: n.Kind, Title: n.Title, Body: n.Body, WorkspaceID: n.WorkspaceID, TabID: n.TabID, PaneID: n.PaneID, Position: n.Position, Received: n.ReceivedAt})
+		notice := app.Notice{Kind: n.Kind, Title: n.Title, Body: n.Body, WorkspaceID: n.WorkspaceID, TabID: n.TabID, PaneID: n.PaneID, Position: n.Position, Received: n.ReceivedAt}
+		fresh = append(fresh, app.NoticeText(notice, snapshot, n.Agent))
 	}
 	return fresh
 }

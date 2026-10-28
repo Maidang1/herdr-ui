@@ -76,7 +76,7 @@ func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
 			})
 		})
 		native.Box(c).Height(1).Shrink(0).FillWidth().Background(p.Border)
-		native.Row(c).Height(36).Shrink(0).Padding(0, 6, 0, 10).AlignItems(native.Center).Gap(2).Children(func() {
+		native.Row(c).Height(32).Shrink(0).Padding(0, 6, 0, 10).AlignItems(native.Center).Gap(2).Children(func() {
 			w.sidebarUpdate(c, p)
 			if w.iconButton(c, "keyboard-reference-entry", icons.Keyboard, "Keyboard reference", p).Clicked() {
 				w.Dispatch("help")
@@ -200,15 +200,26 @@ func (w *Window) newWorkspaceButton(c *native.Context, p design.Palette) {
 	}
 }
 
-// sidebarUpdate replaces the connection status. It stays quiet until a
-// background check finds a newer version, then offers that version.
+// sidebarUpdate offers Settings until a background check finds a newer
+// version, then gives the update the leading position in the footer.
 func (w *Window) sidebarUpdate(c *native.Context, p design.Palette) {
 	var notice UpdateNotice
 	if w.hooks.UpdateNotice != nil {
 		notice = w.hooks.UpdateNotice()
 	}
 	if notice.Available == "" {
-		native.Box(c).Grow(1)
+		button := native.ButtonBase(c.Key("sidebar-settings")).Height(28).Radius(6).Padding(0, 8).Label("Open settings")
+		w.controlState(button, p)
+		button.Children(func() {
+			native.Row(c).Gap(6).AlignItems(native.Center).Children(func() {
+				native.Icon(c, icons.Settings).Size(14, 14).TextColor(p.Secondary)
+				native.Text(c, "Settings").FontSize(12).TextColor(p.Secondary)
+			})
+		})
+		if button.Clicked() {
+			w.Dispatch("settings")
+		}
+		native.Box(c).Grow(1).MinWidth(0)
 		return
 	}
 	label := "Update to " + notice.Available

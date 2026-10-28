@@ -169,6 +169,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			}()
 		}
 		openSettings := func() {
+			screen.RefreshIntegrations()
 			if settingsWin != nil {
 				settingsWin.Focus()
 				return
@@ -179,6 +180,26 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 		keyboard := &keyboardEndpoint{}
 		hooks := keyboardHooks(ctx, s, keyboard, screen, post, func() { win.Close() }, resolvedBinary, target)
 		hooks.Settings = func() error { openSettings(); return nil }
+		integrationPost := func(fn func()) {
+			post(func() {
+				fn()
+				if settingsWin != nil {
+					settingsWin.Update(func() {})
+				}
+			})
+		}
+		hooks.Integrations = func(done func([]herdr.Integration, error)) {
+			go func() {
+				entries, err := herdr.ListIntegrations(ctx, target)
+				integrationPost(func() { done(entries, err) })
+			}()
+		}
+		hooks.IntegrationChange = func(action, agent string, done func([]string, error)) {
+			go func() {
+				messages, err := herdr.ChangeIntegration(ctx, target, action, agent)
+				integrationPost(func() { done(messages, err) })
+			}()
+		}
 		hooks.EditConfig = func() error { return editHerdrConfig(resolvedBinary, target, screen) }
 		hooks.Font = func(f terminal.Font) {
 			host.SetFont(f)
@@ -367,6 +388,11 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			screen.DetachTerminal()
 			closed.Store(true)
 			cancel()
+			// Settings shares this window's session and async callbacks; it
+			// cannot keep managing integrations after that session closes.
+			if settingsWin != nil {
+				settingsWin.Close()
+			}
 		})
 		start()
 		if closeAfter > 0 {
