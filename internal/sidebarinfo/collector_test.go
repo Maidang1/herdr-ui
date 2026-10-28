@@ -11,6 +11,7 @@ import (
 )
 
 func TestLatestSourceCancelsOldCollectionAndOwnsInput(t *testing.T) {
+	oldPath, newPath, mutatedPath := t.TempDir(), t.TempDir(), t.TempDir()
 	entered := make(chan struct{})
 	canceled := make(chan struct{})
 	var once sync.Once
@@ -22,7 +23,7 @@ func TestLatestSourceCancelsOldCollectionAndOwnsInput(t *testing.T) {
 		case "lsof":
 			return commandOutput{}, nil
 		case "git":
-			if args[1] == "/old" {
+			if args[1] == oldPath {
 				once.Do(func() { close(entered) })
 				<-ctx.Done()
 				select {
@@ -39,11 +40,11 @@ func TestLatestSourceCancelsOldCollectionAndOwnsInput(t *testing.T) {
 		}
 		panic("unexpected command")
 	}
-	c := newCollector(herdr.Target{}, func(p Publication) { notifications <- p }, run, func(context.Context, herdr.Target, string) (int, error) { return 0, nil })
-	defer c.Close(context.Background())
-	original := Source{TargetID: 1, Workspaces: []WorkspaceSource{{ID: "w", Path: "/old"}}}
+	c := newCollector(herdr.Target{}, func(p Publication) { publishForTest(t, notifications, p) }, run, func(context.Context, herdr.Target, string) (int, error) { return 0, nil })
+	defer closeCollectorForTest(t, c)
+	original := Source{TargetID: 1, Workspaces: []WorkspaceSource{{ID: "w", Path: oldPath}}}
 	c.updateSource(original)
-	<-entered
+	awaitCollectorSignal(t, entered, "collection did not start")
 	c.updateSource(original)
 	c.mu.Lock()
 	generation := c.generation
@@ -51,14 +52,14 @@ func TestLatestSourceCancelsOldCollectionAndOwnsInput(t *testing.T) {
 	if generation != 1 {
 		t.Fatal("identical source scheduled new generation")
 	}
-	original.Workspaces[0].Path = "/mutated"
+	original.Workspaces[0].Path = mutatedPath
 	c.mu.Lock()
 	path := c.source.Workspaces[0].Path
 	c.mu.Unlock()
-	if path != "/old" {
+	if path != oldPath {
 		t.Fatal("caller mutated collector source")
 	}
-	c.updateSource(Source{TargetID: 2, Workspaces: []WorkspaceSource{{ID: "w", Path: "/new"}}})
+	c.updateSource(Source{TargetID: 2, Workspaces: []WorkspaceSource{{ID: "w", Path: newPath}}})
 	select {
 	case <-canceled:
 	case <-time.After(time.Second):
@@ -77,13 +78,14 @@ func TestCloseCancelsCommandsAndPreventsLateNotification(t *testing.T) {
 	entered := make(chan struct{})
 	var once sync.Once
 	published := make(chan Publication, 2)
-	c := newCollector(herdr.Target{}, func(p Publication) { published <- p }, func(ctx context.Context, _ string, _ ...string) (commandOutput, error) {
+	c := newCollector(herdr.Target{}, func(p Publication) { publishForTest(t, published, p) }, func(ctx context.Context, _ string, _ ...string) (commandOutput, error) {
 		once.Do(func() { close(entered) })
 		<-ctx.Done()
 		return commandOutput{}, ctx.Err()
 	}, func(context.Context, herdr.Target, string) (int, error) { return 0, nil })
-	c.updateSource(Source{TargetID: 1, Workspaces: []WorkspaceSource{{ID: "w", Path: "/repo"}}})
-	<-entered
+	defer closeCollectorForTest(t, c)
+	c.updateSource(Source{TargetID: 1, Workspaces: []WorkspaceSource{{ID: "w", Path: t.TempDir()}}})
+	awaitCollectorSignal(t, entered, "collection did not start")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	if err := c.Close(ctx); err != nil {
@@ -105,5 +107,35 @@ func TestEmptyDesiredStateClearsRootsWithoutLocalCommands(t *testing.T) {
 	p := c.collect(context.Background(), Source{TargetID: 2})
 	if p.TargetID != 2 || len(p.Entries) != 0 || len(c.roots) != 0 {
 		t.Fatal("old state retained", p, c.roots)
+	}
+}
+
+// Every coordination wait fails locally, rather than leaving a broken fixture
+// blocked until the package-wide timeout. Notification callbacks must also be
+// nonblocking so Close can finish even when an assertion fails before draining.
+func awaitCollectorSignal(t *testing.T, signal <-chan struct{}, message string) {
+	t.Helper()
+	select {
+	case <-signal:
+	case <-time.After(3 * time.Second):
+		t.Fatal(message)
+	}
+}
+
+func publishForTest(t *testing.T, publications chan<- Publication, p Publication) {
+	t.Helper()
+	select {
+	case publications <- p:
+	default:
+		t.Error("unexpected publication overflow")
+	}
+}
+
+func closeCollectorForTest(t *testing.T, c *Collector) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := c.Close(ctx); err != nil {
+		t.Errorf("collector cleanup: %v", err)
 	}
 }
