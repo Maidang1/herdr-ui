@@ -1,4 +1,4 @@
-//go:build integration && darwin
+//go:build integration && (darwin || linux)
 
 package integration
 
@@ -25,10 +25,7 @@ func testWindowLifecycle(t *testing.T, multi bool) {
 	if windowBinary == "" {
 		t.Skip("set HERDR_UI_M0_WINDOW_BINARY to test the real window")
 	}
-	binary, err := exec.LookPath("herdr")
-	if err != nil {
-		t.Skip("Herdr not installed")
-	}
+	binary := unixTestBinary(t)
 	dir, err := os.MkdirTemp("/tmp", "herdr-m2-")
 	if err != nil {
 		t.Fatal(err)
@@ -113,7 +110,7 @@ func testWindowLifecycle(t *testing.T, multi bool) {
 			terminals = append(terminals, split.Pane.TerminalID)
 		}
 	}
-	window := exec.Command(windowBinary, "-socket", target.Socket, "-close-after", "5s")
+	window := exec.Command(windowBinary, "-herdr", binary, "-socket", target.Socket, "-close-after", "5s")
 	window.Env = env
 	windowLog, err := os.Create(filepath.Join(dir, "window.log"))
 	if err != nil {
