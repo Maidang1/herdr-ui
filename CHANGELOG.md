@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.9
+
+- Add agent integration settings to inspect, install, and remove integrations managed by Herdr.
+- Show contextual agent notifications without numeric location labels, match terminal backgrounds to the window theme, and add a compact sidebar settings shortcut.
+- Add native Windows named-pipe transport and terminal surface rendering with semantic keyboard, Unicode text, paste, mouse, and resize input.
+- Improve native terminal split-pane geometry, wide grapheme rendering, and reconnect history handling, with automated Windows tests and packaging artifacts.
+
+Windows packages remain available as workflow artifacts; this release publishes the universal macOS app and signed updates. Physical Windows desktop and IME validation remains outstanding.
+
 ## 0.0.8
 
 - Draw agent marks in their brand colors in the sidebar, tabs, split cards, pane list, and command palette.
