@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.12
+
+- Rebrand the desktop application and platform packages as Hergo.
+- Adopt a new ram app icon inspired by Herdr and mygo.
+- Rewrite the README with installation, development, and release guidance, and adopt the MIT license.
+
+Physical Linux X11/Wayland desktop and IME validation remains outstanding, as does physical Windows desktop and IME validation.
+
 ## 0.0.11
 
 - Add native Linux desktop packages for amd64 and arm64, including Debian packages, portable archives, a user-local installer, and signed in-app updates.
