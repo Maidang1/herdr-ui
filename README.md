@@ -38,7 +38,7 @@ make dmg           # 通用二进制（arm64 + x86_64）.app 与 .dmg，与发�
 
 更新签名：`mygo.json` 中只保存公钥与 GitHub 仓库，私钥由仓库 Actions secret `MYGO_UPDATER_PRIVATE_KEY` 提供。发布流程要求签名密钥存在，并与 DMG 一起上传 `update-darwin-universal.json`、签名 `.tar.gz` 和可用的 `.delta`；缺少密钥或更新清单时停止发布。后续版本沿用同一密钥。需要生成首套密钥时使用 `./scripts/go.sh run github.com/egoist/mygo/cmd/mygo keygen -o <仓库外的目录>`，把公钥填入配置，使用 `gh secret set MYGO_UPDATER_PRIVATE_KEY < <私钥路径>` 配置 CI。测试本地签名包时可用框架的 `MYGO_UPDATER_PRIVATE_KEY` 环境变量或仅在本地配置 `updates.privateKey` 路径。
 
-发布：把 `mygo.json` 的 `version` 改为新版本，在 `CHANGELOG.md` 添加对应 `## X.Y.Z` 更新说明并提交，再推送同名标签（如 `git tag v0.1.0 && git push origin v0.1.0`）。[Release 工作流](.github/workflows/release.yml)在 macOS runner 上校验标签与版本一致、运行 `make test`、执行 `make dmg`，然后创建 GitHub Release 并上传 `Herdr-UI-<version>-macos-universal.dmg` 及其 SHA-256。手动运行该工作流只构建，产物留在运行记录里，不发布。应用为 ad hoc 签名，未经公证，首次打开需移除隔离属性（发布说明中附命令）。
+发布：把 `mygo.json` 的 `version` 改为新版本，在 `CHANGELOG.md` 添加对应 `## X.Y.Z` 更新说明并提交，再推送同名标签（如 `git tag v0.1.0 && git push origin v0.1.0`）。[Release 工作流](.github/workflows/release.yml)校验标签与版本一致，在 macOS 和 Windows runner 上并行测试、打包；两个平台都成功后，由独立任务统一创建 GitHub Release，上传 macOS 通用 DMG、Windows x64 安装器与便携 ZIP、SHA-256 校验文件，以及两个平台的签名更新包和清单。Windows 任务保留真实 Herdr 守护进程的集成验证。手动运行该工作流只构建，产物留在运行记录里，即使选择标签也不发布。应用为 ad hoc 签名，未经公证，首次打开需移除隔离属性（发布说明中附命令）。
 
 默认窗口按事件同步，并差量 attach 当前标签的全部可见终端。普通工作区/标签/pane 选择保持窗口本地，不修改 Herdr 全局焦点；滚动通过显式目标 `pane.scroll` 更新服务端视口。可使用 `./bin/herdr-ui -socket /path/to/herdr.sock` 指定目标。
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.10
+
+- Publish macOS universal and Windows x64 packages together through one multi-platform Release workflow.
+- Include the Windows installer, portable ZIP, SHA-256 checksums, and signed Windows update archives and manifest in GitHub Releases.
+- Run both platforms' tests and packaging in parallel, and publish only after both succeed. Manual workflow runs build artifacts without publishing.
+
+Physical Windows desktop and IME validation remains outstanding.
+
 ## 0.0.9
 
 - Add agent integration settings to inspect, install, and remove integrations managed by Herdr.

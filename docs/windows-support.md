@@ -2,7 +2,7 @@
 
 The Windows frontend keeps the existing mygo interface and renders the real Herdr daemon's native endpoint surface. It sends semantic key, Unicode text, paste, mouse and resize events to that endpoint. It does not start a terminal attach process or feed rendered screen characters back into a shell.
 
-The implementation targets Windows x64 and Herdr 0.9.5. The [Windows workflow](https://github.com/Maidang1/herdr-ui/actions/workflows/windows.yml) runs on `windows-2025`. Native tests, vet, executable compilation, the real-daemon integration test, installer packaging and portable ZIP creation first passed together in [run 40747889447](https://github.com/Maidang1/herdr-ui/actions/runs/40747889447). This validates the automated Windows transport and terminal path; physical desktop UI and IME checks remain listed below.
+The implementation targets Windows x64 and Herdr 0.9.5. The Windows job in the [Release workflow](https://github.com/Maidang1/herdr-ui/actions/workflows/release.yml) runs on `windows-2025`. Native tests, vet, executable compilation, the real-daemon integration test, installer packaging and portable ZIP creation first passed together in [run 40747889447](https://github.com/Maidang1/herdr-ui/actions/runs/40747889447). This validates the automated Windows transport and terminal path; physical desktop UI and IME checks remain listed below.
 
 ## Build and test
 
@@ -15,7 +15,7 @@ python scripts/go.py build -trimpath -o artifacts/herdr-ui.exe ./cmd/herdr-ui
 python scripts/go.py run github.com/egoist/mygo/cmd/mygo build -platform windows/amd64
 ```
 
-The pinned mygo CLI has no `-skip-installer` option. Its supported build command packages the executable and resources in `dist/windows-amd64`, and downloads NSIS when needed to produce an installer. CI also archives a portable ZIP. This workflow uploads run artifacts; it does not publish a release or change the macOS release workflow.
+The pinned mygo CLI has no `-skip-installer` option. Its supported build command packages the executable and resources in `dist/windows-amd64`, and downloads NSIS when needed to produce an installer. CI also archives a portable ZIP and creates signed update archives and a manifest using `MYGO_UPDATER_PRIVATE_KEY`. Pushing a `vX.Y.Z` tag matching `mygo.json` builds macOS and Windows in parallel; only after both jobs succeed does one publish job upload both platforms to the same GitHub Release. Windows assets include `Herdr-UI-<version>-windows-amd64-setup.exe`, `Herdr-UI-<version>-windows-amd64.zip`, a platform-specific SHA-256 checksum file, and signed update files. Manual runs only upload workflow artifacts, even when dispatched on a tag.
 
 ## Isolated real-daemon test
 

@@ -1,15 +1,15 @@
 name: Release
 
-# Pushing a tag vX.Y.Z publishes a GitHub release with the universal macOS
-# disk image. The tag must match "version" in mygo.json. Running the workflow
-# by hand builds the same image as an artifact of the run, without a release.
+# Pushing vX.Y.Z builds macOS and Windows in parallel, then publishes both
+# platforms in one GitHub release. The tag must match mygo.json. Manual runs
+# only build artifacts, including when dispatched on a tag.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
 
 permissions:
-  contents: write # creating the release and uploading to it
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -56,6 +56,7 @@ jobs:
           fi
           make dmg
           test -s dist/darwin-universal/update-darwin-universal.json
+          compgen -G 'dist/darwin-universal/*.tar.gz' > /dev/null
 
       - name: Name the disk image
         id: dmg
@@ -63,38 +64,139 @@ jobs:
           name="Herdr-UI-${{ steps.version.outputs.version }}-macos-universal.dmg"
           mv "dist/darwin-universal/Herdr UI ${{ steps.version.outputs.version }}.dmg" "dist/$name"
           shasum -a 256 "dist/$name" | sed 's| dist/| |' > "dist/$name.sha256"
-          echo "name=$name" >> "$GITHUB_OUTPUT"
+          mkdir release-assets
+          shopt -s nullglob
+          cp "dist/$name" "dist/$name.sha256" dist/darwin-universal/update-*.json dist/darwin-universal/*.tar.gz dist/darwin-universal/*.delta release-assets/
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.dmg.outputs.name }}
-          path: |
-            dist/${{ steps.dmg.outputs.name }}*
-            dist/darwin-universal/update-*.json
-            dist/darwin-universal/*.tar.gz
-            dist/darwin-universal/*.delta
+          name: release-macos
+          if-no-files-found: error
+          path: release-assets/*
 
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    env:
+      CGO_ENABLED: '0'
+      GOARCH: amd64
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the tag against mygo.json
+        id: version
+        run: |
+          $version = (Get-Content mygo.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match mygo.json version $version"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Runtime tests
+        run: python scripts/go.py test -timeout 3m ./...
+      - name: Vet
+        run: python scripts/go.py vet ./...
+      - name: Build native executable
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          python scripts/go.py build -trimpath -o artifacts/herdr-ui.exe ./cmd/herdr-ui
+      - name: Install checksum-pinned official Herdr runtime
+        run: python scripts/install-herdr-windows.py --destination "$env:RUNNER_TEMP/herdr-0.9.5"
+      - name: Real named-pipe daemon and semantic surface integration
+        run: python scripts/go.py test -tags integration ./integration -run '^TestWindowsNativeSurface$' -count=1 -v -timeout 3m
+      # The pinned mygo CLI has no -skip-installer flag. Its supported build
+      # command downloads NSIS when needed and creates the installer on Windows.
+      - name: Package native Windows application and signed updates
+        env:
+          MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:MYGO_UPDATER_PRIVATE_KEY)) {
+            throw 'MYGO_UPDATER_PRIVATE_KEY is required to publish signed updates'
+          }
+          python scripts/go.py run github.com/egoist/mygo/cmd/mygo build -platform windows/amd64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $manifest = Get-Item dist/windows-amd64/update-windows-amd64.json
+          if ($manifest.Length -eq 0) { throw 'Windows update manifest is empty' }
+      - name: Create portable application ZIP
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $portable = Join-Path $env:RUNNER_TEMP 'herdr-ui-portable'
+          New-Item -ItemType Directory -Force $portable | Out-Null
+          Get-ChildItem dist/windows-amd64 | Where-Object { $_.Name -notmatch ' Setup |\.tar\.gz$|\.delta$|^update-' } | Copy-Item -Destination $portable -Recurse
+          Compress-Archive -Path "$portable/*" -DestinationPath "artifacts/Herdr-UI-$version-windows-amd64.zip"
+          $installers = @(Get-ChildItem dist/windows-amd64/*Setup*.exe -File)
+          if ($installers.Count -ne 1) { throw 'Expected exactly one Windows installer' }
+          Copy-Item $installers[0].FullName "artifacts/Herdr-UI-$version-windows-amd64-setup.exe"
+          Get-ChildItem dist/windows-amd64 -File | Where-Object { $_.Name -match '\.tar\.gz$|\.delta$|^update-' } | Copy-Item -Destination artifacts
+          if (@(Get-ChildItem artifacts/*.tar.gz -File).Count -eq 0) { throw 'Windows update archive was not produced' }
+          $files = @(Get-ChildItem artifacts -File)
+          foreach ($file in $files) {
+            $hash = (Get-FileHash -Algorithm SHA256 $file.FullName).Hash.ToLowerInvariant()
+            "$hash  $($file.Name)" | Add-Content "artifacts/Herdr-UI-$version-windows-amd64-SHA256SUMS"
+          }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-windows
+          if-no-files-found: error
+          path: |
+            artifacts/*
+
+  publish:
+    needs: [macos, windows]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+      - name: Verify both platform assets
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          version="${VERSION#v}"
+          test -s "release-assets/Herdr-UI-$version-macos-universal.dmg"
+          test -s "release-assets/Herdr-UI-$version-macos-universal.dmg.sha256"
+          test -s "release-assets/Herdr-UI-$version-windows-amd64-setup.exe"
+          test -s "release-assets/Herdr-UI-$version-windows-amd64.zip"
+          test -s "release-assets/Herdr-UI-$version-windows-amd64-SHA256SUMS"
+          test -s release-assets/update-darwin-universal.json
+          test -s release-assets/update-windows-amd64.json
+          cd release-assets
+          sha256sum -c "Herdr-UI-$version-macos-universal.dmg.sha256"
+          sha256sum -c "Herdr-UI-$version-windows-amd64-SHA256SUMS"
       - name: Publish the release
-        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
-          DMG: dist/${{ steps.dmg.outputs.name }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          shopt -s nullglob
-          updates=(dist/darwin-universal/*.tar.gz dist/darwin-universal/*.delta dist/darwin-universal/update-*.json)
+          assets=(release-assets/*)
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "$DMG" "$DMG.sha256" "${updates[@]}" --clobber
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
           else
             cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
-          The app is signed ad hoc, not with a Developer ID, so Gatekeeper blocks it on first launch. After dragging it to Applications, run:
+          macOS: the app is signed ad hoc, not with a Developer ID, so Gatekeeper blocks it on first launch. After dragging it to Applications, run:
 
           ```sh
           xattr -dr com.apple.quarantine "/Applications/Herdr UI.app"
           ```
 
+          Windows x64: use the setup executable or extract the portable ZIP. Physical Windows desktop and IME validation remains outstanding.
+
           Herdr UI attaches to a running Herdr; install and start Herdr first.
           NOTES
-            gh release create "$GITHUB_REF_NAME" "$DMG" "$DMG.sha256" "${updates[@]}" \
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
               --verify-tag --title "Herdr UI $GITHUB_REF_NAME" \
               --notes-file "$RUNNER_TEMP/notes.md" --generate-notes
           fi
