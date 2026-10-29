@@ -67,6 +67,10 @@ jobs:
           mkdir release-assets
           shopt -s nullglob
           cp "dist/$name" "dist/$name.sha256" dist/darwin-universal/update-*.json dist/darwin-universal/*.tar.gz dist/darwin-universal/*.delta release-assets/
+          # Older architecture-specific builds use these feeds. The universal
+          # archive supports both CPUs; keep its URLs and signatures unchanged.
+          cp release-assets/update-darwin-universal.json release-assets/update-darwin-arm64.json
+          cp release-assets/update-darwin-universal.json release-assets/update-darwin-amd64.json
 
       - uses: actions/upload-artifact@v7
         with:
@@ -172,6 +176,8 @@ jobs:
           test -s "release-assets/Herdr-UI-$version-windows-amd64.zip"
           test -s "release-assets/Herdr-UI-$version-windows-amd64-SHA256SUMS"
           test -s release-assets/update-darwin-universal.json
+          cmp release-assets/update-darwin-universal.json release-assets/update-darwin-arm64.json
+          cmp release-assets/update-darwin-universal.json release-assets/update-darwin-amd64.json
           test -s release-assets/update-windows-amd64.json
           cd release-assets
           sha256sum -c "Herdr-UI-$version-macos-universal.dmg.sha256"
