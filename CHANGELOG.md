@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.11
+
+- Add native Linux desktop packages for amd64 and arm64, including Debian packages, portable archives, a user-local installer, and signed in-app updates.
+- Test Linux daemon, PTY, native GTK window integration, and packaged terminal startup in the multi-platform Release workflow.
+- Publish compatible architecture-specific macOS update manifests alongside the universal update manifest.
+
+Physical Linux X11/Wayland desktop and IME validation remains outstanding, as does physical Windows desktop and IME validation.
+
 ## 0.0.10
 
 - Publish macOS universal and Windows x64 packages together through one multi-platform Release workflow.
