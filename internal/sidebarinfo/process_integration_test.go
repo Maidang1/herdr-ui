@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -31,6 +32,9 @@ func TestSidebarListenerHelper(t *testing.T) {
 	os.Exit(0)
 }
 func TestRealLocalTCPListenerIsScopedToPaneShellOwner(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix ps/lsof process discovery; Windows sidebar does not use Unix process tools")
+	}
 	if _, err := exec.LookPath("lsof"); err != nil {
 		t.Skip("local lsof not installed")
 	}

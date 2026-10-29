@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Maidang1/herdr-ui/internal/localipc"
 )
 
 type Command struct {
@@ -24,6 +26,8 @@ type Snapshot struct {
 	BootID                string    `json:"boot_id"`
 	Revision              uint64    `json:"revision"`
 	FocusedPaneID         string    `json:"focused_pane_id"`
+	FocusedTabID          string    `json:"focused_tab_id"`
+	FocusedWorkspaceID    string    `json:"focused_workspace_id"`
 	Commands              []Command `json:"commands"`
 	ServerKeybindingsTOML string    `json:"server_keybindings_toml"`
 }
@@ -37,6 +41,9 @@ type State struct {
 	Snapshot      *Snapshot
 	Notifications []Notification // Bounded last 64 events; ID allows caller deduplication/expiry.
 	Err           error
+	// Surface is immutable after publication, like the session snapshot.
+	Surface         *SurfaceFrame
+	SurfaceSnapshot *Snapshot
 }
 type welcome struct {
 	Generation    int      `json:"generation"`
@@ -73,6 +80,9 @@ type Client struct {
 	pending         map[string]*pending
 	sequence        uint64
 	cols, rows      uint16
+	surfaceActive   bool
+	requireSurface  bool
+	projections     map[uint64]*Snapshot
 }
 
 // SocketPath follows Herdr server/socket_paths.rs, including non-.sock extensions.
@@ -98,6 +108,13 @@ func (c *Client) notify() {
 }
 
 func New(apiSocket string) *Client { return NewSocket(SocketPath(apiSocket)) }
+func NewSurface(apiSocket string) *Client {
+	c := New(apiSocket)
+	// Start passive: focus and real viewport size must precede activation.
+	c.surfaceActive = false
+	c.requireSurface = true
+	return c
+}
 func NewSocket(clientSocket string) *Client {
 	return &Client{socket: clientSocket, pending: make(map[string]*pending)}
 }
@@ -112,7 +129,7 @@ func (c *Client) Start(ctx context.Context) error {
 	runCtx, cancel := context.WithCancel(ctx)
 	c.cancel = cancel
 	c.mu.Unlock()
-	conn, err := (&net.Dialer{Timeout: 5 * time.Second}).DialContext(runCtx, "unix", c.socket)
+	conn, err := localipc.DialContext(runCtx, c.socket)
 	if err != nil {
 		c.fail(err)
 		return err
@@ -131,7 +148,7 @@ func (c *Client) Start(ctx context.Context) error {
 		"generation": 1, "cell_width_px": 0, "cell_height_px": 0,
 		"surface_size": map[string]int{"cols": 80, "rows": 24},
 		"pixel_mouse":  false, "direct_graphics": false, "endpoint_keybindings": false,
-		"mouse_capture": false, "surface_active": false,
+		"mouse_capture": false, "surface_active": c.surfaceActive,
 		"snapshot_codecs": []string{"shell.snapshot.v1"}, "surface_codecs": []string{"shell.surface.v1"},
 		"input_codecs": []string{"shell.input.semantic.v1"}, "blob_codecs": []string{"shell.blob.v1"},
 	}
@@ -161,6 +178,9 @@ func (c *Client) Start(ctx context.Context) error {
 			err = errors.New(w.Error.Message)
 		} else if w.Generation != 1 || w.SnapshotCodec != "shell.snapshot.v1" || w.SurfaceCodec != "shell.surface.v1" || w.InputCodec != "shell.input.semantic.v1" || w.BlobCodec != "shell.blob.v1" {
 			err = errors.New("incompatible endpoint core codecs")
+		}
+		if err == nil && c.requireSurface && (!slices.Contains(w.Capabilities, "surface_interest") || !slices.Contains(w.Methods, "client_shell.surface.set") || !slices.Contains(w.Methods, "tab.focus") || !slices.Contains(w.Methods, "pane.focus")) {
+			err = errors.New("Herdr does not advertise native terminal surfaces; update Herdr")
 		}
 	}
 	if err != nil {
@@ -247,6 +267,49 @@ func (c *Client) handle(b []byte) error {
 		defer c.notify()
 	}
 	switch tag {
+	case SurfaceFrameTag:
+		surface, err := DecodeSurfaceFrame(b)
+		if err != nil {
+			return err
+		}
+		c.mu.Lock()
+		if c.state.Snapshot == nil || surface.BootID != c.state.Snapshot.BootID {
+			c.mu.Unlock()
+			return errors.New("surface boot identity mismatch")
+		}
+		projection := c.projections[surface.ProjectionRevision]
+		if projection == nil && c.state.Snapshot.Revision == surface.ProjectionRevision {
+			projection = c.state.Snapshot
+		}
+		if projection == nil {
+			c.mu.Unlock()
+			return errors.New("surface references unknown projection")
+		}
+		c.state.Surface = surface
+		c.state.SurfaceSnapshot = projection
+		c.mu.Unlock()
+		c.notify()
+		return nil
+	case SurfacePatchTag:
+		patch, err := DecodeSurfacePatch(b)
+		if err != nil {
+			return err
+		}
+		c.mu.Lock()
+		if c.state.Surface == nil {
+			c.mu.Unlock()
+			return errors.New("surface patch before baseline")
+		}
+		next, err := c.state.Surface.Apply(patch)
+		if err == nil {
+			c.state.Surface = next
+		}
+		c.mu.Unlock()
+		if err != nil {
+			return err
+		}
+		c.notify()
+		return nil
 	case controlTag:
 		kind, data := d.str(), d.str()
 		if err := d.finish(); err != nil {
@@ -261,7 +324,20 @@ func (c *Client) handle(b []byte) error {
 				return errors.New("snapshot lacks boot identity")
 			}
 			c.mu.Lock()
+			if c.state.Snapshot != nil && (c.state.Snapshot.BootID != s.BootID || s.Revision < c.state.Snapshot.Revision) {
+				c.mu.Unlock()
+				return errors.New("snapshot identity or revision moved backwards")
+			}
 			c.state.Snapshot = &s
+			if c.projections == nil {
+				c.projections = make(map[uint64]*Snapshot)
+			}
+			c.projections[s.Revision] = &s
+			for revision := range c.projections {
+				if revision < s.Revision && s.Revision-revision > 16 {
+					delete(c.projections, revision)
+				}
+			}
 			c.mu.Unlock()
 		} else if strings.HasPrefix(kind, "shell.snapshot.") {
 			return fmt.Errorf("unsupported snapshot codec %s", kind)
@@ -378,6 +454,8 @@ func (c *Client) send(ctx context.Context, b []byte) error {
 	return err
 }
 func (c *Client) request(ctx context.Context, method string, params any) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	c.mu.Lock()
 	if c.state.Snapshot == nil {
 		c.mu.Unlock()

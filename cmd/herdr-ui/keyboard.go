@@ -89,7 +89,11 @@ func keyboardHooks(ctx context.Context, s *session.Session, k *keyboardEndpoint,
 			if err = file.Close(); err != nil {
 				return err
 			}
-			return screen.OpenCommandSurface("Scrollback editor", []string{"/bin/sh", "-c", `exec ${EDITOR:-vi} "$1"`, "herdr-editor", path}, env, "")
+			command, err := commandForEditor(path)
+			if err != nil {
+				return err
+			}
+			return screen.OpenCommandSurface("Scrollback editor", command, env, "")
 		},
 		PasteImage: func(pane string, data []byte) error {
 			client := k.current()
@@ -154,15 +158,8 @@ func keyboardHooks(ctx context.Context, s *session.Session, k *keyboardEndpoint,
 	}
 }
 func configPath() string {
-	if path := os.Getenv("HERDR_CONFIG_PATH"); path != "" {
-		return path
-	}
-	base := os.Getenv("XDG_CONFIG_HOME")
-	if base == "" {
-		home, _ := os.UserHomeDir()
-		base = filepath.Join(home, ".config")
-	}
-	return filepath.Join(base, "herdr", "config.toml")
+	home, _ := os.UserHomeDir()
+	return herdr.ConfigPath(home, os.Getenv)
 }
 
 // editHerdrConfig opens Herdr's own configuration in the user's editor,
@@ -183,7 +180,11 @@ func editHerdrConfigWith(_ string, _ herdr.Target, screen *view.Window, env []st
 			return err
 		}
 	}
-	return screen.OpenCommandSurface("Herdr configuration", []string{"/bin/sh", "-c", `exec ${EDITOR:-vi} "$1"`, "herdr-editor", path}, env, "")
+	command, err := commandForEditor(path)
+	if err != nil {
+		return err
+	}
+	return screen.OpenCommandSurface("Herdr configuration", command, env, "")
 }
 func matchCommand(state endpoint.State, b input.Bindings, index int) (string, error) {
 	if !state.Connected || state.Snapshot == nil {

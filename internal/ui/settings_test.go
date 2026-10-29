@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/Maidang1/herdr-ui/internal/input"
@@ -136,15 +137,27 @@ func TestSettingsZoomSharesTheFontHook(t *testing.T) {
 
 func TestBindingsSourceStillRender(t *testing.T) {
 	w := settingsWindow(t)
-	if _, err := input.Resolve(nil, "test"); err != nil {
+	bindings, err := input.Resolve(nil, "portable-shortcuts-test")
+	if err != nil {
 		t.Fatal(err)
 	}
+	w.ConfigureBindings(bindings, nil)
 	tester := native.NewTester(w.SettingsView, 720, 520)
 	if err := tester.Click("Shortcuts"); err != nil {
 		t.Fatal(err)
 	}
-	if !tester.HasText("Prefix chords come from Herdr’s own configuration") {
+	guidance := "Prefix chords come from Herdr’s own configuration"
+	if runtime.GOOS != "darwin" {
+		guidance = "Herdr’s configured prefix chords remain available"
+	}
+	if !tester.HasText(guidance) {
 		t.Fatalf("shortcuts page explanation missing: %v", tester.Texts())
+	}
+	if !tester.HasText("portable-shortcuts-test") {
+		t.Fatalf("binding source missing: %v", tester.Texts())
+	}
+	if runtime.GOOS == "windows" && !tester.HasText("Ctrl+Alt remains available for AltGr text") {
+		t.Fatalf("Windows key profile guidance missing: %v", tester.Texts())
 	}
 }
 

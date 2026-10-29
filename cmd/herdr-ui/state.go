@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,7 +29,7 @@ import (
 	native "github.com/egoist/mygo/ui"
 )
 
-func runStateWindow(socket, binary string, closeAfter time.Duration) {
+func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurface bool) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -156,11 +157,11 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			copyOnSelect = terminal.CopyOnSelectClipboard
 		}
 		sidebar = sidebarinfo.New(target, func(p sidebarinfo.Publication) { post(func() { a.UpdateSidebar(p) }) })
-		host = terminalhost.New(terminalhost.Config{Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: font, CopyOnSelect: copyOnSelect, MinimumContrast: persisted.MinimumContrast, OptionAsAlt: persisted.OptionAsAlt, Cursor: cursorStyle(persisted.Cursor), NoBlink: !persisted.CursorBlink, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key, OnPaste: screen.Paste})
+		host = terminalhost.New(terminalhost.Config{NativeSurface: nativeSurface, Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: font, CopyOnSelect: copyOnSelect, MinimumContrast: persisted.MinimumContrast, OptionAsAlt: persisted.OptionAsAlt, Cursor: cursorStyle(persisted.Cursor), NoBlink: !persisted.CursorBlink, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key, OnPaste: screen.Paste})
 		screen.ConnectTerminal(host, s, ctx, post)
 		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, OptionAsAlt: persisted.OptionAsAlt, Cursor: persisted.Cursor, CursorBlink: persisted.CursorBlink, Toast: view.ToastSettings{Delivery: persisted.Toast.Delivery, Position: persisted.Toast.Position, DelaySeconds: persisted.Toast.DelaySeconds}})
 		screen.SetReducedTransparency(mygo.Theme.Preferences().ReduceTransparency)
-		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Vibrancy: windowMaterial(), Content: native.View(screen.View)})
+		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: platformTitleBar(), TitleBarHeight: 44, Vibrancy: windowMaterial(), Content: native.View(screen.View)})
 		persist := func(fn func(*prefs.Settings)) {
 			go func() {
 				if _, err := settings.Update(fn); err != nil {
@@ -174,7 +175,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				settingsWin.Focus()
 				return
 			}
-			settingsWin = mygo.NewWindow(mygo.WindowOptions{Title: "Settings", Width: 720, Height: 520, MinWidth: 560, MinHeight: 420, StateKey: "settings", TitleBarStyle: mygo.TitleBarHiddenInset, TitleBarHeight: 44, Vibrancy: windowMaterial(), Content: native.View(screen.SettingsView)})
+			settingsWin = mygo.NewWindow(mygo.WindowOptions{Title: "Settings", Width: 720, Height: 520, MinWidth: 560, MinHeight: 420, StateKey: "settings", TitleBarStyle: platformTitleBar(), TitleBarHeight: 44, Vibrancy: windowMaterial(), Content: native.View(screen.SettingsView)})
 			settingsWin.OnClosed(func() { settingsWin = nil })
 		}
 		keyboard := &keyboardEndpoint{}
@@ -342,7 +343,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 			if n == 9 {
 				label = "Last Tab"
 			}
-			tabNumbers = append(tabNumbers, &mygo.MenuItem{Label: label, Accelerator: fmt.Sprintf("CmdOrCtrl+%d", n), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.SelectTabNumber(n) }) }})
+			tabNumbers = append(tabNumbers, &mygo.MenuItem{Label: label, Accelerator: view.TabNumberAccelerator(n), Click: func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.SelectTabNumber(n) }) }})
 		}
 		sections["Tab"] = append(sections["Tab"], &mygo.MenuItem{Type: mygo.MenuItemSeparator}, &mygo.MenuItem{Label: "Select Tab", Submenu: tabNumbers})
 		helpItems := []*mygo.MenuItem{commandItem("help")}
@@ -380,7 +381,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration) {
 				item.SetEnabled(enabled)
 			}
 		})
-		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Label: "Herdr", Submenu: appItems}, {Role: mygo.RoleEditMenu}, {Label: "Workspace", Submenu: sections["Workspace"]}, {Label: "Tab", Submenu: sections["Tab"]}, {Label: "Pane", Submenu: sections["Pane"]}, {Label: "Go", Submenu: sections["Go"]}, {Label: "View", Submenu: sections["View"]}, {Role: mygo.RoleWindowMenu}, {Label: "Help", Submenu: helpItems}}))
+		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Label: "Herdr", Submenu: appItems}, platformEditMenu(), {Label: "Workspace", Submenu: sections["Workspace"]}, {Label: "Tab", Submenu: sections["Tab"]}, {Label: "Pane", Submenu: sections["Pane"]}, {Label: "Go", Submenu: sections["Go"]}, {Label: "View", Submenu: sections["View"]}, {Role: mygo.RoleWindowMenu}, {Label: "Help", Submenu: helpItems}}))
 		win.OnClosed(func() {
 			offUpdates()
 			offAppearance()
@@ -477,7 +478,7 @@ func cursorStyle(name string) terminal.CursorStyle {
 // where the windows paint their own opaque surfaces.
 func windowMaterial() mygo.Vibrancy {
 	preferences := mygo.Theme.Preferences()
-	if preferences.ReduceTransparency || preferences.HighContrast {
+	if runtime.GOOS != "darwin" || preferences.ReduceTransparency || preferences.HighContrast {
 		return mygo.VibrancyNone
 	}
 	return mygo.VibrancySidebar

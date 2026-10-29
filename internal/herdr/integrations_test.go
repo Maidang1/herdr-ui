@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"net"
+	"github.com/Maidang1/herdr-ui/internal/localipc"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,13 +17,13 @@ func integrationServer(t *testing.T, reply string) (Target, <-chan struct {
 	t.Helper()
 	// macOS Unix socket paths have a small length limit; t.TempDir includes
 	// the full test name and can exceed it before the socket name is added.
-	dir, err := os.MkdirTemp("/tmp", "herdr-integration-")
+	dir, err := os.MkdirTemp("", "herdr-integration-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(dir) })
 	path := filepath.Join(dir, "i.sock")
-	listener, err := net.Listen("unix", path)
+	listener, err := localipc.Listen(path)
 	if err != nil {
 		t.Fatal(err)
 	}

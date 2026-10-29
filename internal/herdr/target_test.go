@@ -1,11 +1,16 @@
 package herdr
 
 import (
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 )
 
 func TestResolveTarget(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix absolute path fixtures; Windows cases are in target_windows_test.go")
+	}
 	for _, tt := range []struct {
 		name, explicit string
 		env            map[string]string
@@ -47,5 +52,25 @@ func TestAttachCommandUsesResolvedTarget(t *testing.T) {
 	}
 	if _, _, err := target.Attach("herdr", "", nil); err == nil {
 		t.Fatal("empty terminal accepted")
+	}
+}
+
+func TestWindowsConfigDirectoryPrecedence(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		env        map[string]string
+		home, want string
+	}{
+		{"xdg", map[string]string{"XDG_CONFIG_HOME": "/xdg", "APPDATA": "/roaming"}, "/home", "/xdg/herdr"},
+		{"appdata", map[string]string{"APPDATA": "/roaming", "USERPROFILE": "/profile"}, "/home", "/roaming/herdr"},
+		{"profile", map[string]string{"USERPROFILE": "/profile"}, "/home", "/profile/AppData/Roaming/herdr"},
+		{"home", nil, "/home", "/home/.config/herdr"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := configDir("windows", tt.home, func(k string) string { return tt.env[k] })
+			if got != filepath.FromSlash(tt.want) {
+				t.Fatalf("ConfigDir = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }

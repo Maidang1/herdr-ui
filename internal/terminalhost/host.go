@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -47,14 +48,16 @@ type KeyResult struct {
 }
 
 type Config struct {
-	OnPaste  func(Binding, transfer.Data) bool
-	Binary   string
-	Target   herdr.Target
-	Env      []string
-	Post     func(func())
-	Changed  func()
-	OnScroll func(Binding, int)
-	OnKey    func(Binding, ui.Modifiers, ui.Key, InputState) KeyResult
+	// NativeSurface opts into endpoint cells; Windows always uses them.
+	NativeSurface bool
+	OnPaste       func(Binding, transfer.Data) bool
+	Binary        string
+	Target        herdr.Target
+	Env           []string
+	Post          func(func())
+	Changed       func()
+	OnScroll      func(Binding, int)
+	OnKey         func(Binding, ui.Modifiers, ui.Key, InputState) KeyResult
 	// OnSearch reports a pane's search status on the UI thread, while the
 	// binding still owns its terminal.
 	OnSearch func(Binding, terminal.SearchStatus)
@@ -110,6 +113,7 @@ type entry struct {
 // Host's methods Reconcile, Retry and View run on the UI thread. Close runs
 // after UI detachment. The mutex also fences background completion/callbacks.
 type Host struct {
+	surface    *surfaceBackend
 	mu         sync.Mutex
 	cfg        Config
 	create     factory
@@ -122,7 +126,13 @@ type Host struct {
 	closeErr   error
 }
 
-func New(c Config) *Host { return newHost(c, openTerminal) }
+func New(c Config) *Host {
+	h := newHost(c, openTerminal)
+	if c.NativeSurface || runtime.GOOS == "windows" {
+		h.surface = newSurfaceBackend(h)
+	}
+	return h
+}
 func newHost(c Config, f factory) *Host {
 	c.Env = append([]string(nil), c.Env...)
 	return &Host{cfg: c, create: f, entries: make(map[key]*entry), tails: make(map[key]*entry), done: make(chan struct{})}
@@ -133,6 +143,9 @@ func (h *Host) valid(e *entry) bool { return !h.closed && h.entries[identity(e.s
 // Reconcile validates the complete demand before changing any ownership. Pane
 // remapping recreates the attach so its UI callbacks cannot address an old pane.
 func (h *Host) Reconcile(desired []Spec) ([]Binding, error) {
+	if len(desired) == 0 && h.surface != nil {
+		h.surface.update(surfaceSelection{})
+	}
 	seen := make(map[key]bool, len(desired))
 	panes := make(map[key]bool, len(desired))
 	for _, s := range desired {
@@ -244,7 +257,11 @@ func (h *Host) open(e *entry) {
 	o, err := h.options(e)
 	var t instance
 	if err == nil {
-		t, err = h.create(o)
+		if h.surface != nil {
+			t = h.surface.open(e, o)
+		} else {
+			t, err = h.create(o)
+		}
 	}
 	if t == nil && err == nil {
 		err = errors.New("terminal factory returned no terminal")
@@ -320,6 +337,9 @@ func (h *Host) Status(b Binding) Status {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if e := h.lookup(b); e != nil {
+		if h.surface != nil && e.installed {
+			return h.surface.status()
+		}
 		return e.status
 	}
 	return Status{State: Closed}
@@ -478,6 +498,9 @@ func (h *Host) liveInstances() []instance {
 // Close marks all callbacks stale before closing any plugin. It waits only for
 // the caller's context, and subsequent calls can continue waiting for cleanup.
 func (h *Host) Close(ctx context.Context) error {
+	if h.surface != nil {
+		h.surface.cancel()
+	}
 	h.mu.Lock()
 	if !h.closed {
 		h.closed = true
@@ -494,15 +517,26 @@ func (h *Host) Close(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-h.done:
+		if h.surface != nil {
+			select {
+			case <-h.surface.done:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
 		h.mu.Lock()
 		defer h.mu.Unlock()
 		return h.closeErr
 	}
 }
 func (h *Host) options(e *entry) (terminal.Options, error) {
-	cmd, env, err := h.cfg.Target.Attach(h.cfg.Binary, e.spec.TerminalID, h.cfg.Env)
-	if err != nil {
-		return terminal.Options{}, err
+	var cmd, env []string
+	if h.surface == nil {
+		var err error
+		cmd, env, err = h.cfg.Target.Attach(h.cfg.Binary, e.spec.TerminalID, h.cfg.Env)
+		if err != nil {
+			return terminal.Options{}, err
+		}
 	}
 	// The plugin merges Env into os.Environ rather than replacing it. Empty
 	// these inherited caller identities explicitly so filtered values cannot

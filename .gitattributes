@@ -1,0 +1,2 @@
+# Frozen framed protocol payloads must retain their exact byte lengths on Windows.
+*.bin binary

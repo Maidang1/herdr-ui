@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -495,18 +495,8 @@ func (b Bindings) Labels() []string {
 // verified defaults; malformed configuration is an error.
 func LoadBindings(path string) (Bindings, error) {
 	if path == "" {
-		path = os.Getenv("HERDR_CONFIG_PATH")
-	}
-	if path == "" {
-		base := os.Getenv("XDG_CONFIG_HOME")
-		if base == "" {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return Bindings{}, err
-			}
-			base = filepath.Join(home, ".config")
-		}
-		path = filepath.Join(base, "herdr", "config.toml")
+		home, _ := os.UserHomeDir()
+		path = herdr.ConfigPath(home, os.Getenv)
 	}
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {

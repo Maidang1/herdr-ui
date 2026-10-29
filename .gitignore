@@ -25,3 +25,5 @@ mygo-update.key
 
 # Generated pinned dependency workspace and local patches.
 /.build/
+__pycache__/
+*.pyc

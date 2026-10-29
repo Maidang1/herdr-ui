@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -28,8 +29,12 @@ func TestParse(t *testing.T) {
 }
 
 func TestMerge(t *testing.T) {
-	got := Merge("/home/u/.local/bin:/usr/bin", "/usr/bin:/bin::", "/opt/homebrew/bin:/home/u/.local/bin")
-	if want := "/home/u/.local/bin:/usr/bin:/bin:/opt/homebrew/bin"; got != want {
+	first, second, third, want := "/home/u/.local/bin:/usr/bin", "/usr/bin:/bin::", "/opt/homebrew/bin:/home/u/.local/bin", "/home/u/.local/bin:/usr/bin:/bin:/opt/homebrew/bin"
+	if runtime.GOOS == "windows" {
+		first, second, third, want = `C:\Tools;C:\Windows`, `C:\Windows;D:\bin;;`, `C:\Cargo;C:\Tools`, `C:\Tools;C:\Windows;D:\bin;C:\Cargo`
+	}
+	got := Merge(first, second, third)
+	if got != want {
 		t.Fatalf("Merge = %q, want %q", got, want)
 	}
 	if got := Merge("", "/usr/bin"); got != "/usr/bin" {
@@ -47,6 +52,14 @@ func TestFromTerminal(t *testing.T) {
 }
 
 func TestLoginPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Setenv("PATH", `C:\Tools;C:\Windows`)
+		got, err := LoginPath(context.Background(), `C:\missing-shell.exe`)
+		if err != nil || got != os.Getenv("PATH") {
+			t.Fatalf("Windows LoginPath = %q, %v", got, err)
+		}
+		return
+	}
 	dir := t.TempDir()
 	shell := filepath.Join(dir, "sh")
 	// A shell whose startup files print around the command's output.
@@ -60,5 +73,20 @@ func TestLoginPath(t *testing.T) {
 	}
 	if !strings.HasPrefix(got, "/from/rc:") {
 		t.Fatalf("LoginPath = %q", got)
+	}
+}
+
+func TestWindowsApplyPreservesPathWithoutUnixShell(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows environment behavior")
+	}
+	t.Setenv("PATH", `C:\Tools;C:\Windows\System32`)
+	t.Setenv("SHELL", `C:\missing-shell.exe`)
+	before := os.Getenv("PATH")
+	if err := Apply(context.Background(), "missing-herdr-ui-test-binary"); err != nil {
+		t.Fatal(err)
+	}
+	if got := os.Getenv("PATH"); got != before {
+		t.Fatalf("PATH changed: %q", got)
 	}
 }

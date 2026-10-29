@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Maidang1/herdr-ui/internal/localipc"
 	"net"
 	"os"
 	"path/filepath"
@@ -15,13 +16,13 @@ import (
 
 func serve(t *testing.T, handle func(net.Conn)) Target {
 	t.Helper()
-	dir, err := os.MkdirTemp("/tmp", "herdr-wire-")
+	dir, err := os.MkdirTemp("", "herdr-wire-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(dir) })
 	path := filepath.Join(dir, "s")
-	l, err := net.Listen("unix", path)
+	l, err := localipc.Listen(path)
 	if err != nil {
 		t.Fatal(err)
 	}

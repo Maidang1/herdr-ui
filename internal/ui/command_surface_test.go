@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -71,14 +72,17 @@ func drainSurfacePosts(h *surfaceHarness) {
 
 func TestCommandSurfaceClosesLateCompletion(t *testing.T) {
 	h := newSurfaceHarness(t)
-	cmd, env := []string{"/bin/herdr", "--session", "test"}, []string{"HERDR_SOCKET_PATH=/tmp/test.sock"}
-	if err := h.w.openCommandSurface("Herdr", cmd, env, "/tmp", h.factory); err != nil {
+	dir := t.TempDir()
+	binary := filepath.Join(dir, "herdr")
+	socketEnv := "HERDR_SOCKET_PATH=" + filepath.Join(dir, "test.sock")
+	cmd, env := []string{binary, "--session", "test"}, []string{socketEnv}
+	if err := h.w.openCommandSurface("Herdr", cmd, env, dir, h.factory); err != nil {
 		t.Fatal(err)
 	}
 	o := receiveSurface(t, h.options)
 	cmd[0] = "/different"
 	env[0] = "HERDR_SOCKET_PATH=/wrong"
-	if o.Command[0] != "/bin/herdr" || o.Dir != "/tmp" || o.Env[len(o.Env)-1] != "HERDR_SOCKET_PATH=/tmp/test.sock" || o.OnKey != nil {
+	if o.Command[0] != binary || o.Dir != dir || o.Env[len(o.Env)-1] != socketEnv || o.OnKey != nil {
 		t.Fatal(o)
 	}
 	if h.w.terminal.focused != "" {
@@ -95,14 +99,14 @@ func TestCommandSurfaceClosesLateCompletion(t *testing.T) {
 }
 func TestCommandSurfaceReplacementIgnoresOldExit(t *testing.T) {
 	h := newSurfaceHarness(t)
-	if err := h.w.openCommandSurface("First", []string{"/bin/first"}, nil, "", h.factory); err != nil {
+	if err := h.w.openCommandSurface("First", []string{filepath.Join(t.TempDir(), "first")}, nil, "", h.factory); err != nil {
 		t.Fatal(err)
 	}
 	firstOpts := receiveSurface(t, h.options)
 	first := &fakeCommandSurface{closed: make(chan struct{})}
 	h.results <- first
 	receiveSurface(t, h.posts)() // Installation repaint.
-	if err := h.w.openCommandSurface("Second", []string{"/bin/second"}, nil, "", h.factory); err != nil {
+	if err := h.w.openCommandSurface("Second", []string{filepath.Join(t.TempDir(), "second")}, nil, "", h.factory); err != nil {
 		t.Fatal(err)
 	}
 	receiveSurface(t, h.options)
@@ -121,7 +125,7 @@ func TestCommandSurfaceReplacementIgnoresOldExit(t *testing.T) {
 func TestCommandSurfaceExitBeforeFactoryReturn(t *testing.T) {
 	h := newSurfaceHarness(t)
 	f := &fakeCommandSurface{closed: make(chan struct{})}
-	if err := h.w.openCommandSurface("Short", []string{"/bin/true"}, nil, "", func(o terminal.Options) (commandSurfaceTerminal, error) { o.OnExit(0); return f, nil }); err != nil {
+	if err := h.w.openCommandSurface("Short", []string{filepath.Join(t.TempDir(), "true")}, nil, "", func(o terminal.Options) (commandSurfaceTerminal, error) { o.OnExit(0); return f, nil }); err != nil {
 		t.Fatal(err)
 	}
 	receiveSurface(t, f.closed)
@@ -135,7 +139,7 @@ func TestCommandSurfaceCloseNeverWaitsForPTY(t *testing.T) {
 	h := newSurfaceHarness(t)
 	f := &fakeCommandSurface{closed: make(chan struct{}), release: make(chan struct{})}
 	defer close(f.release)
-	if err := h.w.openCommandSurface("Blocking", []string{"/bin/slow"}, nil, "", func(terminal.Options) (commandSurfaceTerminal, error) { return f, nil }); err != nil {
+	if err := h.w.openCommandSurface("Blocking", []string{filepath.Join(t.TempDir(), "slow")}, nil, "", func(terminal.Options) (commandSurfaceTerminal, error) { return f, nil }); err != nil {
 		t.Fatal(err)
 	}
 	receiveSurface(t, h.posts)()
@@ -152,7 +156,7 @@ func TestCommandSurfaceStartupErrorAndValidation(t *testing.T) {
 		t.Fatal("relative executable accepted")
 	}
 	want := errors.New("could not create PTY")
-	if err := h.w.openCommandSurface("Failure", []string{"/missing"}, nil, "", func(terminal.Options) (commandSurfaceTerminal, error) { return nil, want }); err != nil {
+	if err := h.w.openCommandSurface("Failure", []string{filepath.Join(t.TempDir(), "missing")}, nil, "", func(terminal.Options) (commandSurfaceTerminal, error) { return nil, want }); err != nil {
 		t.Fatal(err)
 	}
 	receiveSurface(t, h.posts)()

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -60,21 +61,26 @@ func TestDirectoryBoundaryAmbiguityAndSymlinks(t *testing.T) {
 	if got := workspaceForDirectory(nested, candidates); got != "" {
 		t.Fatal("same-path workspaces ambiguously assigned", got)
 	}
-	alias := filepath.Join(base, "symlink")
-	if err := os.Symlink(project, alias); err != nil {
-		t.Fatal(err)
-	}
-	candidates = workspaceDirectories(Source{Workspaces: []WorkspaceSource{{ID: "root", Path: alias}}}, map[string]string{"root": alias})
-	if got := workspaceForDirectory(nested, candidates); got != "root" {
-		t.Fatal("canonical symlink descendant lost", got)
-	}
-	escape := filepath.Join(project, "escape")
-	if err := os.Symlink(sibling, escape); err != nil {
-		t.Fatal(err)
-	}
-	if got := workspaceForDirectory(escape, candidates); got != "" {
-		t.Fatal("symlink escaped checkout boundary", got)
-	}
+	t.Run("symlinks", func(t *testing.T) {
+		alias := filepath.Join(base, "symlink")
+		if err := os.Symlink(project, alias); err != nil {
+			if runtime.GOOS == "windows" {
+				t.Skipf("Windows symlink creation requires Developer Mode or elevation: %v", err)
+			}
+			t.Fatal(err)
+		}
+		candidates = workspaceDirectories(Source{Workspaces: []WorkspaceSource{{ID: "root", Path: alias}}}, map[string]string{"root": alias})
+		if got := workspaceForDirectory(nested, candidates); got != "root" {
+			t.Fatal("canonical symlink descendant lost", got)
+		}
+		escape := filepath.Join(project, "escape")
+		if err := os.Symlink(sibling, escape); err != nil {
+			t.Fatal(err)
+		}
+		if got := workspaceForDirectory(escape, candidates); got != "" {
+			t.Fatal("symlink escaped checkout boundary", got)
+		}
+	})
 }
 func TestExternalCWDRequiresStableProcessIdentity(t *testing.T) {
 	path := t.TempDir()

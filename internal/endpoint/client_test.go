@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/Maidang1/herdr-ui/internal/localipc"
 	"io"
 	"net"
 	"os"
@@ -96,19 +97,19 @@ func TestBoundedCodec(t *testing.T) {
 }
 func TestSocketDerivation(t *testing.T) {
 	for a, w := range map[string]string{"/tmp/herdr.sock": "/tmp/herdr-client.sock", "/tmp/custom": "/tmp/custom-client.sock", "/tmp/foo.bar": "/tmp/foo-client.sock"} {
-		if g := SocketPath(a); g != w {
+		if g := SocketPath(a); g != filepath.FromSlash(w) {
 			t.Fatal(a, g, w)
 		}
 	}
 }
 func listener(t *testing.T) net.Listener {
 	t.Helper()
-	dir, e := os.MkdirTemp("/tmp", "hep-")
+	dir, e := os.MkdirTemp("", "hep-")
 	if e != nil {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { os.RemoveAll(dir) })
-	l, e := net.Listen("unix", filepath.Join(dir, "c.sock"))
+	l, e := localipc.Listen(filepath.Join(dir, "c.sock"))
 	if e != nil {
 		t.Fatal(e)
 	}

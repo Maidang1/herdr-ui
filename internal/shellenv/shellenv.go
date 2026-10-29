@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -27,6 +28,9 @@ func FromTerminal(getenv func(string) string) bool { return getenv("TERM") != ""
 // LoginPath runs shell as an interactive login shell, which reads the files
 // users set PATH in (.zprofile, .zshrc, config.fish…), and returns its PATH.
 func LoginPath(ctx context.Context, shell string) (string, error) {
+	if runtime.GOOS == "windows" {
+		return os.Getenv("PATH"), nil
+	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, shell, "-l", "-i", "-c", "printf '%s' "+marker+"; /usr/bin/printenv PATH")
@@ -70,6 +74,9 @@ func Merge(first string, others ...string) string {
 
 // CommonDirs lists where command-line tools are usually installed.
 func CommonDirs(home string) string {
+	if runtime.GOOS == "windows" {
+		return strings.Join([]string{filepath.Join(home, ".local", "bin"), filepath.Join(home, ".cargo", "bin")}, string(os.PathListSeparator))
+	}
 	return strings.Join([]string{
 		filepath.Join(home, ".local", "bin"),
 		"/opt/homebrew/bin",
@@ -85,6 +92,9 @@ func CommonDirs(home string) string {
 // user's shell, whose interactive startup can take seconds, and put the
 // shell's PATH first. It returns the error of the shell, if any.
 func Apply(ctx context.Context, binary string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
 	if FromTerminal(os.Getenv) {
 		return nil
 	}

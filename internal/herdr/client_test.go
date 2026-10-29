@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"net"
+	"github.com/Maidang1/herdr-ui/internal/localipc"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,7 +24,7 @@ func TestCallFraming(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "s")
-			l, err := net.Listen("unix", path)
+			l, err := localipc.Listen(path)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -49,7 +49,7 @@ func TestCallFraming(t *testing.T) {
 
 func TestCallCancellation(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "s")
-	l, err := net.Listen("unix", path)
+	l, err := localipc.Listen(path)
 	if err != nil {
 		t.Fatal(err)
 	}
