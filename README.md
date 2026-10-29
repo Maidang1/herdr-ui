@@ -1,63 +1,154 @@
 # Herdr UI
 
-Herdr 的原生桌面客户端，使用 **Go + mygo 原生 UI**。展示已有工作区、工作树、代理状态与终端，支持标签、分屏和 Herdr prefix 模式。macOS 使用内置终端插件；Windows x64 使用命名管道和原生 endpoint 单元格渲染，不依赖 `herdr terminal attach`。Windows 的构建、验证命令和当前限制见 [Windows 支持说明](docs/windows-support.md)。Linux amd64/arm64 沿用 Unix attach 终端路径，提供原生 GTK 桌面包；安装、构建与验证范围见 [Linux 支持说明](docs/linux-support.md)。
+[Herdr](https://github.com/herdrdev/herdr) 的原生桌面客户端，让工作区、Git 工作树、coding agent 和多窗格终端集中在一个窗口里。
 
-目前已实现 M4 原生收尾：当前标签的多窗格终端支持分屏、方向选择、zoom 与比例调整；精简的终端内容区、可调整侧栏和右侧快捷键参考面板适配最小 820×560 窗口。原生菜单提供 System / Light / Dark，外壳跟随减少透明度与增加对比度偏好。阶段证据见 [M0](docs/m0-validation.md)、[M1](docs/m1-validation.md)、[M2](docs/m2-validation.md)、[M3](docs/m3-validation.md)、[M4 验收记录](docs/m4-validation.md)。系统 IME、真实鼠标和 VoiceOver 等交互仍需实机验收。
+使用 Go 和 [mygo](https://github.com/egoist/mygo) 构建，支持 macOS、Windows x64 与 Linux amd64/arm64。界面与终端不依赖 WebView，运行时无需 Node.js。
 
-对照 Herdr 与 Kero（同框架的 agent 终端）实机与源码调研后，补齐了一批终端相关能力（清单与取舍见 [功能对齐清单](docs/feature-parity-plan.md)）：外观与字号偏好持久化（⌘=/⌘-/⌘0，启动恢复）；agent 状态系统通知（需要你/完成）与 Dock 角标，点击跳转对应 pane；终端内查找条 ⌘F（实时计数与步进）；⌘+点击打开打印出的文件路径；⌘K 按 Herdr 语义清屏；Zen 模式 ⌃⌘Z；Go To 面板升级为会话目的地 + 命令的混合面板（frecency 排序）。⌘B 切换侧栏、⌘J 跳到等待中的 agent。常用 Mac 终端键位直接可用：⌘T、⌘W、⌘D/⇧⌘D、⌘1–9、⇧⌘[ ⇧⌘]、⌘[ ⌘]、⌥⌘方向键；鼠标拖动即可选中文字。设置窗口（⌘，）提供外观、终端（字体族/字号/字重/行高/光标形状与闪烁/Option 作 Meta/选中即复制/最小对比度，热更全部终端）、通知开关与快捷键参考四页，改动即时生效并落盘。
+[下载最新版本](https://github.com/Maidang1/herdr-ui/releases/latest) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/Maidang1/herdr-ui/issues)
 
-- [设计与实现方案](docs/implementation.md)：唯一主文档，包含第一版范围、界面、架构、接口、事件同步、终端、快捷键、颜色 token 与验收步骤。
-- [第一版设计稿](docs.pen/new.pen)：Workspaces、Split Panes、Switch Tabs、Shortcuts Reference 四张画板，使用 Pencil 打开。
-- [API schema](reference/herdr-api-schema.json)：机器可读参考，接入时以目标 Herdr 实际版本为准。
-- [图标素材与授权](assets/icons/NOTICE.md)。
+## 功能
 
-界面按 Apple 的同心圆角原则组织（浮动侧栏、内容面板、分屏卡片、菜单逐层派生半径，见主文档 §9.8）。Herdr 原本只能靠 prefix 键触达的命令都有了鼠标入口：工作区、标签、pane 标题与 agent 行都有右键菜单（重命名、worktree、拷贝路径/在 Finder 中显示、分屏、交换、复制模式、清屏、关闭等）；双击工作区或标签重命名，双击 pane 标题放大/恢复；有 agent 等待回复时 Agents 标题旁出现「N waiting」按钮一键跳转；菜单栏按 Workspace / Tab / Pane / Go / View 分组，标题旁以 ⌃B 等符号标出 Herdr 键位，⌘P 打开 Go To 调色板。
+- **工作区与工作树**：浏览已有会话，查看分支、ahead/behind 和本地监听端口，通过菜单管理工作区与 worktree。
+- **多窗格终端**：切换标签、水平或垂直分屏、调整比例、方向导航，以及放大和恢复窗格。
+- **Agent 状态**：按工作区聚合 agent，显示品牌标识与状态，跳转到等待回复的窗格，配置通知与 agent 集成。
+- **键盘与鼠标入口**：保留 Herdr prefix 模式，提供命令面板、快捷键参考、右键菜单和双击重命名。
+- **终端体验**：文字选择与复制粘贴、查找、清屏、字体缩放、文件路径打开和 Zen 模式；具体能力因平台而异。
+- **原生外观与更新**：System / Light / Dark 主题、持久化偏好，以及支持 Ed25519 校验的应用内更新。
 
-侧栏按 Herdr 的 spaces / agents 信息分区：工作区显示真实分支、ahead/behind 与监听端口，代理单独按工作区分组，不展开普通 shell 标题。API 未导出的本地 Git/进程信息由后台有界采集，细节与验证见 [侧栏修正记录](docs/sidebar-validation.md)。
+Herdr UI 连接已经运行的 Herdr，**不会自动启动守护进程、创建工作区或接管已有终端 owner**。普通浏览保持窗口本地选择；需要改变会话的操作按 Herdr 语义执行。
 
-终端直接使用 `github.com/egoist/mygo/plugins/terminal`，通过 `herdr terminal attach <terminal_id>` 连接已有会话；状态从第一版起使用 `events.subscribe`，由事件触发权威快照更新，不定时轮询。
+## 安装
 
-通用图标采用 `lucide-static`，agent 品牌图标采用 `@lobehub/icons-static-svg`：开发时按需导出并嵌入 SVG，由 mygo 显示，运行时无需 Node/npm。单色使用 `ui.Icon`，彩色使用 `ui.Image`。
+先安装并启动 [Herdr](https://github.com/herdrdev/herdr)，再从 [GitHub Releases](https://github.com/Maidang1/herdr-ui/releases) 下载对应平台的应用。Windows 和 Linux 的 CI 集成测试使用 Herdr 0.9.5；API 接入以实际运行的 Herdr 版本为准。
 
-`docs.pen/01.pen` 保留为历史设计源素材。第一版范围、颜色和实现决策统一以主文档及 `docs.pen/new.pen` 为准。实现从主文档中的 M0 接入验证开始。
+| 平台 | 安装包 | 说明 |
+| --- | --- | --- |
+| macOS | 通用 `.dmg` | 同时包含 Apple Silicon 和 Intel 架构 |
+| Windows x64 | `-setup.exe` 或便携 `.zip` | 原生命名管道与 endpoint 终端单元格渲染 |
+| Linux amd64 / arm64 | `.deb` 或便携 `.tar.gz` + `install.sh` | Ubuntu 22.04+ 为验证基线，需要 glibc、GTK 3 和图形会话 |
 
-开发环境：macOS arm64、Go 1.27.1（支持 Go 自动工具链下载）、已安装并运行的 Herdr。mygo 固定到 `80afe0af6f9d0608b05caed22f4607205a60c3a5`，构建不使用本机路径 `replace`。
+### macOS
 
-```sh
-make test          # 纯 Go 契约测试与 vet，不加载终端动态库
-make build         # CGO_ENABLED=0，输出到 bin/
-make run           # 当前标签的多终端窗口
-make probe         # 只读检查当前 Herdr、配置与布局，不占用终端
-make window        # 本地 /bin/cat 输入测试窗口，不连接 Herdr
-make integration   # 临时独立服务 + 真实插件 + 原生窗口，结束后清理
-make package       # 固定版本 mygo CLI，输出含原生库的本地签名 .app
-make linux         # Linux amd64 + arm64 原生包、.deb、便携 .tar.gz 和 install.sh
-make dmg           # 通用二进制（arm64 + x86_64）.app 与 .dmg，与发布流程一致
-```
-
-自动更新：正式打包的应用使用 mygo 原生更新窗口，启动 10 秒后检查 GitHub Releases，运行期间每天再检查一次。菜单「Check for Updates…」可手动检查；设置的 Updates 页可关闭自动检查，或开启自动下载并安装（下次启动生效）。发现新版时显示更新说明，可安装、稍后提醒或跳过版本；下载有进度，校验 Ed25519 签名后替换应用，再选择是否重启。开发构建和不可写的安装位置不会后台检查。旧版本首次升级到包含更新功能的版本需要手动安装一次。
-
-更新签名：`mygo.json` 中只保存公钥与 GitHub 仓库，私钥由仓库 Actions secret `MYGO_UPDATER_PRIVATE_KEY` 提供。发布流程要求签名密钥存在，并与 DMG 一起上传 `update-darwin-universal.json`、签名 `.tar.gz` 和可用的 `.delta`；同时发布内容完全相同的 `update-darwin-arm64.json` 和 `update-darwin-amd64.json`，兼容旧客户端的架构专用更新地址。缺少密钥或更新清单时停止发布。后续版本沿用同一密钥。需要生成首套密钥时使用 `./scripts/go.sh run github.com/egoist/mygo/cmd/mygo keygen -o <仓库外的目录>`，把公钥填入配置，使用 `gh secret set MYGO_UPDATER_PRIVATE_KEY < <私钥路径>` 配置 CI。测试本地签名包时可用框架的 `MYGO_UPDATER_PRIVATE_KEY` 环境变量或仅在本地配置 `updates.privateKey` 路径。
-
-发布：把 `mygo.json` 的 `version` 改为新版本，在 `CHANGELOG.md` 添加对应 `## X.Y.Z` 更新说明并提交，再推送同名标签（如 `git tag v0.1.0 && git push origin v0.1.0`）。[Release 工作流](.github/workflows/release.yml)校验标签与版本一致，在 macOS、Windows 和 Linux（amd64/arm64）runner 上并行测试、打包；所有平台都成功后，由独立任务统一创建 GitHub Release，上传 macOS 通用 DMG、Windows x64 安装器与便携 ZIP、Linux 双架构 .deb 与便携 .tar.gz、用户级 install.sh、SHA-256 校验文件，以及各平台的签名更新包和清单。Windows 任务保留真实 Herdr 守护进程的集成验证。手动运行该工作流只构建，产物留在运行记录里，即使选择标签也不发布。应用为 ad hoc 签名，未经公证，首次打开需移除隔离属性（发布说明中附命令）。
-
-默认窗口按事件同步，并差量 attach 当前标签的全部可见终端。普通工作区/标签/pane 选择保持窗口本地，不修改 Herdr 全局焦点；滚动通过显式目标 `pane.scroll` 更新服务端视口。可使用 `./bin/herdr-ui -socket /path/to/herdr.sock` 指定目标。
-
-快捷键覆盖工作区、标签、pane、worktree、导航、复制模式和自定义命令。默认先按 `Ctrl+B`，再按动作键；`?` 打开快捷键参考。设置与滚动历史通过内嵌 `$EDITOR` 打开，popup/插件交互通过内嵌 Herdr 客户端显示。支持范围、平台键位限制与验证方法见 [快捷键说明](docs/keyboard-parity.md)。缩放状态下切换隐藏 pane，以及图片粘贴和服务端自定义命令，会使用显式目标更新服务端焦点。
-
-M0 验证窗口连接某个已有终端：先运行 `make probe` 取得真实 `terminal_id`，然后执行：
+打开 DMG，将 **Herdr UI.app** 拖入 Applications 后启动。当前应用采用 ad hoc 签名，未经 Apple 公证；首次启动被 Gatekeeper 阻止时，确认安装包来源后执行：
 
 ```sh
-./bin/herdr-ui -terminal '<terminal_id>'
-./bin/herdr-ui -socket /path/to/herdr.sock -terminal '<terminal_id>'
+xattr -dr com.apple.quarantine "/Applications/Herdr UI.app"
 ```
 
-不会自动 takeover、创建工作区或启动守护进程。已有 owner 时 attach 拒绝并保留其诊断画面，提供 Retry；关闭 GUI 只释放本应用的 attach。放大窗格时释放隐藏 attach，恢复时重新连接；普通浏览不发送全局 focus，显式 split/zoom 会按 Herdr 语义改变服务端焦点。JSON 探针不会周期轮询；集成测试中的短时等待仅用于验收。
+### Windows
 
-构建应使用 `make` 或 `./scripts/go.sh`：它们从固定依赖生成仅增加公开组字查询的 mygo 副本，不修改 Go module cache；普通 `go build` 缺少该能力时会显式禁用业务快捷键。配置解析不支持的有效形式会显示诊断，不静默采用默认键位。
+运行安装器，或将便携 ZIP 完整解压后启动应用。请保留解压目录中的资源文件。
 
-开发期 `./scripts/go.sh run ./cmd/herdr-ui -local-fixture`/`make window` 首次可能下载插件的原生库；`make package` 把校验后的 `libghostty-vt` 放入应用资源，打包应用不在启动时下载。集成测试会在 `/tmp` 创建自己的隔离 Herdr 服务与终端，绝不关闭用户已有会话。
+Windows 使用原生 endpoint 渲染，不启动 `herdr terminal attach`。快捷键使用 Ctrl+Shift 等组合，避免占用常用终端按键。安装、构建和已知限制见 [Windows 支持说明](docs/windows-support.md)。
 
-应用图标是已提交的生成文件，普通 Go 构建不需要 Node。更新图标时执行 `npm ci && npm run icons`；清单与确切来源位于 `scripts/icons.json` 和 `internal/icons/SOURCES.txt`，许可证随打包资源保留。
+### Linux
 
-App 图标的源文件是 `assets/app/icon.svg`（同心圆角的分屏窗格，配 Herdr 的 working 弧与 waiting 光晕）。改动后执行 `resvg -w 1024 -h 1024 assets/app/icon.svg assets/app/icon.png` 重新导出；`make package` 读取 `mygo.json` 的 `icon` 生成 `.icns`。
+下载与 CPU 架构匹配的安装包：`amd64` 对应 x86_64，`arm64` 对应 aarch64。
+
+- **Debian / Ubuntu**：使用 `sudo apt install ./herdr-ui_<version>_<arch>.deb` 安装，再运行 `herdr-ui`。
+- **用户级安装**：从同一 release 下载 `install.sh` 与对应便携归档，以普通用户执行 `sh install.sh ./herdr-ui-<version>-linux-<arch>.tar.gz`。
+- **便携运行**：完整解压归档后运行其中的 `./herdr-ui`，保留终端动态库与其他资源。
+
+用户级安装需要 `~/.local/bin` 位于 PATH，并支持可写安装目录中的应用内更新。系统级 `.deb` 安装请使用新版 `.deb` 更新，不要以 root 运行 GUI。
+
+安装前建议使用同一 release 的 SHA-256 文件校验下载。GTK 依赖、完整安装命令和验证范围见 [Linux 支持说明](docs/linux-support.md)。
+
+## 使用
+
+启动后选择工作区与标签，即可连接当前标签的可见终端。默认 prefix 是 `Ctrl+B`，再按动作键；`?` 打开快捷键参考。自定义配置和平台差异见 [快捷键说明](docs/keyboard-parity.md)。
+
+常用 macOS 快捷键：
+
+| 操作 | 快捷键 |
+| --- | --- |
+| 命令与会话导航面板 | `Cmd+P` |
+| 新建 / 关闭标签 | `Cmd+T` / `Cmd+W` |
+| 垂直 / 水平分屏 | `Cmd+D` / `Cmd+Shift+D` |
+| 查找终端文字 | `Cmd+F` |
+| 显示 / 隐藏侧栏 | `Cmd+B` |
+| 跳到等待中的 agent | `Cmd+J` |
+| 设置 | `Cmd+,` |
+| 放大 / 缩小 / 重置字号 | `Cmd+=` / `Cmd+-` / `Cmd+0` |
+
+终端已有 owner 时，应用保留诊断信息并提供 Retry，不自动 takeover。关闭窗口只释放本应用的连接，不关闭 Herdr 会话。
+
+### 自动更新
+
+正式打包且安装位置可写的应用在启动 10 秒后检查更新，运行期间每天再检查一次。可从 **Check for Updates** 菜单手动检查，在设置的 Updates 页控制自动检查与自动下载安装。
+
+下载的更新经过 Ed25519 签名校验。开发构建和不可写的安装位置不会后台检查；`v0.0.6` 及更早版本需要手动安装一次新版才能使用应用内更新。
+
+## 开发
+
+需要 `go.mod` 指定的 Go 版本（当前为 1.27.1）、Python 3.10+，以及运行原生窗口所需的平台环境。连接真实会话时，Herdr 必须已安装并运行。
+
+```sh
+git clone https://github.com/Maidang1/herdr-ui.git
+cd herdr-ui
+make test
+make build
+make run
+```
+
+请使用 `make` 或 `scripts/go.sh`，不要直接用普通 `go build` 替代。包装脚本为固定版本的 mygo 生成带有必要终端补丁的工作区，不修改 Go module cache，也不依赖开发者本机的 `replace` 路径。
+
+| 命令 | 用途 |
+| --- | --- |
+| `make test` | Python 发布契约测试、Go 测试和 vet |
+| `make build` | 构建当前平台可执行文件，输出到 `bin/` |
+| `make run` | 构建并连接已有 Herdr 会话 |
+| `make probe` | 只读检查 Herdr、配置与布局，不占用终端 |
+| `make window` | 本地 `/bin/cat` 输入测试窗口，不连接 Herdr |
+| `make integration` | 临时隔离服务、真实终端插件与原生窗口验证 |
+| `make package` | 打包 macOS `.app` |
+| `make dmg` | 打包 macOS 通用 `.app` 与 `.dmg` |
+| `make linux` | 打包 Linux 双架构 `.deb`、便携归档与安装脚本 |
+
+Windows 使用 `python scripts/go.py` 包装器；具体命令见平台文档。开发期首次启动终端可能下载经过校验的原生库，正式包已包含动态库，不在启动时下载。集成测试使用独立临时服务，不关闭已有用户会话；Linux 和 Windows 的测试环境要求见各自平台文档。
+
+指定 Herdr 可执行文件或 socket：
+
+```sh
+./bin/herdr-ui -herdr /path/to/herdr
+./bin/herdr-ui -socket /path/to/herdr.sock
+```
+
+### 图标
+
+普通构建不需要 npm。重新生成嵌入图标时执行：
+
+```sh
+npm ci
+npm run icons
+```
+
+来源清单位于 `scripts/icons.json` 和 `internal/icons/SOURCES.txt`。应用图标源文件为 `assets/app/icon.svg`；修改后可用 `resvg -w 1024 -h 1024 assets/app/icon.svg assets/app/icon.png` 更新打包用 PNG。
+
+## 发布
+
+1. 更新 `mygo.json` 的 `version`。
+2. 在 `CHANGELOG.md` 添加同版本的更新说明，运行 `make test` 并提交。
+3. 推送与版本一致的 `vX.Y.Z` 标签。
+
+[Release 工作流](.github/workflows/release.yml)并行测试和打包 macOS、Windows 与 Linux 双架构，所有平台成功后统一创建 GitHub Release。手动触发只生成工作流产物，不发布 release。
+
+仓库 Actions secret `MYGO_UPDATER_PRIVATE_KEY` 提供更新签名私钥，配置文件只保存公钥。缺少密钥或签名更新产物会停止发布。macOS 同时提供通用与兼容旧客户端的架构专用更新清单；私钥不得提交到仓库。
+
+## 文档与验证范围
+
+- [设计与实现](docs/implementation.md)：架构、接口、事件同步与设计决策。
+- [功能对齐](docs/feature-parity-plan.md)与[快捷键说明](docs/keyboard-parity.md)：功能范围和平台差异。
+- [Windows 支持](docs/windows-support.md)与[Linux 支持](docs/linux-support.md)：安装、构建、测试与已知限制。
+- [API schema](reference/herdr-api-schema.json)：机器可读接口参考。
+- [侧栏验证](docs/sidebar-validation.md)及 [M0](docs/m0-validation.md)、[M1](docs/m1-validation.md)、[M2](docs/m2-validation.md)、[M3](docs/m3-validation.md)、[M4](docs/m4-validation.md)：阶段验收记录。
+- [设计稿](docs.pen/new.pen)：使用 Pencil 打开；`docs.pen/01.pen` 为历史素材。
+
+CI 测试不能替代实机桌面验收。Windows IME、AltGr、DPI 与完整交互，Linux X11/Wayland 与 IME，以及 macOS 的系统 IME、真实鼠标与 VoiceOver 等仍需实机验证。Windows 的 endpoint 查找覆盖已发布屏幕，且不渲染内联图像；具体限制以平台文档为准。
+
+## 许可证
+
+项目代码采用 [MIT License](LICENSE)。第三方依赖、图标及品牌标识保留各自的许可证和权利声明，不因本项目采用 MIT 而改变：
+
+- [设计图标授权](assets/icons/NOTICE.md)
+- [Lucide 图标许可证](internal/icons/LICENSE-lucide)
+- [Lobe 图标许可证](internal/icons/LICENSE-lobe)

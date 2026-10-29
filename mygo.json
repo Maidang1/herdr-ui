@@ -12,6 +12,7 @@
     "comment": "Native desktop client for Herdr workspaces and terminals"
   },
   "resources": [
+    "LICENSE",
     "internal/icons/LICENSE-lucide",
     "internal/icons/LICENSE-lobe",
     "assets/icons/NOTICE.md"
