@@ -61,8 +61,8 @@ jobs:
       - name: Name the disk image
         id: dmg
         run: |
-          name="Herdr-UI-${{ steps.version.outputs.version }}-macos-universal.dmg"
-          mv "dist/darwin-universal/Herdr UI ${{ steps.version.outputs.version }}.dmg" "dist/$name"
+          name="Hergo-${{ steps.version.outputs.version }}-macos-universal.dmg"
+          mv "dist/darwin-universal/Hergo ${{ steps.version.outputs.version }}.dmg" "dist/$name"
           shasum -a 256 "dist/$name" | sed 's| dist/| |' > "dist/$name.sha256"
           mkdir release-assets
           shopt -s nullglob
@@ -135,16 +135,16 @@ jobs:
           $portable = Join-Path $env:RUNNER_TEMP 'herdr-ui-portable'
           New-Item -ItemType Directory -Force $portable | Out-Null
           Get-ChildItem dist/windows-amd64 | Where-Object { $_.Name -notmatch ' Setup |\.tar\.gz$|\.delta$|^update-' } | Copy-Item -Destination $portable -Recurse
-          Compress-Archive -Path "$portable/*" -DestinationPath "artifacts/Herdr-UI-$version-windows-amd64.zip"
+          Compress-Archive -Path "$portable/*" -DestinationPath "artifacts/Hergo-$version-windows-amd64.zip"
           $installers = @(Get-ChildItem dist/windows-amd64/*Setup*.exe -File)
           if ($installers.Count -ne 1) { throw 'Expected exactly one Windows installer' }
-          Copy-Item $installers[0].FullName "artifacts/Herdr-UI-$version-windows-amd64-setup.exe"
+          Copy-Item $installers[0].FullName "artifacts/Hergo-$version-windows-amd64-setup.exe"
           Get-ChildItem dist/windows-amd64 -File | Where-Object { $_.Name -match '\.tar\.gz$|\.delta$|^update-' } | Copy-Item -Destination artifacts
           if (@(Get-ChildItem artifacts/*.tar.gz -File).Count -eq 0) { throw 'Windows update archive was not produced' }
           $files = @(Get-ChildItem artifacts -File)
           foreach ($file in $files) {
             $hash = (Get-FileHash -Algorithm SHA256 $file.FullName).Hash.ToLowerInvariant()
-            "$hash  $($file.Name)" | Add-Content "artifacts/Herdr-UI-$version-windows-amd64-SHA256SUMS"
+            "$hash  $($file.Name)" | Add-Content "artifacts/Hergo-$version-windows-amd64-SHA256SUMS"
           }
       - uses: actions/upload-artifact@v7
         with:
@@ -225,12 +225,12 @@ jobs:
           dir="dist/linux-${{ matrix.arch }}"
           version="${{ steps.version.outputs.version }}"
           test -s "$dir/update-linux-${{ matrix.arch }}.json"
-          test -s "$dir/herdr-ui-$version-linux-${{ matrix.arch }}.tar.gz"
-          test -s "$dir/herdr-ui_${version}_${{ matrix.arch }}.deb"
+          test -s "$dir/hergo-$version-linux-${{ matrix.arch }}.tar.gz"
+          test -s "$dir/hergo_${version}_${{ matrix.arch }}.deb"
           # A packaged application must not download its terminal at startup.
           find "$dir" -name 'libghostty-vt.so' -type f -size +0c | grep -q .
-          tar -tzf "$dir/herdr-ui-$version-linux-${{ matrix.arch }}.tar.gz" | grep -q 'libghostty-vt.so'
-          depends="$(dpkg-deb -f "$dir/herdr-ui_${version}_${{ matrix.arch }}.deb" Depends)"
+          tar -tzf "$dir/hergo-$version-linux-${{ matrix.arch }}.tar.gz" | grep -q 'libghostty-vt.so'
+          depends="$(dpkg-deb -f "$dir/hergo_${version}_${{ matrix.arch }}.deb" Depends)"
           case "$depends" in *libgtk-3-0*) ;; *) exit 1 ;; esac
           case "$depends" in *webkit*) echo 'Unexpected WebKit dependency'; exit 1 ;; esac
           sh -n "$dir/install.sh"
@@ -238,7 +238,7 @@ jobs:
         run: |
           dir="dist/linux-${{ matrix.arch }}"
           # The executable locates the bundled library, not the developer cache.
-          timeout 30s xvfb-run -a dbus-run-session -- "$dir/herdr-ui" -local-fixture -close-after 3s > "$RUNNER_TEMP/linux-package.log" 2>&1
+          timeout 30s xvfb-run -a dbus-run-session -- "$dir/hergo" -local-fixture -close-after 3s > "$RUNNER_TEMP/linux-package.log" 2>&1
           cat "$RUNNER_TEMP/linux-package.log"
           grep -q 'M0 terminal installed' "$RUNNER_TEMP/linux-package.log"
           grep -q 'M0 terminal closed' "$RUNNER_TEMP/linux-package.log"
@@ -251,7 +251,7 @@ jobs:
           cp "$dir"/*.deb "$dir"/*.tar.gz "$dir"/*.delta "$dir"/update-*.json release-assets/
           cp "$dir/install.sh" "release-assets/install-linux-${{ matrix.arch }}.sh"
           cd release-assets
-          sha256sum -- * > "Herdr-UI-$version-linux-${{ matrix.arch }}-SHA256SUMS"
+          sha256sum -- * > "Hergo-$version-linux-${{ matrix.arch }}-SHA256SUMS"
       - uses: actions/upload-artifact@v7
         with:
           name: release-linux-${{ matrix.arch }}
@@ -275,28 +275,28 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           version="${VERSION#v}"
-          test -s "release-assets/Herdr-UI-$version-macos-universal.dmg"
-          test -s "release-assets/Herdr-UI-$version-macos-universal.dmg.sha256"
-          test -s "release-assets/Herdr-UI-$version-windows-amd64-setup.exe"
-          test -s "release-assets/Herdr-UI-$version-windows-amd64.zip"
-          test -s "release-assets/Herdr-UI-$version-windows-amd64-SHA256SUMS"
+          test -s "release-assets/Hergo-$version-macos-universal.dmg"
+          test -s "release-assets/Hergo-$version-macos-universal.dmg.sha256"
+          test -s "release-assets/Hergo-$version-windows-amd64-setup.exe"
+          test -s "release-assets/Hergo-$version-windows-amd64.zip"
+          test -s "release-assets/Hergo-$version-windows-amd64-SHA256SUMS"
           test -s release-assets/update-darwin-universal.json
           cmp release-assets/update-darwin-universal.json release-assets/update-darwin-arm64.json
           cmp release-assets/update-darwin-universal.json release-assets/update-darwin-amd64.json
           test -s release-assets/update-windows-amd64.json
           for arch in amd64 arm64; do
-            test -s "release-assets/herdr-ui_${version}_${arch}.deb"
-            test -s "release-assets/herdr-ui-$version-linux-$arch.tar.gz"
+            test -s "release-assets/hergo_${version}_${arch}.deb"
+            test -s "release-assets/hergo-$version-linux-$arch.tar.gz"
             test -s "release-assets/update-linux-$arch.json"
             test -s "release-assets/install-linux-$arch.sh"
           done
           # Both packagers generate the same architecture-detecting installer.
           cmp release-assets/install-linux-amd64.sh release-assets/install-linux-arm64.sh
           cd release-assets
-          sha256sum -c "Herdr-UI-$version-macos-universal.dmg.sha256"
-          sha256sum -c "Herdr-UI-$version-windows-amd64-SHA256SUMS"
-          sha256sum -c "Herdr-UI-$version-linux-amd64-SHA256SUMS"
-          sha256sum -c "Herdr-UI-$version-linux-arm64-SHA256SUMS"
+          sha256sum -c "Hergo-$version-macos-universal.dmg.sha256"
+          sha256sum -c "Hergo-$version-windows-amd64-SHA256SUMS"
+          sha256sum -c "Hergo-$version-linux-amd64-SHA256SUMS"
+          sha256sum -c "Hergo-$version-linux-arm64-SHA256SUMS"
           cp install-linux-amd64.sh install.sh
       - name: Publish the release
         env:
@@ -311,16 +311,16 @@ jobs:
           macOS: the app is signed ad hoc, not with a Developer ID, so Gatekeeper blocks it on first launch. After dragging it to Applications, run:
 
           ```sh
-          xattr -dr com.apple.quarantine "/Applications/Herdr UI.app"
+          xattr -dr com.apple.quarantine "/Applications/Hergo.app"
           ```
 
           Windows x64: use the setup executable or extract the portable ZIP. Physical Windows desktop and IME validation remains outstanding.
 
-          Linux amd64/arm64 (Ubuntu 22.04+): install the matching .deb, or download install.sh and the matching herdr-ui-<version>-linux-<arch>.tar.gz and run `sh install.sh <archive>` as your normal user. GTK 3 is required; WebKitGTK is not. User-local installs support signed in-app updates; .deb installs should be updated with the package manager. Physical X11/Wayland desktop and IME validation remains outstanding.
+          Linux amd64/arm64 (Ubuntu 22.04+): install the matching .deb, or download install.sh and the matching hergo-<version>-linux-<arch>.tar.gz and run `sh install.sh <archive>` as your normal user. GTK 3 is required; WebKitGTK is not. User-local installs support signed in-app updates; .deb installs should be updated with the package manager. Physical X11/Wayland desktop and IME validation remains outstanding.
 
-          Herdr UI attaches to a running Herdr; install and start Herdr first.
+          Hergo attaches to a running Herdr; install and start Herdr first.
           NOTES
             gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
-              --verify-tag --title "Herdr UI $GITHUB_REF_NAME" \
+              --verify-tag --title "Hergo $GITHUB_REF_NAME" \
               --notes-file "$RUNNER_TEMP/notes.md" --generate-notes
           fi

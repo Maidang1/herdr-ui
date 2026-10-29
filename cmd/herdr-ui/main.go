@@ -1,4 +1,4 @@
-// Herdr UI shows the selected session pane through the M2 terminal host.
+// Hergo shows the selected session pane through the M2 terminal host.
 // Explicit terminal/local-fixture flags retain the M0 capability harness.
 package main
 
@@ -78,7 +78,7 @@ func main() {
 		var lastCols, lastRows int
 		status := "Loading terminal library…"
 		win := mygo.NewWindow(mygo.WindowOptions{
-			Title: "Herdr UI · M0", Width: 1000, Height: 680, MinWidth: 820, MinHeight: 560,
+			Title: "Hergo · M0", Width: 1000, Height: 680, MinWidth: 820, MinHeight: 560,
 			Content: ui.View(func(c *ui.Context) {
 				ui.Column(c).Fill().Children(func() {
 					ui.Text(c, "M0 · "+status).Height(36)

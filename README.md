@@ -1,8 +1,8 @@
-# Herdr UI
+# Hergo
 
 [Herdr](https://github.com/herdrdev/herdr) 的原生桌面客户端，让工作区、Git 工作树、coding agent 和多窗格终端集中在一个窗口里。
 
-使用 Go 和 [mygo](https://github.com/egoist/mygo) 构建，支持 macOS、Windows x64 与 Linux amd64/arm64。界面与终端不依赖 WebView，运行时无需 Node.js。
+Hergo 取名自 **Her**dr 与 my**go**。使用 Go 和 [mygo](https://github.com/egoist/mygo) 构建，支持 macOS、Windows x64 与 Linux amd64/arm64。界面与终端不依赖 WebView，运行时无需 Node.js。
 
 [下载最新版本](https://github.com/Maidang1/herdr-ui/releases/latest) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/Maidang1/herdr-ui/issues)
 
@@ -15,7 +15,7 @@
 - **终端体验**：文字选择与复制粘贴、查找、清屏、字体缩放、文件路径打开和 Zen 模式；具体能力因平台而异。
 - **原生外观与更新**：System / Light / Dark 主题、持久化偏好，以及支持 Ed25519 校验的应用内更新。
 
-Herdr UI 连接已经运行的 Herdr，**不会自动启动守护进程、创建工作区或接管已有终端 owner**。普通浏览保持窗口本地选择；需要改变会话的操作按 Herdr 语义执行。
+Hergo 连接已经运行的 Herdr，**不会自动启动守护进程、创建工作区或接管已有终端 owner**。普通浏览保持窗口本地选择；需要改变会话的操作按 Herdr 语义执行。
 
 ## 安装
 
@@ -29,10 +29,10 @@ Herdr UI 连接已经运行的 Herdr，**不会自动启动守护进程、创建
 
 ### macOS
 
-打开 DMG，将 **Herdr UI.app** 拖入 Applications 后启动。当前应用采用 ad hoc 签名，未经 Apple 公证；首次启动被 Gatekeeper 阻止时，确认安装包来源后执行：
+打开 DMG，将 **Hergo.app** 拖入 Applications 后启动。当前应用采用 ad hoc 签名，未经 Apple 公证；首次启动被 Gatekeeper 阻止时，确认安装包来源后执行：
 
 ```sh
-xattr -dr com.apple.quarantine "/Applications/Herdr UI.app"
+xattr -dr com.apple.quarantine "/Applications/Hergo.app"
 ```
 
 ### Windows
@@ -45,9 +45,9 @@ Windows 使用原生 endpoint 渲染，不启动 `herdr terminal attach`。快�
 
 下载与 CPU 架构匹配的安装包：`amd64` 对应 x86_64，`arm64` 对应 aarch64。
 
-- **Debian / Ubuntu**：使用 `sudo apt install ./herdr-ui_<version>_<arch>.deb` 安装，再运行 `herdr-ui`。
-- **用户级安装**：从同一 release 下载 `install.sh` 与对应便携归档，以普通用户执行 `sh install.sh ./herdr-ui-<version>-linux-<arch>.tar.gz`。
-- **便携运行**：完整解压归档后运行其中的 `./herdr-ui`，保留终端动态库与其他资源。
+- **Debian / Ubuntu**：使用 `sudo apt install ./hergo_<version>_<arch>.deb` 安装，再运行 `herdr-ui`。
+- **用户级安装**：从同一 release 下载 `install.sh` 与对应便携归档，以普通用户执行 `sh install.sh ./hergo-<version>-linux-<arch>.tar.gz`。
+- **便携运行**：完整解压归档后运行其中的 `./hergo`，保留终端动态库与其他资源。
 
 用户级安装需要 `~/.local/bin` 位于 PATH，并支持可写安装目录中的应用内更新。系统级 `.deb` 安装请使用新版 `.deb` 更新，不要以 root 运行 GUI。
 
@@ -152,3 +152,5 @@ CI 测试不能替代实机桌面验收。Windows IME、AltGr、DPI 与完整交
 - [设计图标授权](assets/icons/NOTICE.md)
 - [Lucide 图标许可证](internal/icons/LICENSE-lucide)
 - [Lobe 图标许可证](internal/icons/LICENSE-lobe)
+
+名称迁移说明：Hergo 原名 Herdr UI。仓库地址、应用标识、更新公钥与偏好存储路径保持不变；源码命令仍为 `herdr-ui`。新包中的应用名为 Hergo，Linux 包名为 `hergo`，兼容命令仍为 `herdr-ui`。旧安装目录可能保留原名称，Linux 新安装位于 `~/.local/hergo.app`（用户级）或 `/opt/hergo`（系统级）。不要同时保留两个安装入口；跨名称更新仍需各平台实机验证。
