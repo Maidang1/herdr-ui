@@ -13,6 +13,7 @@
   },
   "resources": [
     "LICENSE",
+    "assets/app/ICON-NOTICE.md",
     "internal/icons/LICENSE-lucide",
     "internal/icons/LICENSE-lobe",
     "assets/icons/NOTICE.md"

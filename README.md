@@ -122,7 +122,7 @@ npm ci
 npm run icons
 ```
 
-来源清单位于 `scripts/icons.json` 和 `internal/icons/SOURCES.txt`。应用图标源文件为 `assets/app/icon.svg`；修改后可用 `resvg -w 1024 -h 1024 assets/app/icon.svg assets/app/icon.png` 更新打包用 PNG。
+来源清单位于 `scripts/icons.json` 和 `internal/icons/SOURCES.txt`。应用图标将 Herdr 的公羊、卷角与终端提示符，以及 mygo 的五色感叹号融合成圆润的小羊造型，设计来源见 [应用图标说明](assets/app/ICON-NOTICE.md)。源文件为 `assets/app/icon.svg`；修改后可用 `resvg -w 1024 -h 1024 assets/app/icon.svg assets/app/icon.png` 更新打包用 PNG。
 
 ## 发布
 
