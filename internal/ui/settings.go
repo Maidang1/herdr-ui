@@ -259,7 +259,7 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 		native.Column(c.Key("settings-page")).FillWidth().MaxWidth(settingsColumnWidth+2*settingsPagePadding).Shrink(0).Padding(top, settingsPagePadding, 40, settingsPagePadding).Gap(24).AlignItems(native.Stretch).Children(func() {
 			native.Column(c).Gap(4).Children(func() {
 				native.Text(c, settingsPages[s.page]).FontSize(22).FontWeight(700)
-				descriptions := []string{"Make Herdr feel at home.", "Fine-tune your terminal experience.", "Choose when Herdr gets your attention.", "Keep your workflow close at hand.", "Keep Herdr UI up to date.", "Connect your coding agents to Herdr."}
+				descriptions := []string{"Make Hergo feel at home.", "Fine-tune your terminal experience.", "Choose when Hergo gets your attention.", "Keep your workflow close at hand.", "Keep Hergo up to date.", "Connect your coding agents to Herdr."}
 				native.Text(c, descriptions[s.page]).FontSize(13).TextColor(p.Secondary)
 			})
 			switch s.page {

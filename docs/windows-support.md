@@ -15,7 +15,7 @@ python scripts/go.py build -trimpath -o artifacts/herdr-ui.exe ./cmd/herdr-ui
 python scripts/go.py run github.com/egoist/mygo/cmd/mygo build -platform windows/amd64
 ```
 
-The pinned mygo CLI has no `-skip-installer` option. Its supported build command packages the executable and resources in `dist/windows-amd64`, and downloads NSIS when needed to produce an installer. CI also archives a portable ZIP and creates signed update archives and a manifest using `MYGO_UPDATER_PRIVATE_KEY`. Pushing a `vX.Y.Z` tag matching `mygo.json` builds macOS, Windows and Linux in parallel; only after all platform jobs succeed does one publish job upload both platforms to the same GitHub Release. Windows assets include `Herdr-UI-<version>-windows-amd64-setup.exe`, `Herdr-UI-<version>-windows-amd64.zip`, a platform-specific SHA-256 checksum file, and signed update files. Manual runs only upload workflow artifacts, even when dispatched on a tag.
+The pinned mygo CLI has no `-skip-installer` option. Its supported build command packages the executable and resources in `dist/windows-amd64`, and downloads NSIS when needed to produce an installer. CI also archives a portable ZIP and creates signed update archives and a manifest using `MYGO_UPDATER_PRIVATE_KEY`. Pushing a `vX.Y.Z` tag matching `mygo.json` builds macOS, Windows and Linux in parallel; only after all platform jobs succeed does one publish job upload both platforms to the same GitHub Release. Windows assets include `Hergo-<version>-windows-amd64-setup.exe`, `Hergo-<version>-windows-amd64.zip`, a platform-specific SHA-256 checksum file, and signed update files. Manual runs only upload workflow artifacts, even when dispatched on a tag.
 
 ## Isolated real-daemon test
 

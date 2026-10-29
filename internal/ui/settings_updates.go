@@ -21,12 +21,12 @@ func (w *Window) settingsUpdates(c *native.Context, p design.Palette) {
 	if w.hooks.UpdateSettings != nil {
 		s = w.hooks.UpdateSettings()
 	}
-	w.settingsSection(c, "settings-updates", "Software updates", "Updates are checked against a signature before installation. Your Herdr sessions keep running while Herdr UI restarts.", p, func(g *settingsGroup) {
+	w.settingsSection(c, "settings-updates", "Software updates", "Updates are checked against a signature before installation. Your Herdr sessions keep running while Hergo restarts.", p, func(g *settingsGroup) {
 		version := s.Version
 		if version == "" {
 			version = "Development build"
 		}
-		g.row("Herdr UI", version, func() {
+		g.row("Hergo", version, func() {
 			if native.Button(c, "Check for Updates…").Label("Check for Updates").Clicked() && w.hooks.CheckForUpdates != nil {
 				w.hooks.CheckForUpdates()
 			}
@@ -35,10 +35,10 @@ func (w *Window) settingsUpdates(c *native.Context, p design.Palette) {
 			g.row("Automatic updates unavailable", "Install a release build in a writable Applications folder to enable automatic updates.", func() {})
 			return
 		}
-		if g.toggle("settings-update-checks", "Automatically check for updates", "Checks after launch and once a day while Herdr UI is running.", &s.AutomaticChecks).Changed() && w.hooks.AutomaticUpdateChecks != nil {
+		if g.toggle("settings-update-checks", "Automatically check for updates", "Checks after launch and once a day while Hergo is running.", &s.AutomaticChecks).Changed() && w.hooks.AutomaticUpdateChecks != nil {
 			w.hooks.AutomaticUpdateChecks(s.AutomaticChecks)
 		}
-		if g.toggle("settings-update-downloads", "Automatically download and install", "Updates found by automatic checks take effect the next time you open Herdr UI.", &s.AutomaticDownloads).Changed() && w.hooks.AutomaticUpdateDownloads != nil {
+		if g.toggle("settings-update-downloads", "Automatically download and install", "Updates found by automatic checks take effect the next time you open Hergo.", &s.AutomaticDownloads).Changed() && w.hooks.AutomaticUpdateDownloads != nil {
 			w.hooks.AutomaticUpdateDownloads(s.AutomaticDownloads)
 		}
 		last := "Not checked yet"

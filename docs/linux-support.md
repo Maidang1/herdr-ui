@@ -22,13 +22,13 @@ use `amd64` for x86_64 and `arm64` for aarch64.
 Download the matching package and checksum file from the same GitHub release:
 
 ```sh
-sha256sum -c Herdr-UI-<version>-linux-<arch>-SHA256SUMS --ignore-missing
-sudo apt install ./herdr-ui_<version>_<arch>.deb
+sha256sum -c Hergo-<version>-linux-<arch>-SHA256SUMS --ignore-missing
+sudo apt install ./hergo_<version>_<arch>.deb
 herdr-ui
 ```
 
 The package installs the application and bundled terminal library in
-`/opt/herdr-ui`, adds `/usr/bin/herdr-ui`, and registers its icon and desktop
+`/opt/hergo`, adds `/usr/bin/herdr-ui`, and registers its icon and desktop
 entry. APT installs GTK 3 (`libgtk-3-0` or `libgtk-3-0t64`). This is not an APT
 repository: install the new release's `.deb` to update. Normal users cannot
 replace the system-owned application, so background in-app updates are disabled
@@ -46,25 +46,25 @@ Ubuntu 24.04+ uses the package name `libgtk-3-0t64`. Other distributions should
 install their GTK 3 runtime package. CJK/emoji font packages are recommended.
 `lsof` is optional: it enables the sidebar's local listening-port discovery.
 
-Download `install.sh`, the matching `herdr-ui-<version>-linux-<arch>.tar.gz`, and
+Download `install.sh`, the matching `hergo-<version>-linux-<arch>.tar.gz`, and
 its checksum file from the same release. Keep the original archive filename;
 signed update manifests refer to that exact name.
 
 ```sh
-sha256sum -c Herdr-UI-<version>-linux-<arch>-SHA256SUMS --ignore-missing
-sh install.sh ./herdr-ui-<version>-linux-<arch>.tar.gz
+sha256sum -c Hergo-<version>-linux-<arch>-SHA256SUMS --ignore-missing
+sh install.sh ./hergo-<version>-linux-<arch>.tar.gz
 herdr-ui
 ```
 
 Run the installer as your normal user, not with sudo. It installs under
-`~/.local/herdr-ui.app`, adds `~/.local/bin/herdr-ui` and registers a desktop
+`~/.local/hergo.app`, adds `~/.local/bin/herdr-ui` and registers a desktop
 entry. Ensure `~/.local/bin` is on PATH, or launch from the applications menu.
 A writable user-local installation supports the native signed updater using
 `update-linux-amd64.json` or `update-linux-arm64.json` and the existing Ed25519
 public key. No signing private key is stored in the application.
 
 For portable use, extract the archive into a writable directory and run
-`./herdr-ui` there. Keep all resources, particularly `libghostty-vt.so`, beside
+`./hergo` there. Keep all resources, particularly `libghostty-vt.so`, beside
 the executable. Packaged applications never download that library at startup.
 
 `install-linux-amd64.sh` and `install-linux-arm64.sh` are identical copies of

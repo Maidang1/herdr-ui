@@ -161,7 +161,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 		screen.ConnectTerminal(host, s, ctx, post)
 		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, OptionAsAlt: persisted.OptionAsAlt, Cursor: persisted.Cursor, CursorBlink: persisted.CursorBlink, Toast: view.ToastSettings{Delivery: persisted.Toast.Delivery, Position: persisted.Toast.Position, DelaySeconds: persisted.Toast.DelaySeconds}})
 		screen.SetReducedTransparency(mygo.Theme.Preferences().ReduceTransparency)
-		win = mygo.NewWindow(mygo.WindowOptions{Title: "Herdr", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: platformTitleBar(), TitleBarHeight: 44, Vibrancy: windowMaterial(), Content: native.View(screen.View)})
+		win = mygo.NewWindow(mygo.WindowOptions{Title: "Hergo", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: platformTitleBar(), TitleBarHeight: 44, Vibrancy: windowMaterial(), Content: native.View(screen.View)})
 		persist := func(fn func(*prefs.Settings)) {
 			go func() {
 				if _, err := settings.Update(fn); err != nil {
@@ -381,7 +381,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 				item.SetEnabled(enabled)
 			}
 		})
-		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Label: "Herdr", Submenu: appItems}, platformEditMenu(), {Label: "Workspace", Submenu: sections["Workspace"]}, {Label: "Tab", Submenu: sections["Tab"]}, {Label: "Pane", Submenu: sections["Pane"]}, {Label: "Go", Submenu: sections["Go"]}, {Label: "View", Submenu: sections["View"]}, {Role: mygo.RoleWindowMenu}, {Label: "Help", Submenu: helpItems}}))
+		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Label: "Hergo", Submenu: appItems}, platformEditMenu(), {Label: "Workspace", Submenu: sections["Workspace"]}, {Label: "Tab", Submenu: sections["Tab"]}, {Label: "Pane", Submenu: sections["Pane"]}, {Label: "Go", Submenu: sections["Go"]}, {Label: "View", Submenu: sections["View"]}, {Role: mygo.RoleWindowMenu}, {Label: "Help", Submenu: helpItems}}))
 		win.OnClosed(func() {
 			offUpdates()
 			offAppearance()
