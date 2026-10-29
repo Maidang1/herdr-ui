@@ -1,6 +1,6 @@
 # Herdr UI
 
-Herdr 的原生桌面客户端，使用 **Go + mygo 原生 UI**。展示已有工作区、工作树、代理状态与终端，支持标签、分屏和 Herdr prefix 模式。macOS 使用内置终端插件；Windows x64 使用命名管道和原生 endpoint 单元格渲染，不依赖 `herdr terminal attach`。Windows 的构建、验证命令和当前限制见 [Windows 支持说明](docs/windows-support.md)。
+Herdr 的原生桌面客户端，使用 **Go + mygo 原生 UI**。展示已有工作区、工作树、代理状态与终端，支持标签、分屏和 Herdr prefix 模式。macOS 使用内置终端插件；Windows x64 使用命名管道和原生 endpoint 单元格渲染，不依赖 `herdr terminal attach`。Windows 的构建、验证命令和当前限制见 [Windows 支持说明](docs/windows-support.md)。Linux amd64/arm64 沿用 Unix attach 终端路径，提供原生 GTK 桌面包；安装、构建与验证范围见 [Linux 支持说明](docs/linux-support.md)。
 
 目前已实现 M4 原生收尾：当前标签的多窗格终端支持分屏、方向选择、zoom 与比例调整；精简的终端内容区、可调整侧栏和右侧快捷键参考面板适配最小 820×560 窗口。原生菜单提供 System / Light / Dark，外壳跟随减少透明度与增加对比度偏好。阶段证据见 [M0](docs/m0-validation.md)、[M1](docs/m1-validation.md)、[M2](docs/m2-validation.md)、[M3](docs/m3-validation.md)、[M4 验收记录](docs/m4-validation.md)。系统 IME、真实鼠标和 VoiceOver 等交互仍需实机验收。
 
@@ -31,6 +31,7 @@ make probe         # 只读检查当前 Herdr、配置与布局，不占用终�
 make window        # 本地 /bin/cat 输入测试窗口，不连接 Herdr
 make integration   # 临时独立服务 + 真实插件 + 原生窗口，结束后清理
 make package       # 固定版本 mygo CLI，输出含原生库的本地签名 .app
+make linux         # Linux amd64 + arm64 原生包、.deb、便携 .tar.gz 和 install.sh
 make dmg           # 通用二进制（arm64 + x86_64）.app 与 .dmg，与发布流程一致
 ```
 
@@ -38,7 +39,7 @@ make dmg           # 通用二进制（arm64 + x86_64）.app 与 .dmg，与发�
 
 更新签名：`mygo.json` 中只保存公钥与 GitHub 仓库，私钥由仓库 Actions secret `MYGO_UPDATER_PRIVATE_KEY` 提供。发布流程要求签名密钥存在，并与 DMG 一起上传 `update-darwin-universal.json`、签名 `.tar.gz` 和可用的 `.delta`；同时发布内容完全相同的 `update-darwin-arm64.json` 和 `update-darwin-amd64.json`，兼容旧客户端的架构专用更新地址。缺少密钥或更新清单时停止发布。后续版本沿用同一密钥。需要生成首套密钥时使用 `./scripts/go.sh run github.com/egoist/mygo/cmd/mygo keygen -o <仓库外的目录>`，把公钥填入配置，使用 `gh secret set MYGO_UPDATER_PRIVATE_KEY < <私钥路径>` 配置 CI。测试本地签名包时可用框架的 `MYGO_UPDATER_PRIVATE_KEY` 环境变量或仅在本地配置 `updates.privateKey` 路径。
 
-发布：把 `mygo.json` 的 `version` 改为新版本，在 `CHANGELOG.md` 添加对应 `## X.Y.Z` 更新说明并提交，再推送同名标签（如 `git tag v0.1.0 && git push origin v0.1.0`）。[Release 工作流](.github/workflows/release.yml)校验标签与版本一致，在 macOS 和 Windows runner 上并行测试、打包；两个平台都成功后，由独立任务统一创建 GitHub Release，上传 macOS 通用 DMG、Windows x64 安装器与便携 ZIP、SHA-256 校验文件，以及两个平台的签名更新包和清单。Windows 任务保留真实 Herdr 守护进程的集成验证。手动运行该工作流只构建，产物留在运行记录里，即使选择标签也不发布。应用为 ad hoc 签名，未经公证，首次打开需移除隔离属性（发布说明中附命令）。
+发布：把 `mygo.json` 的 `version` 改为新版本，在 `CHANGELOG.md` 添加对应 `## X.Y.Z` 更新说明并提交，再推送同名标签（如 `git tag v0.1.0 && git push origin v0.1.0`）。[Release 工作流](.github/workflows/release.yml)校验标签与版本一致，在 macOS、Windows 和 Linux（amd64/arm64）runner 上并行测试、打包；所有平台都成功后，由独立任务统一创建 GitHub Release，上传 macOS 通用 DMG、Windows x64 安装器与便携 ZIP、Linux 双架构 .deb 与便携 .tar.gz、用户级 install.sh、SHA-256 校验文件，以及各平台的签名更新包和清单。Windows 任务保留真实 Herdr 守护进程的集成验证。手动运行该工作流只构建，产物留在运行记录里，即使选择标签也不发布。应用为 ad hoc 签名，未经公证，首次打开需移除隔离属性（发布说明中附命令）。
 
 默认窗口按事件同步，并差量 attach 当前标签的全部可见终端。普通工作区/标签/pane 选择保持窗口本地，不修改 Herdr 全局焦点；滚动通过显式目标 `pane.scroll` 更新服务端视口。可使用 `./bin/herdr-ui -socket /path/to/herdr.sock` 指定目标。
 

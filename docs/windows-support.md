@@ -15,7 +15,7 @@ python scripts/go.py build -trimpath -o artifacts/herdr-ui.exe ./cmd/herdr-ui
 python scripts/go.py run github.com/egoist/mygo/cmd/mygo build -platform windows/amd64
 ```
 
-The pinned mygo CLI has no `-skip-installer` option. Its supported build command packages the executable and resources in `dist/windows-amd64`, and downloads NSIS when needed to produce an installer. CI also archives a portable ZIP and creates signed update archives and a manifest using `MYGO_UPDATER_PRIVATE_KEY`. Pushing a `vX.Y.Z` tag matching `mygo.json` builds macOS and Windows in parallel; only after both jobs succeed does one publish job upload both platforms to the same GitHub Release. Windows assets include `Herdr-UI-<version>-windows-amd64-setup.exe`, `Herdr-UI-<version>-windows-amd64.zip`, a platform-specific SHA-256 checksum file, and signed update files. Manual runs only upload workflow artifacts, even when dispatched on a tag.
+The pinned mygo CLI has no `-skip-installer` option. Its supported build command packages the executable and resources in `dist/windows-amd64`, and downloads NSIS when needed to produce an installer. CI also archives a portable ZIP and creates signed update archives and a manifest using `MYGO_UPDATER_PRIVATE_KEY`. Pushing a `vX.Y.Z` tag matching `mygo.json` builds macOS, Windows and Linux in parallel; only after all platform jobs succeed does one publish job upload both platforms to the same GitHub Release. Windows assets include `Herdr-UI-<version>-windows-amd64-setup.exe`, `Herdr-UI-<version>-windows-amd64.zip`, a platform-specific SHA-256 checksum file, and signed update files. Manual runs only upload workflow artifacts, even when dispatched on a tag.
 
 ## Isolated real-daemon test
 
@@ -37,7 +37,7 @@ The integration test creates its own temporary config, state directories, logica
 
 On Windows, app commands use Ctrl+Shift so ordinary terminal Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+D and Ctrl+T remain available. Vertical split uses Ctrl+Shift+D and horizontal split uses Ctrl+Shift+E. Tabs use Ctrl+PageUp/PageDown; tab numbers use Ctrl+Shift+1 through Ctrl+Shift+9. Pane focus uses Ctrl+Shift+arrows, pane cycling uses Ctrl+Shift+PageUp/PageDown, previous search match uses Ctrl+Shift+H, and Zen mode uses Ctrl+Shift+Z. Windows global app accelerators avoid Ctrl+Alt because Windows reports AltGr text input with those modifiers. They also avoid the Win/Super key.
 
-On Linux, horizontal split uses Ctrl+Alt+D, tab numbers use Ctrl+Alt+1 through Ctrl+Alt+9, and pane focus uses Ctrl+Alt+arrows. Herdr's configured prefix chords remain available on both platforms. macOS retains its existing Command shortcuts.
+Linux packaging and validation are documented in [Linux support](linux-support.md). On Linux, horizontal split uses Ctrl+Alt+D, tab numbers use Ctrl+Alt+1 through Ctrl+Alt+9, and pane focus uses Ctrl+Alt+arrows. Herdr's configured prefix chords remain available on both platforms. macOS retains its existing Command shortcuts.
 
 Configuration follows the daemon's path rules: `HERDR_CONFIG_PATH` overrides the file; otherwise `XDG_CONFIG_HOME` wins, followed on Windows by `APPDATA`, then `USERPROFILE/AppData/Roaming`, with the shared fallback rules used by the application. Session and socket overrides are resolved independently of the config file override.
 

@@ -1,4 +1,4 @@
-//go:build integration && darwin
+//go:build integration && (darwin || linux)
 
 // These tests use the real native library and a disposable Herdr server.
 // They must never connect to the user's inherited socket/session.
@@ -20,10 +20,7 @@ import (
 )
 
 func TestDirectAttach(t *testing.T) {
-	binary, err := exec.LookPath("herdr")
-	if err != nil {
-		t.Skip("Herdr CLI not installed")
-	}
+	binary := unixTestBinary(t)
 	// Short paths avoid macOS's Unix-domain socket path length limit.
 	dir, err := os.MkdirTemp("/tmp", "herdr-ui-m0-")
 	if err != nil {
@@ -157,7 +154,7 @@ func TestDirectAttach(t *testing.T) {
 		if err := third.Close(); err != nil {
 			t.Fatal(err)
 		}
-		window := exec.Command(windowBinary, "-socket", target.Socket, "-terminal", p.TerminalID, "-close-after", "2s")
+		window := exec.Command(windowBinary, "-herdr", binary, "-socket", target.Socket, "-terminal", p.TerminalID, "-close-after", "2s")
 		window.Env = env
 		windowLog, err := os.Create(filepath.Join(dir, "window.log"))
 		if err != nil {

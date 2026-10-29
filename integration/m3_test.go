@@ -1,4 +1,4 @@
-//go:build integration && darwin
+//go:build integration && (darwin || linux)
 
 package integration
 
@@ -16,10 +16,7 @@ import (
 )
 
 func TestLayoutOperations(t *testing.T) {
-	binary, err := exec.LookPath("herdr")
-	if err != nil {
-		t.Skip("Herdr not installed")
-	}
+	binary := unixTestBinary(t)
 	dir, err := os.MkdirTemp("/tmp", "herdr-m3-")
 	if err != nil {
 		t.Fatal(err)

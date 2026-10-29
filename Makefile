@@ -1,10 +1,11 @@
-.PHONY: build test integration probe run window package dmg
+.PHONY: build test integration probe run window package dmg linux
 
 build:
 	CGO_ENABLED=0 ./scripts/go.sh build -trimpath -o bin/herdr-ui ./cmd/herdr-ui
 	CGO_ENABLED=0 ./scripts/go.sh build -trimpath -o bin/m0-probe ./cmd/m0-probe
 
 test:
+	python3 -m unittest discover -s scripts -p 'test_*.py'
 	./scripts/go.sh test ./...
 	./scripts/go.sh vet ./...
 
@@ -27,3 +28,7 @@ package:
 # Universal (arm64 + x86_64) app and disk image, as the release workflow builds.
 dmg:
 	CGO_ENABLED=0 ./scripts/go.sh run github.com/egoist/mygo/cmd/mygo build -platform darwin/universal
+
+# Native GTK application, Debian package, portable archive and install.sh.
+linux:
+	CGO_ENABLED=0 ./scripts/go.sh run github.com/egoist/mygo/cmd/mygo build -platform linux/amd64,linux/arm64

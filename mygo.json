@@ -5,6 +5,12 @@
   "icon": "assets/app/icon.png",
   "main": "./cmd/herdr-ui",
   "out": "dist",
+  "linux": {
+    "webview": false,
+    "command": "herdr-ui",
+    "categories": ["Development", "TerminalEmulator"],
+    "comment": "Native desktop client for Herdr workspaces and terminals"
+  },
   "resources": [
     "internal/icons/LICENSE-lucide",
     "internal/icons/LICENSE-lobe",

@@ -1,6 +1,6 @@
 name: Release
 
-# Pushing vX.Y.Z builds macOS and Windows in parallel, then publishes both
+# Pushing vX.Y.Z builds macOS, Windows and Linux in parallel, then publishes all
 # platforms in one GitHub release. The tag must match mygo.json. Manual runs
 # only build artifacts, including when dispatched on a tag.
 on:
@@ -153,8 +153,113 @@ jobs:
           path: |
             artifacts/*
 
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    env:
+      CGO_ENABLED: '0'
+      GOARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the tag against mygo.json
+        id: version
+        run: |
+          version="$(jq -r .version mygo.json)"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match mygo.json version $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install native GTK and test desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-0 xvfb xauth openbox dbus-x11 lsof fonts-dejavu-core fonts-noto-cjk fonts-noto-color-emoji
+      - name: Cache checksum-verified terminal libraries
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/mygo/natives
+          key: mygo-natives-linux-${{ matrix.arch }}-${{ hashFiles('go.sum') }}
+      - name: Runtime and release-contract tests
+        run: make test
+      - name: Build native executables
+        run: make build
+      - name: Install checksum-pinned official Herdr runtime
+        run: python3 scripts/install-herdr-linux.py --arch "${{ matrix.arch }}" --destination "$RUNNER_TEMP/herdr-0.9.5"
+      - name: Isolated daemon, PTY and native GTK window integration
+        run: |
+          # Window-manager geometry and a session bus are needed for desktop
+          # behavior; neither this display nor daemon is the user's session.
+          # The child shell, not this shell, expands these environment variables.
+          # shellcheck disable=SC2016
+          xvfb-run -a dbus-run-session -- sh -eu -c '
+            openbox >"$RUNNER_TEMP/openbox.log" 2>&1 &
+            wm=$!
+            trap "kill $wm 2>/dev/null || true" EXIT
+            export HERDR_UI_M0_WINDOW_BINARY="$PWD/bin/herdr-ui"
+            ./scripts/go.sh test -tags integration -count=1 -v -timeout 5m ./integration
+          '
+      - name: Package native Linux application and signed updates
+        env:
+          MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$MYGO_UPDATER_PRIVATE_KEY" ]; then
+            echo "::error::MYGO_UPDATER_PRIVATE_KEY is required to publish signed updates"
+            exit 1
+          fi
+          ./scripts/go.sh run github.com/egoist/mygo/cmd/mygo build -platform "linux/${{ matrix.arch }}"
+          dir="dist/linux-${{ matrix.arch }}"
+          version="${{ steps.version.outputs.version }}"
+          test -s "$dir/update-linux-${{ matrix.arch }}.json"
+          test -s "$dir/herdr-ui-$version-linux-${{ matrix.arch }}.tar.gz"
+          test -s "$dir/herdr-ui_${version}_${{ matrix.arch }}.deb"
+          # A packaged application must not download its terminal at startup.
+          find "$dir" -name 'libghostty-vt.so' -type f -size +0c | grep -q .
+          tar -tzf "$dir/herdr-ui-$version-linux-${{ matrix.arch }}.tar.gz" | grep -q 'libghostty-vt.so'
+          depends="$(dpkg-deb -f "$dir/herdr-ui_${version}_${{ matrix.arch }}.deb" Depends)"
+          case "$depends" in *libgtk-3-0*) ;; *) exit 1 ;; esac
+          case "$depends" in *webkit*) echo 'Unexpected WebKit dependency'; exit 1 ;; esac
+          sh -n "$dir/install.sh"
+      - name: Smoke test packaged terminal without downloading libraries
+        run: |
+          dir="dist/linux-${{ matrix.arch }}"
+          # The executable locates the bundled library, not the developer cache.
+          timeout 30s xvfb-run -a dbus-run-session -- "$dir/herdr-ui" -local-fixture -close-after 3s > "$RUNNER_TEMP/linux-package.log" 2>&1
+          cat "$RUNNER_TEMP/linux-package.log"
+          grep -q 'M0 terminal installed' "$RUNNER_TEMP/linux-package.log"
+          grep -q 'M0 terminal closed' "$RUNNER_TEMP/linux-package.log"
+      - name: Collect Linux release assets
+        run: |
+          dir="dist/linux-${{ matrix.arch }}"
+          version="${{ steps.version.outputs.version }}"
+          mkdir release-assets
+          shopt -s nullglob
+          cp "$dir"/*.deb "$dir"/*.tar.gz "$dir"/*.delta "$dir"/update-*.json release-assets/
+          cp "$dir/install.sh" "release-assets/install-linux-${{ matrix.arch }}.sh"
+          cd release-assets
+          sha256sum -- * > "Herdr-UI-$version-linux-${{ matrix.arch }}-SHA256SUMS"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-linux-${{ matrix.arch }}
+          if-no-files-found: error
+          path: release-assets/*
+
   publish:
-    needs: [macos, windows]
+    needs: [macos, windows, linux]
     if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
@@ -165,7 +270,7 @@ jobs:
           pattern: release-*
           merge-multiple: true
           path: release-assets
-      - name: Verify both platform assets
+      - name: Verify all platform assets
         env:
           VERSION: ${{ github.ref_name }}
         run: |
@@ -179,9 +284,20 @@ jobs:
           cmp release-assets/update-darwin-universal.json release-assets/update-darwin-arm64.json
           cmp release-assets/update-darwin-universal.json release-assets/update-darwin-amd64.json
           test -s release-assets/update-windows-amd64.json
+          for arch in amd64 arm64; do
+            test -s "release-assets/herdr-ui_${version}_${arch}.deb"
+            test -s "release-assets/herdr-ui-$version-linux-$arch.tar.gz"
+            test -s "release-assets/update-linux-$arch.json"
+            test -s "release-assets/install-linux-$arch.sh"
+          done
+          # Both packagers generate the same architecture-detecting installer.
+          cmp release-assets/install-linux-amd64.sh release-assets/install-linux-arm64.sh
           cd release-assets
           sha256sum -c "Herdr-UI-$version-macos-universal.dmg.sha256"
           sha256sum -c "Herdr-UI-$version-windows-amd64-SHA256SUMS"
+          sha256sum -c "Herdr-UI-$version-linux-amd64-SHA256SUMS"
+          sha256sum -c "Herdr-UI-$version-linux-arm64-SHA256SUMS"
+          cp install-linux-amd64.sh install.sh
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -199,6 +315,8 @@ jobs:
           ```
 
           Windows x64: use the setup executable or extract the portable ZIP. Physical Windows desktop and IME validation remains outstanding.
+
+          Linux amd64/arm64 (Ubuntu 22.04+): install the matching .deb, or download install.sh and the matching herdr-ui-<version>-linux-<arch>.tar.gz and run `sh install.sh <archive>` as your normal user. GTK 3 is required; WebKitGTK is not. User-local installs support signed in-app updates; .deb installs should be updated with the package manager. Physical X11/Wayland desktop and IME validation remains outstanding.
 
           Herdr UI attaches to a running Herdr; install and start Herdr first.
           NOTES
