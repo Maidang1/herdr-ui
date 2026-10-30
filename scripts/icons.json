@@ -44,7 +44,14 @@
     "Devin": "devin",
     "Kilo": "kilo-code",
     "Qwen": "qwen",
-    "Antigravity": "antigravity"
+    "Antigravity": "antigravity",
+    "PrimeAgent": "prime-agent",
+    "OMP": "omp",
+    "Droid": "droid",
+    "QoderCLI": "qodercli",
+    "Hermes": "hermes",
+    "Letta": "letta",
+    "MastraCode": "mastracode"
   },
   "lobe": {
     "RepositoryGithub": "github"

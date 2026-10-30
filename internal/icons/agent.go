@@ -25,6 +25,13 @@ var (
 	kiloDark        *ui.SVG
 	qwenDark        *ui.SVG
 	antigravityDark *ui.SVG
+	primeAgentDark  *ui.SVG
+	ompDark         *ui.SVG
+	droidDark       *ui.SVG
+	qoderDark       *ui.SVG
+	hermesDark      *ui.SVG
+	lettaDark       *ui.SVG
+	mastraDark      *ui.SVG
 )
 
 func init() {
@@ -41,6 +48,13 @@ func init() {
 	kiloDark = darkVariant("color-kilo-code", Kilo)
 	qwenDark = darkVariant("color-qwen", Qwen)
 	antigravityDark = darkVariant("color-antigravity", Antigravity)
+	primeAgentDark = darkVariant("color-prime-agent", PrimeAgent)
+	ompDark = darkVariant("color-omp", OMP)
+	droidDark = darkVariant("color-droid", Droid)
+	qoderDark = darkVariant("color-qodercli", QoderCLI)
+	hermesDark = darkVariant("color-hermes", Hermes)
+	lettaDark = darkVariant("color-letta", Letta)
+	mastraDark = darkVariant("color-mastracode", MastraCode)
 }
 
 func darkVariant(file string, light *ui.SVG) *ui.SVG {
@@ -95,6 +109,20 @@ func brandPair(name string) (light, dark *ui.SVG) {
 		return Kilo, kiloDark
 	case "qwen":
 		return Qwen, qwenDark
+	case "omp", "oh-my-pi":
+		return OMP, ompDark
+	case "droid":
+		return Droid, droidDark
+	case "qodercli", "qoder":
+		return QoderCLI, qoderDark
+	case "hermes":
+		return Hermes, hermesDark
+	case "letta":
+		return Letta, lettaDark
+	case "mastracode", "mastra-code", "mastra":
+		return MastraCode, mastraDark
+	case "prime-agent", "prime_agent", "prime":
+		return PrimeAgent, primeAgentDark
 	case "antigravity", "antigravity-cli", "antigravity_cli":
 		return Antigravity, antigravityDark
 	default:
