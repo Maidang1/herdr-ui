@@ -572,6 +572,7 @@ func (p *surfaceInstance) Send(b []byte) {
 		}
 	}
 }
+func (p *surfaceInstance) SetTheme(light, dark *terminal.Theme)    { p.view.SetTheme(light, dark) }
 func (p *surfaceInstance) SetFont(f terminal.Font)                 { p.view.SetFont(f) }
 func (p *surfaceInstance) SetCopyOnSelect(v terminal.CopyOnSelect) { p.view.SetCopyOnSelect(v) }
 func (p *surfaceInstance) SetMinimumContrast(v float32)            { p.view.SetMinimumContrast(v) }

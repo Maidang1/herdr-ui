@@ -215,3 +215,31 @@ func TestSkipIsPaintSuppressionNotCharacterWidth(t *testing.T) {
 		t.Fatalf("paint flag changed search text: %+v", v.matches)
 	}
 }
+
+func TestSetTheme(t *testing.T) {
+	v := New(Config{})
+	tt := ui.NewTester(func(c *ui.Context) { v.View(c).Fill() }, 120, 60)
+	light, dark := terminal.LightTheme(), terminal.DarkTheme()
+	light.Background, dark.Background = ui.RGB(230, 220, 210), ui.RGB(20, 30, 40)
+	v.SetTheme(light, dark)
+	for _, darkMode := range []bool{false, true, false} {
+		tt.SetDark(darkMode)
+		tt.Frame()
+		want := light.Background
+		if darkMode {
+			want = dark.Background
+		}
+		got := tt.Image().RGBAAt(60, 30)
+		if got.R != want.R || got.G != want.G || got.B != want.B {
+			t.Fatalf("updated background = %v, want %v (dark=%v)", got, want, darkMode)
+		}
+	}
+	v.SetTheme(nil, nil)
+	tt.Frame()
+	if v.theme != terminal.LightTheme() {
+		// Default theme accessors may return fresh copies.
+		if *v.theme != *terminal.LightTheme() {
+			t.Fatal("clearing theme did not restore default")
+		}
+	}
+}

@@ -25,7 +25,7 @@ func TestUpdatePersistsAndReloads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Update(func(v *Settings) { v.WindowTheme = "dark"; v.FontSize = 15 }); err != nil {
+	if _, err := s.Update(func(v *Settings) { v.WindowTheme = "dark"; v.ColorScheme = "gruvbox"; v.FontSize = 15 }); err != nil {
 		t.Fatal(err)
 	}
 	again, err := Open(path)
@@ -33,7 +33,7 @@ func TestUpdatePersistsAndReloads(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := again.Settings()
-	if got.WindowTheme != "dark" || got.FontSize != 15 {
+	if got.WindowTheme != "dark" || got.ColorScheme != "gruvbox" || got.FontSize != 15 {
 		t.Fatalf("round trip lost values: %+v", got)
 	}
 }
@@ -75,7 +75,7 @@ func TestInvalidValuesFallBackToDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := s.Settings()
-	if got.WindowTheme != "system" || got.FontSize != 13 {
+	if got.WindowTheme != "system" || got.ColorScheme != "herdr" || got.FontSize != 13 {
 		t.Fatalf("invalid values accepted: %+v", got)
 	}
 	persisted, err := s.Update(func(*Settings) {})

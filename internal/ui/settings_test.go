@@ -43,16 +43,19 @@ func TestSettingsPagesNavigate(t *testing.T) {
 func TestSettingsThemeChoiceCallsHook(t *testing.T) {
 	w := settingsWindow(t)
 	var chosen string
-	w.SetActionHooks(ActionHooks{Theme: func(source string) { chosen = source }})
-	tester := native.NewTester(w.SettingsView, 720, 520)
-	if err := tester.Click("Dark"); err != nil {
+	var scheme string
+	w.SetActionHooks(ActionHooks{Theme: func(source string) { chosen = source }, ColorScheme: func(name string) error { scheme = name; return nil }})
+	tester := native.NewTester(w.SettingsView, 720, 1000)
+	if err := tester.Click("Follow Herdr"); err != nil {
 		t.Fatal(err)
 	}
-	if chosen != "dark" {
-		t.Fatalf("theme hook saw %q", chosen)
-	}
-	if w.settings.snapshot.Theme != "dark" {
-		t.Fatal("working copy did not follow the choice")
+	for _, choice := range []struct{ label, appearance string }{{"Hergo Dark", "dark"}, {"Hergo Light", "light"}, {"System", "system"}} {
+		if err := tester.Click(choice.label); err != nil {
+			t.Fatal(err)
+		}
+		if chosen != choice.appearance || scheme != "native" || w.settings.snapshot.Theme != choice.appearance || w.settings.snapshot.ColorScheme != "native" {
+			t.Fatalf("%s did not apply its palette and appearance: %q %q %+v", choice.label, scheme, chosen, w.settings.snapshot)
+		}
 	}
 }
 

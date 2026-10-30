@@ -22,7 +22,7 @@ const (
 // statusMark draws the mark for value in a size×size box.
 func statusMark(c *native.Context, key, value string, size float32, p design.Palette) native.Element {
 	lower := strings.ToLower(value)
-	_, color, label := status(value, c.Theme().Dark)
+	_, color, label := statusFromPalette(value, p)
 	still := c.Preferences().ReduceMotion
 	return native.Box(c.Key("status-mark:"+key)).Size(size, size).Shrink(0).Label(label).Draw(func(pt *native.Painter, r native.Rect) {
 		cx, cy := r.X+r.W/2, r.Y+r.H/2

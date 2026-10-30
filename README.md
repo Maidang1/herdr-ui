@@ -72,6 +72,24 @@ Windows 使用原生 endpoint 渲染，不启动 `herdr terminal attach`。快�
 
 终端已有 owner 时，应用保留诊断信息并提供 Retry，不自动 takeover。关闭窗口只释放本应用的连接，不关闭 Herdr 会话。
 
+### 配色
+
+Hergo 默认自动跟随 Herdr 的 `config.toml` 配色，无需在设置中选择。启动时读取配置，运行期间每秒检测一次文件内容变化，自动同步窗口与终端的默认背景、文字和选区。已有偏好文件没有 `color_scheme` 时也使用此默认行为；明确保存的配色选择继续保留。
+
+如需单独设置 Hergo，在 **Settings → Appearance** 关闭 **Follow Herdr** 开关，再在下方 **Theme** 中直接选择 System、Hergo Light、Hergo Dark 或 Herdr 内置主题。System 根据系统外观切换 Hergo Light 与 Hergo Dark。重新打开开关即可恢复自动跟随；手动主题在跟随期间不可修改。
+
+跟随配置时支持 `[theme]` 的 `name`、`auto_switch`、`dark_name`、`light_name`，以及 `[theme.custom]` 和亮暗覆盖。例如：
+
+```toml
+[theme]
+name = "gruvbox"
+auto_switch = true
+dark_name = "gruvbox"
+light_name = "gruvbox-light"
+```
+
+Hergo Light 和 Hergo Dark 分别固定使用 Hergo 自带的浅色与深色；其他固定名称的主题保持自身的亮暗风格。修改 Herdr 配置后自动应用；配置暂时无法读取或解析时保留当前配色，下次修改后重试。内置色值来自固定版本的 Herdr 源码，随 Hergo 更新；终端的 ANSI 调色板继续由终端插件提供。
+
 ### 自动更新
 
 正式打包且安装位置可写的应用在启动 10 秒后检查更新，运行期间每天再检查一次。可从 **Check for Updates** 菜单手动检查，在设置的 Updates 页控制自动检查与自动下载安装。

@@ -106,4 +106,11 @@ func TestAttachColorsFollowWindowAppearance(t *testing.T) {
 	check(dark)
 	tester.SetDark(false)
 	check(light)
+	light, dark = terminal.LightTheme(), terminal.DarkTheme()
+	light.Background, light.Foreground = ui.RGB(230, 220, 210), ui.RGB(30, 40, 50)
+	dark.Background, dark.Foreground = ui.RGB(20, 30, 40), ui.RGB(220, 230, 240)
+	plugin.SetTheme(light, dark)
+	check(light)
+	tester.SetDark(true)
+	check(dark)
 }

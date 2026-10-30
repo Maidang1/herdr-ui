@@ -735,3 +735,106 @@ func TestNativePasteHasApplicationHandler(t *testing.T) {
 		t.Fatal("stale terminal dispatched paste")
 	}
 }
+
+type themedTerminal struct {
+	*fakeTerminal
+	themes [][2]*terminal.Theme
+	onSet  func()
+}
+
+func (f *themedTerminal) SetTheme(light, dark *terminal.Theme) {
+	if f.onSet != nil {
+		f.onSet()
+	}
+	f.themes = append(f.themes, [2]*terminal.Theme{light, dark})
+}
+
+func TestHostSetTheme(t *testing.T) {
+	light, dark := terminal.LightTheme(), terminal.DarkTheme()
+	updatedLight, updatedDark := terminal.LightTheme(), terminal.DarkTheme()
+	updatedLight.Background, updatedDark.Background = ui.RGB(235, 220, 205), ui.RGB(20, 30, 40)
+	t.Run("running and future attaches", func(t *testing.T) {
+		x := setup()
+		first := &themedTerminal{fakeTerminal: x.f}
+		second := &themedTerminal{fakeTerminal: &fakeTerminal{}}
+		x.h.cfg.Theme, x.h.cfg.DarkTheme = light, dark
+		x.h.create = func(o terminal.Options) (instance, error) {
+			x.options <- o
+			<-x.release
+			if o.Command[len(o.Command)-1] == demand.TerminalID {
+				return first, nil
+			}
+			return second, nil
+		}
+		b := reconcile(t, x)
+		first.onSet = func() { x.h.Status(b) } // Setters must run outside the host lock.
+		o := receive(t, x.options)
+		if o.Theme != light || o.DarkTheme != dark {
+			t.Fatal("initial attach ignored configured theme")
+		}
+		x.release <- struct{}{}
+		receive(t, x.posts)()
+		x.h.SetTheme(updatedLight, updatedDark)
+		if got := first.themes[len(first.themes)-1]; got != ([2]*terminal.Theme{updatedLight, updatedDark}) {
+			t.Fatal("running terminal retained old theme", got)
+		}
+		next := Spec{TargetID: 1, TerminalID: "next", PaneID: "next-pane"}
+		if _, err := x.h.Reconcile([]Spec{demand, next}); err != nil {
+			t.Fatal(err)
+		}
+		o = receive(t, x.options)
+		if o.Theme != updatedLight || o.DarkTheme != updatedDark {
+			t.Fatal("future attach ignored updated theme")
+		}
+		x.release <- struct{}{}
+		receive(t, x.posts)()
+		if got := second.themes[len(second.themes)-1]; got != ([2]*terminal.Theme{updatedLight, updatedDark}) {
+			t.Fatal("future terminal installed wrong theme", got)
+		}
+		x.h.SetTheme(nil, nil)
+		defaultLight, defaultDark := terminalThemes()
+		for _, f := range []*themedTerminal{first, second} {
+			got := f.themes[len(f.themes)-1]
+			if *got[0] != *defaultLight || *got[1] != *defaultDark {
+				t.Fatal("clearing theme did not restore defaults")
+			}
+		}
+		finish(t, x)
+	})
+	for _, queued := range []bool{false, true} {
+		name := "opening"
+		if queued {
+			name = "queued installation"
+		}
+		t.Run(name, func(t *testing.T) {
+			x := setup()
+			native := &themedTerminal{fakeTerminal: x.f}
+			x.h.create = func(o terminal.Options) (instance, error) {
+				x.options <- o
+				<-x.release
+				return native, nil
+			}
+			b := reconcile(t, x)
+			native.onSet = func() { x.h.Status(b) }
+			receive(t, x.options)
+			var install func()
+			if queued {
+				x.release <- struct{}{}
+				install = receive(t, x.posts)
+			}
+			x.h.SetTheme(updatedLight, updatedDark)
+			if len(native.themes) != 0 {
+				t.Fatal("theme applied before installation")
+			}
+			if !queued {
+				x.release <- struct{}{}
+				install = receive(t, x.posts)
+			}
+			install()
+			if len(native.themes) != 1 || native.themes[0] != ([2]*terminal.Theme{updatedLight, updatedDark}) {
+				t.Fatal("installation did not apply latest theme", native.themes)
+			}
+			finish(t, x)
+		})
+	}
+}

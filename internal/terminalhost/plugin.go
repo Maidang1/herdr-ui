@@ -26,6 +26,9 @@ func (p *pluginInstance) SetFont(f terminal.Font) { p.terminal.SetFont(f) }
 func (p *pluginInstance) SetCopyOnSelect(c terminal.CopyOnSelect) {
 	p.terminal.SetCopyOnSelect(c)
 }
+func (p *pluginInstance) SetTheme(light, dark *terminal.Theme) {
+	p.terminal.SetTheme(light, dark)
+}
 func (p *pluginInstance) SetMinimumContrast(ratio float32) {
 	p.terminal.SetMinimumContrast(ratio)
 }

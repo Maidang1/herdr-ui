@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Maidang1/herdr-ui/internal/app"
+	"github.com/Maidang1/herdr-ui/internal/design"
 	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/Maidang1/herdr-ui/internal/input"
 	"github.com/Maidang1/herdr-ui/internal/prefs"
@@ -159,7 +160,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 		sidebar = sidebarinfo.New(target, func(p sidebarinfo.Publication) { post(func() { a.UpdateSidebar(p) }) })
 		host = terminalhost.New(terminalhost.Config{NativeSurface: nativeSurface, Binary: resolvedBinary, Target: target, Env: os.Environ(), Font: font, CopyOnSelect: copyOnSelect, MinimumContrast: persisted.MinimumContrast, OptionAsAlt: persisted.OptionAsAlt, Cursor: cursorStyle(persisted.Cursor), NoBlink: !persisted.CursorBlink, Post: post, Changed: func() { post(func() {}) }, OnScroll: screen.Scroll, OnKey: screen.Key, OnPaste: screen.Paste})
 		screen.ConnectTerminal(host, s, ctx, post)
-		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, OptionAsAlt: persisted.OptionAsAlt, Cursor: persisted.Cursor, CursorBlink: persisted.CursorBlink, Toast: view.ToastSettings{Delivery: persisted.Toast.Delivery, Position: persisted.Toast.Position, DelaySeconds: persisted.Toast.DelaySeconds}})
+		screen.SetInitialSettings(view.SettingsSnapshot{Theme: persisted.WindowTheme, ColorScheme: persisted.ColorScheme, Font: font, CopyOnSelect: persisted.CopyOnSelect, MinimumContrast: persisted.MinimumContrast, OptionAsAlt: persisted.OptionAsAlt, Cursor: persisted.Cursor, CursorBlink: persisted.CursorBlink, Toast: view.ToastSettings{Delivery: persisted.Toast.Delivery, Position: persisted.Toast.Position, DelaySeconds: persisted.Toast.DelaySeconds}})
 		screen.SetReducedTransparency(mygo.Theme.Preferences().ReduceTransparency)
 		win = mygo.NewWindow(mygo.WindowOptions{Title: "Hergo", Width: 1200, Height: 800, MinWidth: 820, MinHeight: 560, TitleBarStyle: platformTitleBar(), TitleBarHeight: 44, Vibrancy: windowMaterial(), Content: native.View(screen.View)})
 		persist := func(fn func(*prefs.Settings)) {
@@ -207,6 +208,52 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 			persist(func(v *prefs.Settings) {
 				v.FontFamily, v.FontSize, v.FontWeight, v.LineHeight = f.Family, f.Size, f.Weight, f.LineHeight
 			})
+		}
+		activeScheme := persisted.ColorScheme
+		applyColors := func(name string) error {
+			var light, dark *design.HerdrTheme
+			if name != "native" && name != "" {
+				var err error
+				light, dark, err = design.HerdrThemes(configPath(), name)
+				if err != nil {
+					return err
+				}
+			}
+			activeScheme = name
+			screen.SetColorThemes(light, dark)
+			// Context.Dark reflects the chosen palette, which can differ from
+			// the system slot. Resolve that slot before passing terminal colors.
+			selected := light
+			if mygo.Theme.IsDark() {
+				selected = dark
+			}
+			colors := terminalColorTheme(selected)
+			host.SetTheme(colors, colors)
+			post(func() {})
+			if settingsWin != nil {
+				settingsWin.Update(func() {})
+			}
+			return nil
+		}
+		if err := applyColors(persisted.ColorScheme); err != nil {
+			log.Printf("colors: %v", err)
+		}
+		go watchHerdrColors(ctx, configPath(), time.Second, func() {
+			post(func() {
+				if activeScheme != "herdr" {
+					return
+				}
+				if err := applyColors("herdr"); err != nil {
+					log.Printf("colors: %v", err)
+				}
+			})
+		})
+		hooks.ColorScheme = func(name string) error {
+			if err := applyColors(name); err != nil {
+				return err
+			}
+			persist(func(v *prefs.Settings) { v.ColorScheme = name })
+			return nil
 		}
 		hooks.Theme = func(source string) {
 			mygo.Theme.SetSource(mygo.ThemeSource(source))
@@ -286,6 +333,9 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 		offAppearance := mygo.Theme.OnUpdated(func() {
 			if closed.Load() {
 				return
+			}
+			if err := applyColors(activeScheme); err != nil {
+				log.Printf("colors: %v", err)
 			}
 			reduced := mygo.Theme.Preferences().ReduceTransparency
 			for source, item := range themeItems {

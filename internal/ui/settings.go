@@ -15,6 +15,7 @@ import (
 // application layer; the window keeps its own editable copy.
 type SettingsSnapshot struct {
 	Theme           string
+	ColorScheme     string
 	Font            terminal.Font
 	CopyOnSelect    bool
 	MinimumContrast float32
@@ -68,7 +69,6 @@ type settingsUI struct {
 	size        float64
 	lineHeight  float64
 	contrast    float64
-	themeIndex  int
 	weightIndex int
 	delivery    int
 	position    int
@@ -76,8 +76,10 @@ type settingsUI struct {
 	cursor      int
 	// family mirrors Font.Family for the picker, systemFontLabel for "";
 	// families lists the installed monospaced families, read once.
-	family   string
-	families []string
+	manualScheme string
+	schemeError  string
+	family       string
+	families     []string
 	// appliedFont is the font every terminal is using. The snapshot is the
 	// draft the preview shows; Apply copies it here.
 	appliedFont terminal.Font
@@ -89,6 +91,9 @@ var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.Messa
 
 // install seeds the working copy from the persisted values.
 func (s *settingsUI) install(snapshot SettingsSnapshot) {
+	if snapshot.ColorScheme == "" {
+		snapshot.ColorScheme = "herdr"
+	}
 	if snapshot.Font.Size <= 0 {
 		snapshot.Font.Size = 13
 	}
@@ -106,6 +111,10 @@ func (s *settingsUI) install(snapshot SettingsSnapshot) {
 		snapshot.Cursor = "block"
 	}
 	s.snapshot = snapshot
+	s.manualScheme = "system"
+	if snapshot.ColorScheme != "herdr" {
+		s.manualScheme = s.selectedColorScheme()
+	}
 	s.appliedFont = snapshot.Font
 	s.sizeDefault = snapshot.Font.Size
 	s.resetMirrors()
@@ -121,7 +130,6 @@ func (s *settingsUI) resetMirrors() {
 	s.size = float64(s.snapshot.Font.Size)
 	s.lineHeight = float64(s.snapshot.Font.LineHeight)
 	s.contrast = float64(s.snapshot.MinimumContrast)
-	s.themeIndex = themeIndexOf(s.snapshot.Theme)
 	s.weightIndex = weightIndexOf(s.snapshot.Font.Weight)
 	s.delivery = indexOf(toastDeliveries, s.snapshot.Toast.Delivery, 0)
 	s.position = indexOf(toastPositions, s.snapshot.Toast.Position, 3)
@@ -151,18 +159,6 @@ func (s *settingsUI) fontChoices() []string {
 	}
 	return choices
 }
-
-func themeIndexOf(theme string) int {
-	switch theme {
-	case "light":
-		return 1
-	case "dark":
-		return 2
-	}
-	return 0
-}
-
-func themeFromIndex(i int) string { return []string{"system", "light", "dark"}[max(0, min(2, i))] }
 
 var fontWeights = []int{300, 400, 500, 600}
 
@@ -414,43 +410,17 @@ func (g *settingsGroup) toggle(key, label, detail string, on *bool) native.Eleme
 }
 
 func (w *Window) settingsAppearance(c *native.Context, p design.Palette, s *settingsUI) {
-	w.settingsSection(c, "settings-theme", "Theme", "System follows your system’s light or dark appearance.", p, func(g *settingsGroup) {
-		g.block(func() {
-			native.Row(c).FillWidth().Gap(12).Children(func() {
-				for i, name := range []string{"System", "Light", "Dark"} {
-					selected := s.themeIndex == i
-					button := native.ButtonBase(c.Key("settings-theme:" + name)).Grow(1).Basis(0).MinWidth(0).Padding(6).Radius(8).Label(name).Selected(selected)
-					button.Border(1, p.Border)
-					w.controlState(button, p)
-					if selected {
-						button.Border(2, p.Accent).Background(p.Accent.Alpha(.06))
-					}
-					button.Children(func() {
-						native.Column(c).FillWidth().Gap(8).Children(func() {
-							settingsThemePreview(c, i, p)
-							native.Text(c, name).FontSize(12).FontWeight(600).TextColor(p.Text)
-						})
-					})
-					if button.Clicked() {
-						s.themeIndex = i
-						s.snapshot.Theme = themeFromIndex(i)
-						if w.hooks.Theme != nil {
-							w.hooks.Theme(s.snapshot.Theme)
-						}
-					}
-				}
-			})
-		})
+	w.settingsColors(c, p, s)
+	footnote := "System switches between Hergo Light and Hergo Dark with your system appearance."
+	if s.snapshot.ColorScheme == "herdr" {
+		footnote = "Turn off Follow Herdr to choose a theme here."
+	}
+	w.settingsSection(c, "settings-theme", "Theme", footnote, p, func(g *settingsGroup) {
+		w.settingsColorChoice(c, p, s, g)
 	})
 }
 
-// Miniature windows make the appearance options recognizable before selection.
-func settingsThemePreview(c *native.Context, mode int, p design.Palette) {
-	light, dark := design.Colors(false), design.Colors(true)
-	base := light
-	if mode == 2 {
-		base = dark
-	}
+func settingsPalettePreview(c *native.Context, base, panel, p design.Palette) {
 	native.Column(c).FillWidth().Height(72).Radius(5).Clip().Background(base.Content).Border(1, p.Border).Children(func() {
 		native.Row(c).FillWidth().Height(14).PaddingX(5).Gap(3).AlignItems(native.Center).Background(base.Sidebar).Children(func() {
 			for range 3 {
@@ -462,10 +432,6 @@ func settingsThemePreview(c *native.Context, mode int, p design.Palette) {
 				native.Box(c).FillWidth().Height(4).Radius(2).Background(base.Accent.Alpha(.35))
 				native.Box(c).FillWidth().Height(3).Radius(2).Background(base.Border)
 			})
-			panel := base
-			if mode == 0 {
-				panel = dark
-			}
 			native.Column(c).Grow(1).Padding(8).Gap(5).Background(panel.Content).Children(func() {
 				native.Box(c).Width(28).Height(3).Radius(2).Background(panel.Accent)
 				native.Box(c).FillWidth().Height(3).Radius(2).Background(panel.Secondary.Alpha(.35))

@@ -31,6 +31,8 @@ type ActionHooks struct {
 	// Theme applies the window appearance ("system", "light", "dark") and
 	// persists it.
 	Theme func(source string)
+	// ColorScheme applies a Herdr palette or the native colors and persists it.
+	ColorScheme func(name string) error
 	// CopyOnSelect applies and persists the selection-copy behavior.
 	CopyOnSelect func(enabled bool)
 	// MinimumContrast applies and persists the least text contrast.
@@ -336,6 +338,9 @@ func (w *Window) dispatchShortcut(action string, index int) bool {
 	}
 	w.runShortcut(op, func(r session.OperationResult) {
 		if action == "reload_config" {
+			if w.settings.snapshot.ColorScheme == "herdr" {
+				w.chooseColorScheme("herdr")
+			}
 			b, err := input.LoadBindings("")
 			w.ConfigureBindings(b, err)
 			var status struct {

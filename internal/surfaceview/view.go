@@ -90,6 +90,9 @@ func (v *View) SetFrame(f endpoint.SurfaceFrame, paneID string) {
 	}
 	v.research()
 }
+func (v *View) SetTheme(light, dark *terminal.Theme) {
+	v.cfg.Theme, v.cfg.DarkTheme = light, dark
+}
 func (v *View) SetFont(f terminal.Font)                 { v.cfg.Font = f; clear(v.glyphs) }
 func (v *View) SetCopyOnSelect(c terminal.CopyOnSelect) { v.cfg.CopyOnSelect = c }
 func (v *View) SetMinimumContrast(r float32)            { v.cfg.MinimumContrast = r }

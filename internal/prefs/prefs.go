@@ -17,6 +17,8 @@ import (
 type Settings struct {
 	// WindowTheme is the app appearance: "system", "light" or "dark".
 	WindowTheme string
+	// ColorScheme is "native", "herdr", or a Herdr built-in theme name.
+	ColorScheme string
 	// FontFamily is the terminal font family; "" is the system's
 	// monospaced font.
 	FontFamily string
@@ -60,7 +62,7 @@ type Toast struct {
 
 // Defaults returns the settings a fresh installation starts with.
 func Defaults() Settings {
-	return Settings{WindowTheme: "system", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 4.5, Cursor: "block", CursorBlink: true, Toast: Toast{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}}
+	return Settings{WindowTheme: "system", ColorScheme: "herdr", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 4.5, Cursor: "block", CursorBlink: true, Toast: Toast{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}}
 }
 
 // Store loads and saves the settings file. Load applies defaults for
@@ -113,6 +115,12 @@ func Open(path string) (*Store, error) {
 			case "system", "light", "dark":
 				s.values.WindowTheme = theme
 			}
+		}
+	}
+	if v, ok := raw["color_scheme"]; ok {
+		var scheme string
+		if json.Unmarshal(v, &scheme) == nil && scheme != "" {
+			s.values.ColorScheme = scheme
 		}
 	}
 	if v, ok := raw["font_family"]; ok {
@@ -227,6 +235,7 @@ func (s *Store) Update(fn func(*Settings)) (Settings, error) {
 	}
 	document := s.extra
 	document["window_theme"], _ = json.Marshal(s.values.WindowTheme)
+	document["color_scheme"], _ = json.Marshal(s.values.ColorScheme)
 	document["font_family"], _ = json.Marshal(s.values.FontFamily)
 	document["font_size"], _ = json.Marshal(s.values.FontSize)
 	document["font_weight"], _ = json.Marshal(s.values.FontWeight)

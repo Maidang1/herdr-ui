@@ -67,6 +67,8 @@ type Config struct {
 	// Font sizes every new terminal attaches with; a zero Size falls back
 	// to the plugin's own default.
 	Font terminal.Font
+	// Theme and DarkTheme override the default terminal colors.
+	Theme, DarkTheme *terminal.Theme
 	// CopyOnSelect and MinimumContrast are the terminal behaviors every
 	// attach starts with; both have hot setters below.
 	CopyOnSelect    terminal.CopyOnSelect
@@ -283,11 +285,13 @@ func (h *Host) open(e *entry) {
 	h.cfg.Post(func() {
 		h.mu.Lock()
 		valid := h.valid(e)
+		var light, dark *terminal.Theme
 		if valid {
 			if err != nil {
 				e.status = Status{State: Failed, Message: "Terminal unavailable: " + err.Error()}
 			} else {
 				e.installed = true
+				light, dark = h.themes()
 				if e.status.State == Starting {
 					e.status = Status{State: Attached}
 				}
@@ -295,6 +299,9 @@ func (h *Host) open(e *entry) {
 		}
 		h.mu.Unlock()
 		if valid {
+			if err == nil {
+				setInstanceTheme(t, light, dark)
+			}
 			h.changed()
 		}
 	})
@@ -414,6 +421,42 @@ func (h *Host) SetFont(f terminal.Font) {
 	for _, t := range live {
 		t.SetFont(f)
 	}
+}
+
+// SetTheme applies colors to attached terminals and remembers them for future
+// attaches. Like View, it runs on the UI thread and calls instances unlocked.
+func (h *Host) SetTheme(light, dark *terminal.Theme) {
+	h.mu.Lock()
+	h.cfg.Theme, h.cfg.DarkTheme = light, dark
+	light, dark = h.themes()
+	live := h.liveInstances()
+	h.mu.Unlock()
+	for _, t := range live {
+		setInstanceTheme(t, light, dark)
+	}
+}
+
+func setInstanceTheme(t instance, light, dark *terminal.Theme) {
+	if s, ok := t.(interface {
+		SetTheme(*terminal.Theme, *terminal.Theme)
+	}); ok {
+		s.SetTheme(light, dark)
+	}
+}
+
+// themes resolves config overrides with mu held.
+func (h *Host) themes() (*terminal.Theme, *terminal.Theme) {
+	light, dark := h.cfg.Theme, h.cfg.DarkTheme
+	if light == nil || dark == nil {
+		defaultLight, defaultDark := terminalThemes()
+		if light == nil {
+			light = defaultLight
+		}
+		if dark == nil {
+			dark = defaultDark
+		}
+	}
+	return light, dark
 }
 
 // SetOnSearch installs Config.OnSearch after construction, for callers
@@ -542,7 +585,9 @@ func (h *Host) options(e *entry) (terminal.Options, error) {
 	// these inherited caller identities explicitly so filtered values cannot
 	// reappear when the plugin builds the child process environment.
 	env = append(env, "HERDR_SESSION=", "HERDR_PANE_ID=", "HERDR_TAB_ID=", "HERDR_WORKSPACE_ID=")
-	light, dark := terminalThemes()
+	h.mu.Lock()
+	light, dark := h.themes()
+	h.mu.Unlock()
 	font := h.cfg.Font
 	if font.Size <= 0 {
 		font.Size = 13

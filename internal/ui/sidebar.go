@@ -24,7 +24,7 @@ const (
 // It draws no surface of its own: it sits on the window's background, as a
 // Mac sidebar does, and only the content beside it is a panel.
 func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
-	native.Column(c.Key("workspace-sidebar")).Label("Workspace sidebar").Width(w.sidebarWidth).Shrink(0).AlignItems(native.Stretch).Children(func() {
+	native.Column(c.Key("workspace-sidebar")).Label("Workspace sidebar").FillHeight().Width(w.sidebarWidth).Shrink(0).AlignItems(native.Stretch).Children(func() {
 		bar := c.TitleBar()
 		native.Row(c).Height(38).Shrink(0).Padding(0, 8).AlignItems(native.Center).DragWindow().Children(func() {
 			// The native traffic lights sit over the sidebar's top-left
@@ -40,38 +40,46 @@ func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
 			w.sidebarFilterField(c, p)
 		})
 		rows, agents := w.filteredSidebar(v)
-		native.Scroll(c.Key("sidebar-information")).Grow(1).MinHeight(0).FillWidth().Label("Spaces and agents").Children(func() {
-			native.Column(c).FillWidth().Padding(0, 8, 12, 8).Gap(14).Children(func() {
-				native.Column(c).FillWidth().Gap(2).Children(func() {
-					w.sidebarSectionHeader(c, "Spaces", len(rows), p, func() { w.newWorkspaceButton(c, p) })
-					for _, row := range rows {
-						w.workspace(c, row, p)
-					}
-					if len(rows) == 0 {
-						w.sidebarEmpty(c, "No matching spaces", p)
-					}
-				})
-				native.Column(c).FillWidth().Gap(2).Children(func() {
-					w.sidebarSectionHeader(c, "Agents", len(agents), p, func() {
-						w.attentionButton(c, v.Agents, p)
-						w.agentSortToggle(c, p)
+		// Keep scrollbar tracks outside the clipped sections; wheel and
+		// touchpad scrolling still use the full list area.
+		native.Column(c.Key("sidebar-information")).Grow(1).Basis(0).MinHeight(0).FillWidth().Children(func() {
+			native.Column(c.Key("sidebar-spaces-section")).Grow(1).Basis(0).MinHeight(0).FillWidth().PaddingX(8).Clip().Children(func() {
+				w.sidebarSectionHeader(c, "Spaces", len(rows), p, func() { w.newWorkspaceButton(c, p) })
+				native.Scroll(c.Key("sidebar-spaces")).Grow(1).Basis(0).MinHeight(0).FillWidth().ScrollbarInsets(0, -w.sidebarWidth, 0, -w.sidebarWidth).Label("Spaces list").Children(func() {
+					native.Column(c).FillWidth().Padding(0, 0, 8, 0).Gap(2).Children(func() {
+						for _, row := range rows {
+							w.workspace(c, row, p)
+						}
+						if len(rows) == 0 {
+							w.sidebarEmpty(c, "No matching spaces", p)
+						}
 					})
-					if len(agents) == 0 {
-						w.sidebarEmpty(c, "No agents", p)
-					} else if w.agentsGrouped {
-						for i := 0; i < len(agents); {
-							end := i + 1
-							for end < len(agents) && agents[end].WorkspaceID == agents[i].WorkspaceID {
-								end++
+				})
+			})
+			native.Column(c.Key("sidebar-agents-section")).Grow(1).Basis(0).MinHeight(0).FillWidth().PaddingX(8).Clip().Children(func() {
+				w.sidebarSectionHeader(c, "Agents", len(agents), p, func() {
+					w.attentionButton(c, v.Agents, p)
+					w.agentSortToggle(c, p)
+				})
+				native.Scroll(c.Key("sidebar-agents")).Grow(1).Basis(0).MinHeight(0).FillWidth().ScrollbarInsets(0, -w.sidebarWidth, 0, -w.sidebarWidth).Label("Agents list").Children(func() {
+					native.Column(c).FillWidth().Padding(0, 0, 12, 0).Gap(2).Children(func() {
+						if len(agents) == 0 {
+							w.sidebarEmpty(c, "No agents", p)
+						} else if w.agentsGrouped {
+							for i := 0; i < len(agents); {
+								end := i + 1
+								for end < len(agents) && agents[end].WorkspaceID == agents[i].WorkspaceID {
+									end++
+								}
+								w.agentGroup(c, agents[i:end], p)
+								i = end
 							}
-							w.agentGroup(c, agents[i:end], p)
-							i = end
+						} else {
+							for _, row := range agents {
+								w.agentRow(c, row, p)
+							}
 						}
-					} else {
-						for _, row := range agents {
-							w.agentRow(c, row, p)
-						}
-					}
+					})
 				})
 			})
 		})
@@ -90,7 +98,7 @@ func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
 // sidebarSectionHeader titles a section with its item count, and places the
 // section's one action at the right edge of the same line.
 func (w *Window) sidebarSectionHeader(c *native.Context, title string, count int, p design.Palette, action func()) {
-	native.Row(c).FillWidth().Height(28).Padding(0, 2, 0, sidebarRowInset).Gap(6).AlignItems(native.Center).Children(func() {
+	native.Row(c).FillWidth().Height(28).Shrink(0).Padding(0, 2, 0, sidebarRowInset).Gap(6).AlignItems(native.Center).Children(func() {
 		native.Text(c, title).FontSize(11).FontWeight(600).TextColor(p.Secondary)
 		if count > 0 {
 			native.Textf(c, "%d", count).FontSize(11).TextColor(p.Tertiary.Alpha(.75))
@@ -489,7 +497,7 @@ func (w *Window) agentRow(c *native.Context, row app.AgentRow, p design.Palette)
 	button := native.ButtonBase(c.Key("agent:"+row.PaneID)).FillWidth().Radius(w.shape.Row).Padding(5, sidebarRowInset).Label(agentDescription(row)).Selected(row.Selected)
 	w.sidebarRowStyle(button, row.Selected, p)
 	button.Children(func() {
-		_, color, label := status(row.Status, c.Theme().Dark)
+		_, color, label := statusFromPalette(row.Status, p)
 		native.Row(c).FillWidth().Gap(sidebarGutter).AlignItems(native.Center).Children(func() {
 			native.Box(c).Size(18, 18).Shrink(0).Center().Children(func() {
 				agentMark(c, row.Agent, 15, p.Secondary)

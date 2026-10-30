@@ -273,7 +273,15 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 }
 
 func (w *Window) stateIcon(c *native.Context, name, value string) {
-	icon, color, label := status(value, c.Theme().Dark)
+	p := design.Colors(c.Theme().Dark)
+	if a := &w.appearance; a.lightColors != nil {
+		resolved := a.lightColors
+		if a.dark && a.darkColors != nil {
+			resolved = a.darkColors
+		}
+		p = resolved.Colors
+	}
+	icon, color, label := statusFromPalette(value, p)
 	native.Icon(c, icon).Size(14, 14).TextColor(color).Label(name + " · " + label)
 }
 func statusLabel(value string) string {
@@ -293,7 +301,10 @@ func statusLabel(value string) string {
 	}
 }
 func status(value string, dark bool) (*native.SVG, native.Color, string) {
-	p := design.Colors(dark)
+	return statusFromPalette(value, design.Colors(dark))
+}
+
+func statusFromPalette(value string, p design.Palette) (*native.SVG, native.Color, string) {
 	label := statusLabel(value)
 	switch strings.ToLower(value) {
 	case "working":

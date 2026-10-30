@@ -6,10 +6,11 @@ import (
 )
 
 type windowAppearance struct {
-	active              bool
-	reducedTransparency bool
-	theme               *native.Theme
-	dark, highContrast  bool
+	active                  bool
+	reducedTransparency     bool
+	theme                   *native.Theme
+	lightColors, darkColors *design.HerdrTheme
+	dark, highContrast      bool
 }
 
 // These setters are called on the UI thread by the native window assembly.
@@ -26,29 +27,57 @@ func (w *Window) appearancePalette(c *native.Context) design.Palette {
 	a := &w.appearance
 	if a.theme == nil || a.dark != dark || a.highContrast != high {
 		a.theme = design.NativeTheme(dark, high)
+		if a.lightColors != nil {
+			resolved := a.lightColors
+			if dark && a.darkColors != nil {
+				resolved = a.darkColors
+			}
+			copy := *resolved.Theme
+			a.theme = &copy
+		}
 		a.dark = dark
 		a.highContrast = high
 	}
 	c.SetTheme(a.theme)
 	p := design.WindowColors(dark, high, !a.active)
+	if a.lightColors != nil {
+		resolved := a.lightColors
+		if dark && a.darkColors != nil {
+			resolved = a.darkColors
+		}
+		p = resolved.Colors
+		if high {
+			p.Border = p.ControlBorder
+		}
+		if !a.active {
+			p.Selected = p.InactiveSelected
+		}
+	}
 	if w.translucent(c) {
 		p.Sidebar = p.SidebarTint
 	}
 	return p
 }
 
+// SetColorThemes applies resolved colors to both the main and settings views.
+// A nil pair restores the native palette.
+func (w *Window) SetColorThemes(light, dark *design.HerdrTheme) {
+	w.appearance.lightColors, w.appearance.darkColors = light, dark
+	w.appearance.theme = nil
+}
+
 // translucent tells whether the window may show materials: the system
 // draws its behind-window material, and neither Reduce Transparency nor
 // Increase Contrast asks for opaque surfaces.
 func (w *Window) translucent(c *native.Context) bool {
-	return c.Vibrancy() && !w.appearance.reducedTransparency && !c.Preferences().HighContrast
+	return w.appearance.lightColors == nil && c.Vibrancy() && !w.appearance.reducedTransparency && !c.Preferences().HighContrast
 }
 
 // glassy tells whether floating surfaces may be Liquid Glass. Glass
 // refracts what the window itself painted, so it needs no window material,
 // only the user's leave to be translucent.
 func (w *Window) glassy(c *native.Context) bool {
-	return !w.appearance.reducedTransparency && !c.Preferences().HighContrast
+	return w.appearance.lightColors == nil && !w.appearance.reducedTransparency && !c.Preferences().HighContrast
 }
 
 func (w *Window) styleShell(c *native.Context, root native.Element, p design.Palette) {

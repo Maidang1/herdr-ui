@@ -241,3 +241,40 @@ func TestSidebarLiveRenderArtifact(t *testing.T) {
 		}
 	}
 }
+
+func TestSidebarListsSplitHeightAndScrollIndependently(t *testing.T) {
+	w := workspaceSidebarFixture(t)
+	w.agentsGrouped = false
+	v := w.currentView()
+	v.Rows, v.Agents = nil, nil
+	for i := 0; i < 30; i++ {
+		v.Rows = append(v.Rows, app.WorkspaceRow{ID: fmt.Sprintf("space-%d", i), Name: fmt.Sprintf("Space %02d", i), Branch: "main"})
+		v.Agents = append(v.Agents, app.AgentRow{PaneID: fmt.Sprintf("agent-%d", i), WorkspaceName: "Repo", Agent: fmt.Sprintf("Agent %02d", i), Status: "idle"})
+	}
+	for _, height := range []int{560, 800} {
+		tester := native.NewTester(func(c *native.Context) { w.sidebar(c, v, design.Colors(false)) }, 248, height)
+		find := func(label string) native.Rect {
+			t.Helper()
+			r, ok := tester.Find(label)
+			if !ok {
+				t.Fatalf("missing %s", label)
+			}
+			return r
+		}
+		spaces, agents := find("Spaces list"), find("Agents list")
+		if spaces.H != agents.H || spaces.H <= 0 || spaces.Y+spaces.H > agents.Y {
+			t.Fatalf("lists must get equal separate space: spaces=%+v agents=%+v", spaces, agents)
+		}
+		spaceBefore, agentBefore := find("Space 00"), find("Agent 00")
+		headerBefore := find("Agents")
+		tester.Scroll(spaces.X+30, spaces.Y+30, 0, 120)
+		if find("Space 00").Y >= spaceBefore.Y || find("Agent 00").Y != agentBefore.Y || find("Agents").Y != headerBefore.Y {
+			t.Fatal("scrolling spaces moved the agents or its header")
+		}
+		spaceAfter := find("Space 00")
+		tester.Scroll(agents.X+30, agents.Y+30, 0, 120)
+		if find("Agent 00").Y >= agentBefore.Y || find("Space 00").Y != spaceAfter.Y || find("Agents").Y != headerBefore.Y {
+			t.Fatal("scrolling agents moved spaces or its header")
+		}
+	}
+}
