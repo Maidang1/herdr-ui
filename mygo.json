@@ -1,7 +1,7 @@
 {
   "name": "Hergo",
   "identifier": "dev.herdr.ui",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "icon": "assets/app/icon.png",
   "main": "./cmd/herdr-ui",
   "out": "dist",
@@ -13,6 +13,8 @@
   },
   "resources": [
     "LICENSE",
+    "internal/design/herdr-LICENSE",
+    "internal/design/herdr-ATTRIBUTION.md",
     "assets/app/ICON-NOTICE.md",
     "internal/icons/LICENSE-lucide",
     "internal/icons/LICENSE-lobe",

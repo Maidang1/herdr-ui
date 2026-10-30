@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.13
+
+- Follow Herdr theme configuration automatically, including light/dark switching and custom color overrides. Apply configuration edits to windows and terminals while the app is running.
+- Show all themes as preview cards, with System, Hergo Light and Hergo Dark alongside Herdr built-in themes. Use the Follow Herdr switch to choose automatic or manual colors.
+- Split Spaces and Agents into equal-height sidebar sections with fixed headers and independent scrolling, and hide their scrollbars.
+- Improve default Herdr text contrast.
+
+Physical Linux X11/Wayland desktop and IME validation remains outstanding, as does physical Windows desktop and IME validation.
+
 ## 0.0.12
 
 - Rebrand the desktop application and platform packages as Hergo.
