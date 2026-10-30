@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.14
+
+- Add agent and process details, detection diagnostics, and independent agent naming.
+- Add Herdr plugin management, session restore settings, saved SSH machines, and local session entry points.
+- Add cancellable output matching reminders with substring and regular expression matching.
+- Add official agent marks for Prime Agent, OMP, Droid, Qoder CLI, Hermes, Letta, and Mastra Code, with light and dark theme support.
+
+Live SSH access, installed-plugin mutations, successful naming of a real coding agent, and Windows command surfaces remain unverified on physical systems. Physical Linux X11/Wayland desktop and IME validation remains outstanding, as does physical Windows desktop and IME validation.
+
 ## 0.0.13
 
 - Follow Herdr theme configuration automatically, including light/dark switching and custom color overrides. Apply configuration edits to windows and terminals while the app is running.
