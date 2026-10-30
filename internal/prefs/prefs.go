@@ -60,7 +60,7 @@ type Toast struct {
 
 // Defaults returns the settings a fresh installation starts with.
 func Defaults() Settings {
-	return Settings{WindowTheme: "system", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 1, Cursor: "block", CursorBlink: true, Toast: Toast{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}}
+	return Settings{WindowTheme: "system", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 4.5, Cursor: "block", CursorBlink: true, Toast: Toast{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}}
 }
 
 // Store loads and saves the settings file. Load applies defaults for

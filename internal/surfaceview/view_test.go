@@ -80,6 +80,19 @@ func TestColorTagsAndModifiers(t *testing.T) {
 	}
 }
 
+func TestMinimumContrastMakesDarkTextVisibleOnDarkBackground(t *testing.T) {
+	v := New(Config{Theme: terminal.LightTheme(), MinimumContrast: 4.5})
+	v.theme = v.cfg.Theme
+
+	fg, bg := v.colors(endpoint.SurfaceCell{FG: 0x02030303, BG: 0x02050505})
+	if bg != ui.RGB(5, 5, 5) {
+		t.Fatalf("background changed: %v", bg)
+	}
+	if got := contrast(fg, bg); got < 4.5 {
+		t.Fatalf("text contrast = %.2f, want at least 4.5", got)
+	}
+}
+
 func TestMouseReportingAndShiftSelection(t *testing.T) {
 	var forwarded []ui.InputEvent
 	v := New(Config{OnInput: func(e ui.InputEvent) bool { forwarded = append(forwarded, e); return true }})

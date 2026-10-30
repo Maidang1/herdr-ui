@@ -14,6 +14,9 @@ func TestOpenMissingFileReturnsDefaults(t *testing.T) {
 	if got := s.Settings(); got != Defaults() {
 		t.Fatalf("missing file changed settings: %+v", got)
 	}
+	if got := s.Settings().MinimumContrast; got != 4.5 {
+		t.Fatalf("default minimum contrast = %v, want 4.5", got)
+	}
 }
 
 func TestUpdatePersistsAndReloads(t *testing.T) {
