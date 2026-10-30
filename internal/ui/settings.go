@@ -548,7 +548,7 @@ func (w *Window) settingsTerminal(c *native.Context, p design.Palette, s *settin
 		}
 	})
 	w.settingsSection(c, "settings-readability", "Readability", "", p, func(g *settingsGroup) {
-		g.row("Minimum contrast", "Adjusts text that would be hard to read over its background. 1× keeps program colors.", func() {
+		g.row("Minimum contrast", "Starts at 4.5× to keep text readable; 1× keeps program colors.", func() {
 			if settingsSlider(c, "settings-contrast-slider", &s.contrast, 1, 7, formatContrast).Changed() {
 				s.snapshot.MinimumContrast = max(1, min(7, float32(s.contrast)))
 				if w.hooks.MinimumContrast != nil {
