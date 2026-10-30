@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Original Hergo concept inspired by Herdr's ram and terminal prompt,
+       and mygo's five colored exclamation marks; not a copy of either logo. -->
+  <defs>
+    <linearGradient id="tile" x1="150" y1="100" x2="850" y2="940" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#CCEFF7"/>
+      <stop offset=".55" stop-color="#72C8DE"/>
+      <stop offset="1" stop-color="#4899BC"/>
+    </linearGradient>
+    <linearGradient id="wool" x1="270" y1="240" x2="750" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF9EC"/>
+      <stop offset="1" stop-color="#E8DCC8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="145%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#19394B" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)" filter="url(#shadow)"/>
+  <rect x="102" y="102" width="820" height="820" rx="183" fill="none" stroke="#FFFFFF" stroke-opacity=".4" stroke-width="3"/>
+  <!-- Soft wool scallops and a rounded muzzle keep the ram friendly. -->
+  <path d="M405 354 C380 299 428 260 475 281 C495 222 559 223 589 264 C635 238 689 274 685 320 C743 321 779 373 760 420 C813 452 805 516 763 543 C799 584 775 642 733 653 C754 704 718 748 673 746 C661 797 609 814 567 785 C526 817 478 798 460 765 L455 649 C453 607 413 596 362 593 L296 589 C226 585 212 533 249 490 L337 393 C357 371 378 358 405 354Z" fill="url(#wool)"/>
+  <!-- Dark face with the Herdr terminal eye, redrawn at icon scale. -->
+  <path d="M415 366 C367 367 338 391 306 432 L253 498 C225 533 244 558 286 563 L368 570 C414 574 443 596 455 630 C484 655 520 646 529 614 L536 492 C541 432 493 380 415 366Z" fill="#29333D"/>
+  <path d="M309 466 L342 491 L309 516" fill="none" stroke="#FFF7E9" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M374 509 H410" fill="none" stroke="#FFF7E9" stroke-width="20" stroke-linecap="round"/>
+  <ellipse cx="420" cy="546" rx="25" ry="15" fill="#EA9EA2" opacity=".8"/>
+  <!-- Spiral horn is both the ram's identity and a quiet G-shaped turn. -->
+  <path d="M465 390 C440 331 491 284 553 287 C647 292 704 369 684 451 C666 525 600 560 544 528 C496 501 498 451 530 429 C555 412 585 423 590 447" fill="none" stroke="#29333D" stroke-width="72" stroke-linecap="round"/>
+  <path d="M465 390 C440 331 491 284 553 287 C647 292 704 369 684 451 C666 525 600 560 544 528 C496 501 498 451 530 429 C555 412 585 423 590 447" fill="none" stroke="#C8AF8D" stroke-width="40" stroke-linecap="round"/>
+  <!-- Mygo's five colored bangs curve around the horn like a small crest. -->
+  <g transform="translate(446 273) rotate(-38)" fill="#5AA9C4"><rect x="-10" y="-60" width="20" height="38" rx="7"/><circle cy="-8" r="10"/></g>
+  <g transform="translate(505 235) rotate(-18)" fill="#E9708F"><rect x="-10" y="-60" width="20" height="38" rx="7"/><circle cy="-8" r="10"/></g>
+  <g transform="translate(576 228) rotate(4)" fill="#4FAE5D"><rect x="-10" y="-60" width="20" height="38" rx="7"/><circle cy="-8" r="10"/></g>
+  <g transform="translate(644 249) rotate(26)" fill="#B69336"><rect x="-10" y="-60" width="20" height="38" rx="7"/><circle cy="-8" r="10"/></g>
+  <g transform="translate(698 294) rotate(48)" fill="#8A83BD"><rect x="-10" y="-60" width="20" height="38" rx="7"/><circle cy="-8" r="10"/></g>
+</svg>

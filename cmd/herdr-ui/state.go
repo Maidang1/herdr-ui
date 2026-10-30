@@ -68,6 +68,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 	mygo.App.WhenReady(func() {
 		var win *mygo.Window
 		var schedule func()
+		var syncFeatureTargets func()
 		schedule = func() {
 			if closed.Load() || !pending.CompareAndSwap(false, true) {
 				return
@@ -79,6 +80,9 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 				}
 				latest := s.Latest()
 				a.Update(latest)
+				if syncFeatureTargets != nil {
+					syncFeatureTargets()
+				}
 				notifier.Step(latest)
 				if sidebar != nil {
 					sidebar.Update(latest)
@@ -125,6 +129,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 			}()
 		}
 		screen := view.New(a, start)
+		syncFeatureTargets = screen.SyncFeatureTargets
 		bindings, bindingErr := input.LoadBindings("")
 		screen.ConfigureBindings(bindings, bindingErr)
 		post := func(fn func()) {
@@ -202,6 +207,7 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 				integrationPost(func() { done(messages, err) })
 			}()
 		}
+		installFeatureHooks(&hooks, ctx, s, target, screen, integrationPost, resolvedBinary)
 		hooks.EditConfig = func() error { return editHerdrConfig(resolvedBinary, target, screen) }
 		hooks.Font = func(f terminal.Font) {
 			host.SetFont(f)

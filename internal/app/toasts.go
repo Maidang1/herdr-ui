@@ -215,6 +215,9 @@ func (t *Toasts) check(n Notice, now time.Time, ctx ToastContext) (ready, keep b
 // in-app toast whenever the tab is selected, for a system notification only
 // while the window has the focus too.
 func (t *Toasts) onScreen(n Notice, ctx ToastContext) bool {
+	if n.Kind == "OutputMatched" {
+		return false
+	}
 	if ctx.Delivery == DeliverySystem && !ctx.Active {
 		return false
 	}

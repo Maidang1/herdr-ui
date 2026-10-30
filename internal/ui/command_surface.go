@@ -17,13 +17,16 @@ import (
 // Only lifecycle state crosses threads. Window ownership and focus changes stay
 // on the UI thread; construction and PTY teardown never run there.
 type commandSurfaceState struct {
-	mu       sync.Mutex
-	title    string
-	instance commandSurfaceTerminal
-	err      error
-	closed   bool
-	cancel   context.CancelFunc
-	focus    bool // UI thread only.
+	mu        sync.Mutex
+	title     string
+	instance  commandSurfaceTerminal
+	err       error
+	closed    bool
+	cancel    context.CancelFunc
+	focus     bool // UI thread only.
+	completed bool
+	exitCode  int
+	command   []string
 }
 type commandSurfaceTerminal interface {
 	View(*native.Context) native.Element
@@ -54,7 +57,15 @@ func createCommandSurface(options terminal.Options) (commandSurfaceTerminal, err
 func (w *Window) OpenCommandSurface(title string, command, env []string, cwd string) error {
 	return w.openCommandSurface(title, command, env, cwd, createCommandSurface)
 }
+
+// OpenReviewCommandSurface retains command output until the user closes it.
+func (w *Window) OpenReviewCommandSurface(title string, command, env []string, cwd string) error {
+	return w.openCommandSurfaceMode(title, command, env, cwd, createCommandSurface, true)
+}
 func (w *Window) openCommandSurface(title string, command, env []string, cwd string, create commandSurfaceFactory) error {
+	return w.openCommandSurfaceMode(title, command, env, cwd, create, false)
+}
+func (w *Window) openCommandSurfaceMode(title string, command, env []string, cwd string, create commandSurfaceFactory, retain bool) error {
 	if w.terminal == nil || w.terminal.post == nil || w.terminal.ctx == nil {
 		return errors.New("command surface requires a connected window")
 	}
@@ -68,8 +79,11 @@ func (w *Window) openCommandSurface(title string, command, env []string, cwd str
 		title = "Command"
 	}
 	w.CloseCommandSurface()
+	w.details.open = false
+	w.details.generation++
+	w.details.busy = false
 	ctx, cancel := context.WithCancel(w.terminal.ctx)
-	s := &commandSurfaceState{title: title, cancel: cancel, focus: true}
+	s := &commandSurfaceState{title: title, cancel: cancel, focus: true, command: slices.Clone(command)}
 	w.commandSurfaceState = s
 	w.BlurInput()
 	post := w.terminal.post
@@ -85,12 +99,23 @@ func (w *Window) openCommandSurface(title string, command, env []string, cwd str
 	}
 	// Identity blanks are necessary because terminal.Options.Env augments the
 	// inherited environment. Caller-supplied values may intentionally override.
-	childEnv := append([]string{"HERDR_SESSION=", "HERDR_PANE_ID=", "HERDR_TAB_ID=", "HERDR_WORKSPACE_ID="}, env...)
+	childEnv := append([]string{"HERDR_SOCKET_PATH=", "HERDR_SESSION=", "HERDR_PANE_ID=", "HERDR_TAB_ID=", "HERDR_WORKSPACE_ID="}, env...)
 	opts := terminal.Options{
 		Command: slices.Clone(command), Env: childEnv, Dir: cwd,
 		Font: terminal.Font{Size: 13}, Padding: terminal.Padding{X: 12, Y: 10},
 		ClipboardRead: terminal.ClipboardDeny, RightClick: terminal.RightClickCopyOrPaste,
-		OnExit: func(int) { exited() },
+		OnExit: func(code int) {
+			if retain {
+				post(func() {
+					if w.commandSurfaceState == s {
+						s.completed = true
+						s.exitCode = code
+					}
+				})
+			} else {
+				exited()
+			}
+		},
 	}
 	go func() {
 		if ctx.Err() != nil {
@@ -150,6 +175,13 @@ func (w *Window) CloseCommandSurface() {
 	w.BlurInput()
 }
 
+func displayCommand(command []string) string {
+	quoted := make([]string, len(command))
+	for i, arg := range command {
+		quoted[i] = "'" + strings.ReplaceAll(arg, "'", "'\"'\"'") + "'"
+	}
+	return strings.Join(quoted, " ")
+}
 func (w *Window) commandSurface(c *native.Context, p design.Palette) {
 	s := w.commandSurfaceState
 	if s == nil {
@@ -158,6 +190,9 @@ func (w *Window) commandSurface(c *native.Context, p design.Palette) {
 	native.Column(c.Key("command-surface")).Grow(1).FillWidth().MinHeight(0).AlignItems(native.Stretch).Background(p.Content).Clip().Children(func() {
 		native.Row(c.Key("command-surface-header")).FillWidth().Shrink(0).Padding(10, 14).Gap(12).AlignItems(native.Center).Background(p.Elevated).Children(func() {
 			native.Text(c, s.title).Bold().SingleLine().Grow(1)
+			if s.completed {
+				native.Text(c, fmt.Sprintf("Finished · Exit %d", s.exitCode)).TextColor(p.Secondary)
+			}
 			if native.Button(c, "Close").Label("Close " + s.title).Clicked() {
 				w.CloseCommandSurface()
 			}
@@ -170,6 +205,9 @@ func (w *Window) commandSurface(c *native.Context, p design.Palette) {
 			native.Column(c).Grow(1).FillWidth().Center().Gap(8).Padding(24).Children(func() {
 				native.Text(c, "Unable to start "+s.title).Bold().TextColor(p.Danger)
 				native.Text(c, fmt.Sprint(err)).TextColor(p.Secondary).Selectable()
+				if w.hooks.WriteClipboard != nil && native.Button(c, "Copy command").Clicked() {
+					w.shortcutError(w.hooks.WriteClipboard(displayCommand(s.command)))
+				}
 			})
 			return
 		}

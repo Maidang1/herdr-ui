@@ -29,6 +29,7 @@ type actionController struct {
 type Action struct{ ID, Label string }
 
 var Actions = []Action{
+	{"pane_details", "Agent and process details"}, {"watch_output", "Notify when output matches"},
 	{"help", "Keyboard reference"}, {"settings", "Settings"}, {"new_workspace", "New workspace"}, {"new_worktree", "New worktree"}, {"open_worktree", "Open worktree"}, {"remove_worktree", "Remove worktree"}, {"rename_workspace", "Rename workspace"}, {"close_workspace", "Close workspace"}, {"workspace_picker", "Workspace navigator"}, {"goto", "Session navigator"}, {"detach", "Detach window"}, {"reload_config", "Reload configuration"}, {"open_notification_target", "Open notification target"}, {"previous_workspace", "Previous workspace"}, {"next_workspace", "Next workspace"}, {"previous_agent", "Previous agent"}, {"next_agent", "Next agent"}, {"focus_agent", "Focus agent by number"}, {"remote_image_paste", "Paste clipboard image"}, {"new_tab", "New tab"}, {"rename_tab", "Rename tab"}, {"previous_tab", "Previous tab"}, {"next_tab", "Next tab"}, {"move_tab_previous", "Move tab left"}, {"move_tab_next", "Move tab right"}, {"switch_tab", "Switch tab by number"}, {"switch_workspace", "Switch workspace by number"}, {"close_tab", "Close tab"}, {"rename_pane", "Rename pane"}, {"edit_scrollback", "Edit scrollback"}, {"copy_mode", "Copy mode"}, {"focus_pane_left", "Focus left"}, {"focus_pane_down", "Focus down"}, {"focus_pane_up", "Focus up"}, {"focus_pane_right", "Focus right"}, {"swap_pane_left", "Swap left"}, {"swap_pane_down", "Swap down"}, {"swap_pane_up", "Swap up"}, {"swap_pane_right", "Swap right"}, {"cycle_pane_next", "Next pane"}, {"cycle_pane_previous", "Previous pane"}, {"last_pane", "Last pane"}, {"split_vertical", "Split right"}, {"split_horizontal", "Split down"}, {"close_pane", "Close pane"}, {"zoom", "Zoom / restore"}, {"resize_mode", "Resize mode"}, {"resize_pane_left", "Resize left"}, {"resize_pane_down", "Resize down"}, {"resize_pane_up", "Resize up"}, {"resize_pane_right", "Resize right"}, {"toggle_sidebar", "Toggle sidebar"}, {"zoom_in", "Bigger text"}, {"zoom_out", "Smaller text"}, {"zoom_reset", "Actual size"}, {"attention", "Jump to agent needing you"}, {"find", "Find in terminal"}, {"find_next", "Find next"}, {"find_previous", "Find previous"}, {"clear_pane", "Clear pane"}, {"zen", "Toggle zen mode"},
 }
 
@@ -392,6 +393,10 @@ func (w *Window) SetActionStateChanged(fn func(string, bool)) { w.actionState = 
 // ActionLabel describes the action's current effect for every native entry.
 func (w *Window) ActionLabel(id string) string {
 	switch id {
+	case "watch_output":
+		if w.outputWatch.cancel != nil {
+			return "Cancel output reminder"
+		}
 	case "toggle_sidebar":
 		if w.sidebarVisible {
 			return "Hide sidebar"

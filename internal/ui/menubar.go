@@ -30,6 +30,7 @@ var MenuBar = []MenuSection{
 		{"resize_mode", "resize_pane_left", "resize_pane_right", "resize_pane_up", "resize_pane_down"},
 		{"find", "find_next", "find_previous"},
 		{"copy_mode", "edit_scrollback", "clear_pane", "remote_image_paste"},
+		{"pane_details", "watch_output"},
 	}},
 	{"Go", [][]string{
 		{"goto", "workspace_picker"},

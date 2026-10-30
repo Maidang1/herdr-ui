@@ -68,6 +68,8 @@ func (w *Window) tabMenu(m *native.Menu, tab app.TabRow) {
 // layout commands, the history tools, and closing it.
 func (w *Window) paneMenu(m *native.Menu, paneID string) {
 	selectPane := func() { w.app.SelectPane(paneID) }
+	w.menuAction(m, "Agent and Process Details…", "pane_details", selectPane)
+	w.menuAction(m, w.ActionLabel("watch_output"), "watch_output", selectPane)
 	w.menuAction(m, "Rename Pane…", "rename_pane", selectPane)
 	m.Separator()
 	w.menuAction(m, "Split Right", "split_vertical", selectPane)

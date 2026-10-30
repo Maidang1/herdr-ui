@@ -15,13 +15,25 @@ import (
 
 // ActionHooks are platform integrations. All callbacks run on the UI thread.
 type ActionHooks struct {
-	Detach         func()
-	Settings       func() error
-	ReadImage      func() []byte
-	PasteImage     func(string, []byte) error
-	WriteClipboard func(string) error
-	EditText       func(string) error
-	InvokeCommand  func(int, session.Operation, func(error))
+	PaneDetails         func(session.Operation, func(herdr.PaneDetails, error))
+	RenameAgent         func(session.Operation, *string, func(error))
+	Plugins             func(func(herdr.PluginCatalog, error))
+	PluginEnabled       func(string, bool, func(error))
+	PluginAction        func(session.Operation, string, string, func(error))
+	PluginPane          func(session.Operation, string, string, string, func(error))
+	WatchOutput         func(session.Operation, herdr.OutputWatch, func(herdr.OutputMatch, error)) func()
+	RestoreSettings     func(func(herdr.RestoreSettings, error))
+	SaveRestoreSettings func(herdr.RestoreSettings, func(error))
+	PluginInstall       func(string, bool) error
+	Machines            func(func(herdr.MachineCatalog, error))
+	MachineCommand      func(herdr.MachineCommand) error
+	Detach              func()
+	Settings            func() error
+	ReadImage           func() []byte
+	PasteImage          func(string, []byte) error
+	WriteClipboard      func(string) error
+	EditText            func(string) error
+	InvokeCommand       func(int, session.Operation, func(error))
 	// Notices returns the notifications Herdr sent since the last call,
 	// for the in-app toast queue.
 	Notices func() []app.Notice
@@ -152,6 +164,12 @@ func (w *Window) dispatchShortcut(action string, index int) bool {
 	}
 	v := w.currentView()
 	switch action {
+	case "pane_details":
+		w.openDetails()
+		return true
+	case "watch_output":
+		w.promptOutputWatch()
+		return true
 	case "settings":
 		if w.hooks.Settings != nil {
 			w.shortcutError(w.hooks.Settings())

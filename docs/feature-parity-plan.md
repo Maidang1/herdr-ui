@@ -26,11 +26,11 @@
 - GitHub 登录/PR/Issues/评论（herdr-gpui `src/github/`、`src/pull_request/`）
 - AI 额度/用量面板（herdr-gpui `src/usage/`；Herdr 状态栏 usage chips）
 - 内置浏览器标签与页面标注（kero `browser.go`；herdr-gpui `src/browser/`）
-- Teleport/云设备/远程主机管理（herdr-gpui `src/cloud*/`；kero `internal/remote`）
+- Teleport/云设备管理及原生多机器侧栏（herdr-gpui `src/cloud*/`）；本地保存的 SSH 机器与交互式连接入口见下方新增管理能力。
 - Worktree checkpoint/Review diff 审查、Orchestrator、Smart Dispatch（herdr-gpui）
 - Agent 技能安装、程序状态上报 OSC 7501（kero `internal/cli` skills/report）
 - VS Code/px0 内嵌编辑器（herdr-gpui `src/code_server/`）
-- 应用自更新、崩溃报告面板（发布工程，非终端功能）
+- 崩溃报告面板（发布工程）；应用自更新已由现有原生更新器提供。
 
 ## 第三批（已实现）
 
@@ -60,6 +60,16 @@
 Option 作 Meta 同时修正了 mygo 的缺陷：macOS 输入法在 Meta 键之后仍会插入 Option 字符（⌥B 得到 `ESC b∫`），⌥E 等死键还会开启组字。补丁让终端在 Option 按下且输入法未在组字时绕过输入法。
 
 终端响铃不做：attach 流会吞掉 BEL、OSC 52 与 OSC 9（实测 `printf '\a'` 后只剩重绘），客户端收不到。
+
+## Herdr 管理能力（2026-10）
+
+- Pane 菜单增加可关闭的 Agent/process Details，展示 `agent.get`、`pane.process_info` 与 `agent.explain`；agent 名称走 `agent.rename`，不更改 pane label。诊断原文可复制，session reference 不代表恢复保证。
+- Settings → Plugins：列表、enable/disable、actions、支持的 tab/split 入口与按需展开日志；GitHub install/update 在独立命令终端交互确认，popup/overlay 不当普通 pane 打开。
+- Settings → Session restore：写 Herdr 配置的 `session.resume_agents_on_restore` 和 `experimental.pane_history`，保留未知配置/注释，原子替换并保留符号链接目标，不主动重启。
+- 输出提醒：独立可取消连接执行 `pane.wait_for_output`，recent 80 行，substring/Rust regex，默认 30 分钟，最大 24 小时。匹配后通知一次，不自动跳转；终端/epoch 变化和退出取消。
+- Settings → Machines：读取本地 typed 机器和命名会话列表；状态检查显式执行。保存机器管理、SSH setup/auth/open 和本地 session attach 使用独立交互终端，命令退出结果保留至关闭。不承诺原生远程侧栏；远程连接与 Windows 命令终端未实机验证。
+
+明确不提供 agent start、pane move、agent cost/history。
 
 ## 后续候选（暂缓，含原因）
 

@@ -44,6 +44,8 @@ type Window struct {
 	navigatorUses       []navigatorUse
 	navigatorSessions   int
 	settings            settingsUI
+	details             detailsUI
+	outputWatch         outputWatchUI
 	shape               design.Shape
 	toasts              app.Toasts
 	// copied asks the next frame to show the copy confirmation, which
@@ -136,6 +138,7 @@ func (w *Window) currentView() app.View {
 
 func (w *Window) View(c *native.Context) {
 	w.syncInput()
+	w.SyncFeatureTargets()
 	width, _ := c.Size()
 	w.viewportWidth = width
 	w.sidebarVisible = chromeLayout(width, w.sidebarWidth, w.hidden || w.zen).sidebarVisible
@@ -152,6 +155,12 @@ func (w *Window) View(c *native.Context) {
 	}
 	w.styleShell(c, root, p)
 	root.HandleInput(func(ev native.InputEvent) bool {
+		if ev.Kind == native.InputKeyDown && ev.Key == native.KeyEscape && w.details.open && !w.modalOpen() {
+			w.details.open = false
+			w.details.generation++
+			w.details.busy = false
+			return true
+		}
 		if ev.Kind != native.InputKeyDown || w.controller == nil || w.controller.bindingError != "" || w.modalOpen() || w.sidebarFilterOn || w.findOpen() || w.currentView().PaneID != "" {
 			return false
 		}
@@ -197,7 +206,9 @@ func (w *Window) View(c *native.Context) {
 						native.Text(c, "Last synced "+v.Updated.Format("15:04:05")).FontSize(12).TextColor(p.Secondary).Padding(0, 16, 8, 16)
 					}
 				}
-				if w.commandSurfaceState != nil {
+				if w.details.open {
+					w.detailsView(c, p)
+				} else if w.commandSurfaceState != nil {
 					w.commandSurface(c, p)
 				} else {
 					w.content(c, v, p)

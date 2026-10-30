@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Hergo cat concept: ears and a curled tail share the terminal H silhouette.
+       A sleepy eye and warm agent-status eye add character without a face badge. -->
+  <defs>
+    <linearGradient id="tile" x1="160" y1="100" x2="820" y2="940" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#CDBAF5"/>
+      <stop offset=".5" stop-color="#A384DA"/>
+      <stop offset="1" stop-color="#7354AE"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="220" y1="200" x2="780" y2="830" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#302840"/>
+      <stop offset="1" stop-color="#1D1928"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="100" x2="0" y2="930" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity=".04"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="145%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#231737" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)" filter="url(#shadow)"/>
+  <rect x="102" y="102" width="820" height="820" rx="183" fill="none" stroke="url(#edge)" stroke-width="3"/>
+  <!-- Soft triangular ears grow out of the two terminal rails. -->
+  <path d="M232 304 L240 194 Q242 170 262 183 L360 247Z" fill="url(#ink)"/>
+  <path d="M664 247 L762 183 Q782 170 784 194 L792 304Z" fill="url(#ink)"/>
+  <!-- One structural H, divided into a tall pane and two short panes. -->
+  <path d="M302 226 H346 Q384 226 384 264 V432 H640 V264 Q640 226 678 226 H722 Q798 226 798 302 V722 Q798 798 722 798 H678 Q640 798 640 760 V592 H384 V760 Q384 798 346 798 H302 Q226 798 226 722 V302 Q226 226 302 226Z" fill="url(#ink)"/>
+  <path d="M256 216 L260 253 L292 241Z" fill="#C3A0E3"/>
+  <path d="M768 216 L764 253 L732 241Z" fill="#C3A0E3"/>
+  <!-- A low curled tail suggests a seated cat and a subtle G-shaped turn. -->
+  <path d="M305 748 C305 829 419 850 463 807 C494 777 475 741 445 746" fill="none" stroke="#231D31" stroke-width="45" stroke-linecap="round"/>
+  <!-- The right rail's divider makes the multi-pane origin legible. -->
+  <path d="M674 512 H798" stroke="#AE91DF" stroke-width="16"/>
+  <!-- Open terminal angle and a cursor share the H's connecting pane. -->
+  <path d="M440 469 L483 512 L440 555" fill="none" stroke="#F6F1FF" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M532 551 H586 V521" fill="none" stroke="#D5C0FF" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- One sleepy eye; the other remains the warm agent signal. -->
+  <path d="M277 337 Q305 360 333 337" fill="none" stroke="#D5C0FF" stroke-width="19" stroke-linecap="round"/>
+  <circle cx="719" cy="337" r="32" fill="#F4CD87"/>
+</svg>

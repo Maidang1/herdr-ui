@@ -3,6 +3,7 @@ package ui
 import (
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Maidang1/herdr-ui/internal/design"
@@ -61,6 +62,9 @@ func indexOf(values []string, value string, fallback int) int {
 // to.
 type settingsUI struct {
 	integrations integrationSettings
+	plugins      pluginSettings
+	restore      restoreSettingsUI
+	machines     machineSettings
 	page         int
 	snapshot     SettingsSnapshot
 	// sizeDefault is the size Actual Size and the settings' reset return
@@ -85,9 +89,9 @@ type settingsUI struct {
 	appliedFont terminal.Font
 }
 
-var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts", "Updates", "Integrations"}
+var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts", "Updates", "Integrations", "Plugins", "Session restore", "Machines"}
 
-var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.MessageCircle, icons.Keyboard, icons.RotateCw, icons.Agent("agent")}
+var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.MessageCircle, icons.Keyboard, icons.RotateCw, icons.Agent("agent"), icons.Terminal, icons.RotateCw, icons.Globe}
 
 // install seeds the working copy from the persisted values.
 func (s *settingsUI) install(snapshot SettingsSnapshot) {
@@ -255,7 +259,7 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 		native.Column(c.Key("settings-page")).FillWidth().MaxWidth(settingsColumnWidth+2*settingsPagePadding).Shrink(0).Padding(top, settingsPagePadding, 40, settingsPagePadding).Gap(24).AlignItems(native.Stretch).Children(func() {
 			native.Column(c).Gap(4).Children(func() {
 				native.Text(c, settingsPages[s.page]).FontSize(22).FontWeight(700)
-				descriptions := []string{"Make Hergo feel at home.", "Fine-tune your terminal experience.", "Choose when Hergo gets your attention.", "Keep your workflow close at hand.", "Keep Hergo up to date.", "Connect your coding agents to Herdr."}
+				descriptions := []string{"Make Hergo feel at home.", "Fine-tune your terminal experience.", "Choose when Hergo gets your attention.", "Keep your workflow close at hand.", "Keep Hergo up to date.", "Connect your coding agents to Herdr.", "Manage installed Herdr plugins.", "Choose what Herdr restores after restart.", "Manage saved machines and open sessions."}
 				native.Text(c, descriptions[s.page]).FontSize(13).TextColor(p.Secondary)
 			})
 			switch s.page {
@@ -269,6 +273,12 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 				w.settingsUpdates(c, p)
 			case 5:
 				w.settingsIntegrations(c, p)
+			case 6:
+				w.settingsPlugins(c, p)
+			case 7:
+				w.settingsRestore(c, p)
+			case 8:
+				w.settingsMachines(c, p)
 			default:
 				w.settingsShortcuts(c, p)
 			}
@@ -279,9 +289,10 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 // settingsGroup builds the rows of one group's card, dividing each from
 // the one before.
 type settingsGroup struct {
-	c    *native.Context
-	p    design.Palette
-	rows int
+	c       *native.Context
+	p       design.Palette
+	rows    int
+	compact bool
 }
 
 // settingsSection is one titled group: the title above its card, and the
@@ -289,7 +300,7 @@ type settingsGroup struct {
 func (w *Window) settingsSection(c *native.Context, key, title, footnote string, p design.Palette, rows func(g *settingsGroup)) {
 	native.Column(c.Key(key)).FillWidth().Shrink(0).Gap(8).AlignItems(native.Stretch).Children(func() {
 		native.Text(c, title).FontSize(13).FontWeight(600).PaddingX(4)
-		g := &settingsGroup{c: c, p: p}
+		g := &settingsGroup{c: c, p: p, compact: strings.HasPrefix(key, "settings-plugins") || strings.HasPrefix(key, "settings-plugin-logs") || strings.HasPrefix(key, "settings-machines") || strings.HasPrefix(key, "settings-remote-open") || strings.HasPrefix(key, "settings-local-sessions")}
 		// The card stands off the grouped page by its own fill, as System
 		// Settings' do; Increase Contrast outlines it.
 		card := native.Column(c.Key(key + "-card")).Label(title + " settings").FillWidth().Radius(10).Background(p.Elevated).Clip().AlignItems(native.Stretch)
@@ -319,6 +330,17 @@ func (g *settingsGroup) divide() {
 func (g *settingsGroup) row(label, detail string, control func()) {
 	g.divide()
 	c, p := g.c, g.p
+	width, _ := c.Size()
+	if width < 680 && g.compact {
+		native.Column(c).FillWidth().Padding(9, settingsRowPadding).Gap(8).AlignItems(native.Stretch).Children(func() {
+			native.Text(c, label).FontSize(13)
+			if detail != "" {
+				native.Text(c, detail).FontSize(11).TextColor(p.Secondary).FillWidth()
+			}
+			native.Row(c).Gap(10).AlignItems(native.Center).Children(control)
+		})
+		return
+	}
 	native.Row(c).FillWidth().MinHeight(settingsRowHeight).Padding(9, settingsRowPadding).Gap(16).AlignItems(native.Center).Children(func() {
 		native.Column(c).Grow(1).Shrink(1).MinWidth(0).Gap(3).Children(func() {
 			native.Text(c, label).FontSize(13)
