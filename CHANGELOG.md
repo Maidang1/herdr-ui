@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.15
 
 - Detect whether Herdr is installed (PATH and the usual install directories). Without Herdr, the window explains how to install it and offers a plain terminal.
 - Add a plain terminal mode: local shells in tabs, a quiet one-line strip, and a Herdr status chip that leads back to Herdr once it is installed. Settings → Herdr chooses Automatic, Herdr, or Plain terminal at startup; `-plain` and `-connect` override it once.
