@@ -44,7 +44,25 @@ type Settings struct {
 	CursorBlink bool
 	// Toast is how agent notifications reach the user.
 	Toast Toast
+	// StartupMode is how the app opens: "auto" connects to Herdr when it
+	// is installed and opens a plain terminal otherwise, "herdr" always
+	// connects, and "plain" always opens the plain terminal.
+	StartupMode string
+	// AgentView is the sidebar's agent filter preset, shared with Herdr.
+	AgentView string
+	// ShareReminders also shows Hergo's own reminders (output and agent
+	// state) in Herdr's terminal clients through notification.show.
+	ShareReminders bool
 }
+
+// LayoutTemplate is a saved split tree in Herdr's LayoutNode form.
+type LayoutTemplate struct {
+	Name string          `json:"name"`
+	Root json.RawMessage `json:"root"`
+}
+
+// ValidStartupMode reports whether v names a StartupMode.
+func ValidStartupMode(v string) bool { return v == "auto" || v == "herdr" || v == "plain" }
 
 // Toast mirrors Herdr's [ui.toast] settings. Until the user picks a value
 // here, it follows Herdr's own configuration (see InheritToast).
@@ -62,7 +80,7 @@ type Toast struct {
 
 // Defaults returns the settings a fresh installation starts with.
 func Defaults() Settings {
-	return Settings{WindowTheme: "system", ColorScheme: "herdr", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 4.5, Cursor: "block", CursorBlink: true, Toast: Toast{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}}
+	return Settings{WindowTheme: "system", ColorScheme: "herdr", FontSize: 13, FontWeight: 400, LineHeight: 1, MinimumContrast: 4.5, Cursor: "block", CursorBlink: true, Toast: Toast{Delivery: "herdr", Position: "bottom-right", DelaySeconds: 1}, StartupMode: "auto", AgentView: "all"}
 }
 
 // Store loads and saves the settings file. Load applies defaults for
@@ -71,6 +89,8 @@ type Store struct {
 	mu     sync.Mutex
 	path   string
 	values Settings
+	// layouts are tab layouts saved for layout.apply.
+	layouts []LayoutTemplate
 	extra  map[string]json.RawMessage
 	// toastSet names the toast keys chosen here, which Herdr's
 	// configuration no longer overrides.
@@ -205,7 +225,78 @@ func Open(path string) (*Store, error) {
 			s.toastSet["delay"] = true
 		}
 	}
+	if v, ok := raw["startup_mode"]; ok {
+		var mode string
+		if json.Unmarshal(v, &mode) == nil && ValidStartupMode(mode) {
+			s.values.StartupMode = mode
+		}
+	}
+	if v, ok := raw["agent_view"]; ok {
+		var view string
+		if json.Unmarshal(v, &view) == nil && view != "" {
+			s.values.AgentView = view
+		}
+	}
+	if v, ok := raw["share_reminders"]; ok {
+		var on bool
+		if json.Unmarshal(v, &on) == nil {
+			s.values.ShareReminders = on
+		}
+	}
+	if v, ok := raw["layout_templates"]; ok {
+		var templates []LayoutTemplate
+		if json.Unmarshal(v, &templates) == nil {
+			for _, t := range templates {
+				if t.Name != "" && len(t.Root) > 0 {
+					s.layouts = append(s.layouts, t)
+				}
+			}
+		}
+	}
 	return s, nil
+}
+
+// Memory is a store that keeps the defaults for this launch only, for when
+// the settings file cannot be read.
+func Memory() *Store {
+	return &Store{values: Defaults(), toastSet: map[string]bool{}}
+}
+
+// LayoutTemplates returns the saved tab layouts, in the order saved.
+func (s *Store) LayoutTemplates() []LayoutTemplate {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]LayoutTemplate(nil), s.layouts...)
+}
+
+// SaveLayoutTemplate stores t, replacing a layout of the same name.
+func (s *Store) SaveLayoutTemplate(t LayoutTemplate) error {
+	return s.editLayouts(func(layouts []LayoutTemplate) []LayoutTemplate {
+		return append(withoutLayout(layouts, t.Name), t)
+	})
+}
+
+// DeleteLayoutTemplate removes the layout named name.
+func (s *Store) DeleteLayoutTemplate(name string) error {
+	return s.editLayouts(func(layouts []LayoutTemplate) []LayoutTemplate { return withoutLayout(layouts, name) })
+}
+
+func withoutLayout(layouts []LayoutTemplate, name string) []LayoutTemplate {
+	kept := []LayoutTemplate{}
+	for _, t := range layouts {
+		if t.Name != name {
+			kept = append(kept, t)
+		}
+	}
+	return kept
+}
+
+func (s *Store) editLayouts(fn func([]LayoutTemplate) []LayoutTemplate) error {
+	s.mu.Lock()
+	s.layouts = fn(append([]LayoutTemplate(nil), s.layouts...))
+	s.mu.Unlock()
+	_, err := s.Update(func(*Settings) {})
+	return err
 }
 
 // Settings returns the loaded values.
@@ -245,6 +336,12 @@ func (s *Store) Update(fn func(*Settings)) (Settings, error) {
 	document["option_as_alt"], _ = json.Marshal(s.values.OptionAsAlt)
 	document["cursor_style"], _ = json.Marshal(s.values.Cursor)
 	document["cursor_blink"], _ = json.Marshal(s.values.CursorBlink)
+	document["startup_mode"], _ = json.Marshal(s.values.StartupMode)
+	document["agent_view"], _ = json.Marshal(s.values.AgentView)
+	document["share_reminders"], _ = json.Marshal(s.values.ShareReminders)
+	if s.layouts != nil {
+		document["layout_templates"], _ = json.Marshal(s.layouts)
+	}
 	if s.toastSet["delivery"] {
 		document["toast_delivery"], _ = json.Marshal(s.values.Toast.Delivery)
 	}
@@ -257,6 +354,9 @@ func (s *Store) Update(fn func(*Settings)) (Settings, error) {
 	data, err := json.MarshalIndent(document, "", "  ")
 	if err != nil {
 		return s.values, err
+	}
+	if s.path == "" {
+		return s.values, nil
 	}
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
 		return s.values, err

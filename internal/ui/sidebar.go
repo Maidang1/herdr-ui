@@ -8,6 +8,7 @@ import (
 
 	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/design"
+	"github.com/Maidang1/herdr-ui/internal/herdr"
 	"github.com/Maidang1/herdr-ui/internal/icons"
 	native "github.com/egoist/mygo/ui"
 )
@@ -40,6 +41,7 @@ func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
 			w.sidebarFilterField(c, p)
 		})
 		rows, agents := w.filteredSidebar(v)
+		agents = w.filterAgentView(agents, v.WorkspaceID)
 		// Keep scrollbar tracks outside the clipped sections; wheel and
 		// touchpad scrolling still use the full list area.
 		native.Column(c.Key("sidebar-information")).Grow(1).Basis(0).MinHeight(0).FillWidth().Children(func() {
@@ -59,6 +61,7 @@ func (w *Window) sidebar(c *native.Context, v app.View, p design.Palette) {
 			native.Column(c.Key("sidebar-agents-section")).Grow(1).Basis(0).MinHeight(0).FillWidth().PaddingX(8).Clip().Children(func() {
 				w.sidebarSectionHeader(c, "Agents", len(agents), p, func() {
 					w.attentionButton(c, v.Agents, p)
+					w.agentViewToggle(c, p)
 					w.agentSortToggle(c, p)
 				})
 				native.Scroll(c.Key("sidebar-agents")).Grow(1).Basis(0).MinHeight(0).FillWidth().ScrollbarInsets(0, -w.sidebarWidth, 0, -w.sidebarWidth).Label("Agents list").Children(func() {
@@ -315,6 +318,27 @@ func (w *Window) attentionButton(c *native.Context, agents []app.AgentRow, p des
 	}
 }
 
+// agentViewToggle picks the agent view, which Herdr's clients share: a
+// click steps to the next, the menu names them all.
+func (w *Window) agentViewToggle(c *native.Context, p design.Palette) {
+	preset := herdr.AgentViewPresetByID(w.agentView)
+	button := native.ButtonBase(c.Key("agent-view")).Height(22).Radius(11).Padding(0, 6, 0, 8).Label("Agent view: " + preset.Label)
+	w.controlState(button, p)
+	button.Children(func() {
+		native.Text(c, agentViewShortLabel(preset.ID)).FontSize(11).TextColor(p.Tertiary)
+	})
+	button.ContextMenu(func(m *native.Menu) {
+		for _, option := range herdr.AgentViewPresets {
+			if m.Item(option.Label).Checked(option.ID == preset.ID).Chosen() {
+				w.chooseAgentView(option.ID)
+			}
+		}
+	})
+	if button.Clicked() {
+		w.Dispatch("agent_view_next")
+	}
+}
+
 // agentSortToggle cycles Herdr's two agents layouts: grouped under their
 // workspaces, or one flat list ordered by attention priority.
 func (w *Window) agentSortToggle(c *native.Context, p design.Palette) {
@@ -434,6 +458,17 @@ func (w *Window) workspace(c *native.Context, row app.WorkspaceRow, p design.Pal
 			})
 		})
 		button.ContextMenu(func(m *native.Menu) { w.workspaceMenu(m, row) })
+		// Rows reorder by dragging one onto another, as Herdr's sidebar
+		// does; worktrees stay under their workspace, so only top rows drag.
+		if row.Depth == 0 && w.sidebarFilter == "" {
+			button.Drag(workspaceDrag{row.ID})
+			if over, ok := native.DragOver[workspaceDrag](button); ok && over.ID != row.ID {
+				button.Border(2, p.Focus)
+			}
+			if dropped, ok := native.Drop[workspaceDrag](button); ok {
+				w.reorderWorkspace(dropped.ID, row.ID)
+			}
+		}
 		if button.DoubleClicked() {
 			w.app.SelectWorkspace(row.ID)
 			w.Dispatch("rename_workspace")

@@ -17,12 +17,14 @@ type MenuSection struct {
 var MenuBar = []MenuSection{
 	{"Workspace", [][]string{
 		{"new_workspace", "rename_workspace", "close_workspace"},
+		{"move_workspace_up", "move_workspace_down"},
 		{"new_worktree", "open_worktree", "remove_worktree"},
 		{"reload_config", "detach"},
 	}},
 	{"Tab", [][]string{
 		{"new_tab", "rename_tab", "close_tab"},
 		{"move_tab_previous", "move_tab_next"},
+		{"save_layout", "apply_layout"},
 	}},
 	{"Pane", [][]string{
 		{"split_vertical", "split_horizontal", "zoom", "rename_pane", "close_pane"},
@@ -30,7 +32,9 @@ var MenuBar = []MenuSection{
 		{"resize_mode", "resize_pane_left", "resize_pane_right", "resize_pane_up", "resize_pane_down"},
 		{"find", "find_next", "find_previous"},
 		{"copy_mode", "edit_scrollback", "clear_pane", "remote_image_paste"},
+		{"move_pane_new_tab", "move_pane_new_workspace"},
 		{"pane_details", "watch_output"},
+		{"agent_prompt", "agent_wait", "agent_start"},
 	}},
 	{"Go", [][]string{
 		{"goto", "workspace_picker"},
@@ -39,14 +43,14 @@ var MenuBar = []MenuSection{
 		{"focus_pane_left", "focus_pane_right", "focus_pane_up", "focus_pane_down", "cycle_pane_next", "cycle_pane_previous", "last_pane"},
 	}},
 	{"View", [][]string{
-		{"toggle_sidebar", "zen"},
+		{"toggle_sidebar", "zen", "agent_view_next"},
 		{"zoom_in", "zoom_out", "zoom_reset"},
 	}},
 }
 
 // menuPrompts are the commands that ask for more before acting, which a
 // Mac menu marks with an ellipsis.
-var menuPrompts = map[string]bool{"rename_workspace": true, "rename_tab": true, "rename_pane": true, "new_worktree": true, "open_worktree": true, "remove_worktree": true, "settings": true}
+var menuPrompts = map[string]bool{"rename_workspace": true, "rename_tab": true, "rename_pane": true, "new_worktree": true, "open_worktree": true, "remove_worktree": true, "settings": true, "agent_prompt": true, "agent_start": true, "save_layout": true, "apply_layout": true}
 
 // MenuTitle is a command's menu-bar title: Title Case, with an ellipsis
 // when the command asks for more.

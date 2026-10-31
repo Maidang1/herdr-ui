@@ -146,6 +146,9 @@ func (w *Window) canShortcut(action string) (bool, bool) {
 	if action == "new_workspace" || action == "reload_config" {
 		return true, !w.controller.shortcut.busy
 	}
+	if extraAction(action) && !w.canExtra(action, v) {
+		return true, false
+	}
 	return true, v.PaneID != "" && !w.controller.shortcut.busy
 }
 
@@ -163,6 +166,9 @@ func (w *Window) dispatchShortcut(action string, index int) bool {
 		a.navigate = false
 	}
 	v := w.currentView()
+	if extraAction(action) && w.dispatchExtra(action) {
+		return true
+	}
 	switch action {
 	case "pane_details":
 		w.openDetails()

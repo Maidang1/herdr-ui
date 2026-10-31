@@ -47,6 +47,36 @@ func shortcutRequest(op Operation) (string, map[string]any, string, error) {
 			method, response = "tab.move", "tab_list"
 			p["insert_index"] = op.Index
 		}
+	case "move_workspace":
+		if op.Index < 0 {
+			return "", nil, "", fmt.Errorf("invalid workspace position")
+		}
+		method, response = "workspace.move", ""
+		p["workspace_id"], p["insert_index"] = op.WorkspaceID, op.Index
+	case "move_tab_to":
+		if op.Index < 0 {
+			return "", nil, "", fmt.Errorf("invalid tab position")
+		}
+		method, response = "tab.move", "tab_list"
+		p["tab_id"], p["insert_index"] = op.TabID, op.Index
+	case "move_pane_new_tab", "move_pane_new_workspace", "move_pane_to_tab":
+		method, response = "pane.move", "pane_moved"
+		p["pane_id"], p["focus"] = op.PaneID, true
+		switch op.Action {
+		case "move_pane_new_tab":
+			p["destination"] = map[string]any{"type": "new_tab", "workspace_id": op.WorkspaceID}
+		case "move_pane_new_workspace":
+			p["destination"] = map[string]any{"type": "new_workspace"}
+		default:
+			if op.Text == "" || op.Text == op.TabID {
+				return "", nil, "", fmt.Errorf("choose another tab")
+			}
+			direction := op.Direction
+			if direction != "right" && direction != "down" {
+				direction = "right"
+			}
+			p["destination"] = map[string]any{"type": "tab", "tab_id": op.Text, "split": direction}
+		}
 	case "select_pane":
 		method, response = "pane.focus", "pane_info"
 		p["pane_id"] = op.PaneID
@@ -141,7 +171,7 @@ func (s *Session) executeShortcut(ctx context.Context, client *herdr.Client, q *
 			ID string `json:"pane_id"`
 		} `json:"root_pane"`
 	}
-	if err := json.Unmarshal(data, &envelope); err != nil || envelope.Type != expected {
+	if err := json.Unmarshal(data, &envelope); err != nil || (expected != "" && envelope.Type != expected) {
 		err := &herdr.ProtocolError{Reason: method + " returned an invalid acknowledgement"}
 		q.complete(OutcomeUnknown, err.Error(), ScrollInfo{})
 		return err

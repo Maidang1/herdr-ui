@@ -3,11 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/Maidang1/herdr-ui/internal/app"
 	"github.com/Maidang1/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/prefs"
 	"github.com/Maidang1/herdr-ui/internal/session"
 	view "github.com/Maidang1/herdr-ui/internal/ui"
 )
@@ -126,4 +130,131 @@ func installFeatureHooks(h *view.ActionHooks, ctx context.Context, s *session.Se
 		}
 		return screen.OpenReviewCommandSurface("Install Herdr plugin", []string{binary, "plugin", "install", source}, env, "")
 	}
+}
+
+// installExtraHooks wires the agent, layout and server requests. Mutating
+// requests are sent once; a request that fails may still have happened.
+func installExtraHooks(ctx context.Context, s *session.Session, target herdr.Target, post func(func()), settings *prefs.Store, install func() herdr.Installation, binary string) view.ExtraHooks {
+	stale := func() error { return fmt.Errorf("the terminal or connection changed; select it again") }
+	persist := func(fn func(*prefs.Settings)) {
+		go func() {
+			if _, err := settings.Update(fn); err != nil {
+				log.Printf("prefs: %v", err)
+			}
+		}()
+	}
+	var h view.ExtraHooks
+	h.AgentPrompt = func(op session.Operation, text string, done func(error)) {
+		go func() {
+			if !featureIdentity(s, op) {
+				post(func() { done(stale()) })
+				return
+			}
+			_, err := herdr.AgentPrompt(ctx, target, op.PaneID, text)
+			post(func() { s.Refresh(); done(err) })
+		}()
+	}
+	h.AgentWait = func(op session.Operation, until []string, timeout time.Duration, done func(herdr.AgentDetails, error)) func() {
+		call, cancel := context.WithCancel(ctx)
+		go func() {
+			if !featureIdentity(s, op) {
+				post(func() { done(herdr.AgentDetails{}, stale()) })
+				return
+			}
+			details, err := herdr.AgentWait(call, target, op.PaneID, until, timeout)
+			post(func() { done(details, err) })
+		}()
+		return cancel
+	}
+	h.AgentStart = func(op session.Operation, kind string, done func(error)) {
+		go func() {
+			if !featureIdentity(s, op) {
+				post(func() { done(stale()) })
+				return
+			}
+			_, err := herdr.AgentStart(ctx, target, op.PaneID, kind, "", nil)
+			post(func() { s.Refresh(); done(err) })
+		}()
+	}
+	h.AgentView = func(preset string, done func(error)) {
+		persist(func(v *prefs.Settings) { v.AgentView = preset })
+		go func() {
+			err := herdr.SetAgentView(ctx, target, herdr.AgentViewPresetByID(preset))
+			post(func() { done(err) })
+		}()
+	}
+	h.LayoutNames = func() []string {
+		var names []string
+		for _, t := range settings.LayoutTemplates() {
+			names = append(names, t.Name)
+		}
+		return names
+	}
+	h.SaveLayout = func(op session.Operation, name string, done func(error)) {
+		go func() {
+			template, err := herdr.ExportLayoutTemplate(ctx, target, op.TabID, name)
+			if err == nil {
+				err = settings.SaveLayoutTemplate(prefs.LayoutTemplate{Name: name, Root: template.Root})
+			}
+			post(func() { done(err) })
+		}()
+	}
+	h.ApplyLayout = func(op session.Operation, name string, done func(error)) {
+		var template *herdr.LayoutTemplate
+		for _, t := range settings.LayoutTemplates() {
+			if t.Name == name {
+				template = &herdr.LayoutTemplate{Name: t.Name, Root: t.Root}
+				break
+			}
+		}
+		if template == nil {
+			done(fmt.Errorf("no saved layout named %q", name))
+			return
+		}
+		go func() {
+			err := herdr.ApplyLayoutTemplate(ctx, target, op.WorkspaceID, *template)
+			post(func() { s.Refresh(); done(err) })
+		}()
+	}
+	h.DeleteLayout = func(name string) {
+		if err := settings.DeleteLayoutTemplate(name); err != nil {
+			log.Printf("prefs: %v", err)
+		}
+	}
+	h.ShareReminder = func(n app.Notice) {
+		go func() {
+			if err := herdr.ShowNotification(ctx, target, n.Title, n.Body, "done"); err != nil {
+				log.Printf("notification.show: %v", err)
+			}
+		}()
+	}
+	h.ShareReminders = func(on bool) { persist(func(v *prefs.Settings) { v.ShareReminders = on }) }
+	h.Manifests = func(reload bool, done func([]herdr.AgentManifest, error)) {
+		go func() {
+			read := herdr.ReadAgentManifests
+			if reload {
+				read = herdr.ReloadAgentManifests
+			}
+			entries, err := read(ctx, target)
+			post(func() { done(entries, err) })
+		}()
+	}
+	h.PluginLink = func(path string, done func(error)) {
+		if strings.HasPrefix(path, "~/") {
+			if home, err := os.UserHomeDir(); err == nil {
+				path = filepath.Join(home, path[2:])
+			}
+		}
+		go func() { _, err := herdr.LinkPlugin(ctx, target, path); post(func() { done(err) }) }()
+	}
+	h.PluginUnlink = func(id string, done func(error)) {
+		go func() { err := herdr.UnlinkPlugin(ctx, target, id); post(func() { done(err) }) }()
+	}
+	h.LiveHandoff = func(done func(error)) {
+		exe := install().Path
+		go func() { err := herdr.LiveHandoff(ctx, target, exe); post(func() { done(err) }) }()
+	}
+	h.StartupMode = func(mode string) { persist(func(v *prefs.Settings) { v.StartupMode = mode }) }
+	h.Installation = install
+	return h
 }

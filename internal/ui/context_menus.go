@@ -29,6 +29,8 @@ func (w *Window) workspaceMenu(m *native.Menu, row app.WorkspaceRow) {
 	}
 	w.menuAction(m, "New Tab", "new_tab", selectRow)
 	w.menuAction(m, "Rename Workspace…", "rename_workspace", selectRow)
+	w.menuAction(m, "Move Up", "move_workspace_up", selectRow)
+	w.menuAction(m, "Move Down", "move_workspace_down", selectRow)
 	if row.GitKnown {
 		m.Separator()
 		w.menuAction(m, "New Worktree…", "new_worktree", selectRow)
@@ -57,6 +59,19 @@ func (w *Window) tabMenu(m *native.Menu, tab app.TabRow) {
 	m.Separator()
 	w.menuAction(m, "Move Tab Left", "move_tab_previous", selectTab)
 	w.menuAction(m, "Move Tab Right", "move_tab_next", selectTab)
+	w.menuAction(m, "Save Layout…", "save_layout", selectTab)
+	if w.extra.LayoutNames != nil {
+		if names := w.extra.LayoutNames(); len(names) > 0 {
+			m.Submenu("New Tab from Layout", func(m *native.Menu) {
+				for _, name := range names {
+					if m.Item(name).Disabled(!w.Can("apply_layout")).Chosen() {
+						selectTab()
+						w.applyLayout(name)
+					}
+				}
+			})
+		}
+	}
 	m.Separator()
 	w.menuAction(m, "Split Right", "split_vertical", selectTab)
 	w.menuAction(m, "Split Down", "split_horizontal", selectTab)
@@ -72,6 +87,10 @@ func (w *Window) paneMenu(m *native.Menu, paneID string) {
 	w.menuAction(m, w.ActionLabel("watch_output"), "watch_output", selectPane)
 	w.menuAction(m, "Rename Pane…", "rename_pane", selectPane)
 	m.Separator()
+	w.menuAction(m, "Send Prompt to Agent…", "agent_prompt", selectPane)
+	w.menuAction(m, w.ActionLabel("agent_wait"), "agent_wait", selectPane)
+	w.menuAction(m, "Start Agent…", "agent_start", selectPane)
+	m.Separator()
 	w.menuAction(m, "Split Right", "split_vertical", selectPane)
 	w.menuAction(m, "Split Down", "split_horizontal", selectPane)
 	w.menuAction(m, w.ActionLabel("zoom"), "zoom", selectPane)
@@ -80,6 +99,25 @@ func (w *Window) paneMenu(m *native.Menu, paneID string) {
 		w.menuAction(m, "Right", "swap_pane_right", selectPane)
 		w.menuAction(m, "Up", "swap_pane_up", selectPane)
 		w.menuAction(m, "Down", "swap_pane_down", selectPane)
+	})
+	m.Submenu("Move Pane", func(m *native.Menu) {
+		w.menuAction(m, "To New Tab", "move_pane_new_tab", selectPane)
+		w.menuAction(m, "To New Workspace", "move_pane_new_workspace", selectPane)
+		v := w.currentView()
+		var others []app.TabRow
+		for _, tab := range v.Tabs {
+			if tab.ID != v.TabID {
+				others = append(others, tab)
+			}
+		}
+		if len(others) > 0 {
+			m.Separator()
+			for _, tab := range others {
+				if m.Item("To Tab “" + tab.Name + "”").Disabled(!w.Can("move_pane_new_workspace")).Chosen() {
+					w.movePaneToTab(paneID, tab.ID)
+				}
+			}
+		}
 	})
 	m.Separator()
 	w.menuAction(m, "Find…", "find", selectPane)

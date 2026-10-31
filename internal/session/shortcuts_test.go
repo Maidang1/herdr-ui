@@ -57,3 +57,25 @@ func TestSelectionRejectionDoesNotDisconnectSession(t *testing.T) {
 		t.Fatal(result)
 	}
 }
+
+func TestMoveShortcutRequests(t *testing.T) {
+	method, params, response, err := shortcutRequest(Operation{Action: "move_workspace", WorkspaceID: "w2", Index: 3})
+	if err != nil || method != "workspace.move" || params["insert_index"] != 3 || params["workspace_id"] != "w2" || response != "" {
+		t.Fatalf("%s %v %s %v", method, params, response, err)
+	}
+	if _, _, _, err := shortcutRequest(Operation{Action: "move_workspace", Index: -1}); err == nil {
+		t.Fatal("accepted a negative position")
+	}
+	method, params, _, err = shortcutRequest(Operation{Action: "move_pane_to_tab", PaneID: "p", TabID: "t1", Text: "t2", Direction: "sideways"})
+	destination, _ := params["destination"].(map[string]any)
+	if err != nil || method != "pane.move" || destination["tab_id"] != "t2" || destination["split"] != "right" {
+		t.Fatalf("%s %v %v", method, params, err)
+	}
+	if _, _, _, err := shortcutRequest(Operation{Action: "move_pane_to_tab", PaneID: "p", TabID: "t1", Text: "t1"}); err == nil {
+		t.Fatal("accepted moving a pane to its own tab")
+	}
+	_, params, _, _ = shortcutRequest(Operation{Action: "move_pane_new_workspace", PaneID: "p"})
+	if destination, _ := params["destination"].(map[string]any); destination["type"] != "new_workspace" {
+		t.Fatalf("%v", params)
+	}
+}

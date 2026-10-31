@@ -46,6 +46,13 @@ type Window struct {
 	settings            settingsUI
 	details             detailsUI
 	outputWatch         outputWatchUI
+	agentWatch          agentWatchUI
+	extra               ExtraHooks
+	agentView           string
+	shareReminders      bool
+	startupMode         string
+	title               string
+	manifests           manifestSettings
 	shape               design.Shape
 	toasts              app.Toasts
 	// copied asks the next frame to show the copy confirmation, which
@@ -55,7 +62,7 @@ type Window struct {
 }
 
 func New(a *app.App, retry func()) *Window {
-	return &Window{app: a, retry: retry, shape: design.SystemShapes(), sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, agentsGrouped: true, appearance: windowAppearance{active: true}}
+	return &Window{app: a, retry: retry, shape: design.SystemShapes(), sidebarWidth: 248, viewportWidth: 1200, sidebarVisible: true, agentsGrouped: true, agentView: "all", startupMode: "auto", appearance: windowAppearance{active: true}}
 }
 
 // SetInitialSettings applies the persisted settings before the first
@@ -139,6 +146,8 @@ func (w *Window) currentView() app.View {
 func (w *Window) View(c *native.Context) {
 	w.syncInput()
 	w.SyncFeatureTargets()
+	w.syncAgentWatch()
+	w.syncWindowTitle(w.currentView())
 	width, _ := c.Size()
 	w.viewportWidth = width
 	w.sidebarVisible = chromeLayout(width, w.sidebarWidth, w.hidden || w.zen).sidebarVisible
@@ -194,7 +203,7 @@ func (w *Window) View(c *native.Context) {
 				w.toolbar(c, v, p)
 				w.actionBar(c, v, p)
 				w.shortcutPanel(c, p)
-				if v.Stale && v.Error != "" {
+				if v.Stale && v.Error != "" && !herdrMissing(v) {
 					native.Row(c).Padding(10, 16).Gap(12).AlignItems(native.Center).Children(func() {
 						native.Icon(c, icons.Unplug).Size(16, 16).TextColor(p.Danger)
 						native.Text(c, v.Error).TextColor(p.Danger).Grow(1)
@@ -228,6 +237,10 @@ func (w *Window) content(c *native.Context, v app.View, p design.Palette) {
 	if len(v.Rows) == 0 {
 		if w.terminal != nil {
 			w.DetachTerminal()
+		}
+		if herdrMissing(v) {
+			w.herdrMissingView(c, p)
+			return
 		}
 		title, detail := "Connecting to Herdr…", "Waiting for the local session."
 		if v.State == session.Ready {

@@ -288,7 +288,11 @@ func (w *Window) outputWatchControls(c *native.Context, p design.Palette) {
 	})
 }
 
-func (w *Window) deliverOutputNotice(n app.Notice) { w.toasts.Receive(n); w.PumpNotifications() }
+func (w *Window) deliverOutputNotice(n app.Notice) {
+	w.toasts.Receive(n)
+	w.PumpNotifications()
+	w.shareReminder(n)
+}
 
 func (w *Window) ask(prompt shortcutPrompt, submit func(string)) {
 	if w.controller == nil {

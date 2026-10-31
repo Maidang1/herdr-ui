@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -30,7 +29,7 @@ import (
 	native "github.com/egoist/mygo/ui"
 )
 
-func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurface bool) {
+func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurface bool, settings *prefs.Store, install *installationWatch) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -38,10 +37,6 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 	target, err := herdr.ResolveTarget(socket, home, os.Getenv)
 	if err != nil {
 		log.Fatal(err)
-	}
-	settings, prefsErr := prefs.Open("")
-	if prefsErr != nil {
-		log.Printf("prefs: %v", prefsErr)
 	}
 	// Notification delivery starts from Herdr's own [ui.toast], as the
 	// terminal client would deliver them, until chosen in Settings.
@@ -54,10 +49,8 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 	s := session.New(target)
 	a := app.New()
 	resolvedBinary := binary
-	if path, err := exec.LookPath(binary); err == nil {
-		if absolute, err := filepath.Abs(path); err == nil {
-			resolvedBinary = absolute
-		}
+	if found := install.Get(); found.Path != "" {
+		resolvedBinary = found.Path
 	}
 	var host *terminalhost.Host
 	var sidebar *sidebarinfo.Collector
@@ -111,7 +104,18 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 			go func() {
 				defer startup.Done()
 				defer starting.Store(false)
-				if err := baseline(ctx, binary); err != nil {
+				found := install.Refresh(ctx)
+				if found.Path == "" {
+					if !closed.Load() {
+						win.Update(func() {
+							if !closed.Load() {
+								a.Update(session.PublishedSnapshot{State: session.Incompatible, Stale: true, Error: herdr.ErrNotInstalled.Error()})
+							}
+						})
+					}
+					return
+				}
+				if err := baseline(ctx, found.Path); err != nil {
 					if !closed.Load() {
 						win.Update(func() {
 							if !closed.Load() {
@@ -208,6 +212,22 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 			}()
 		}
 		installFeatureHooks(&hooks, ctx, s, target, screen, integrationPost, resolvedBinary)
+		extra := installExtraHooks(ctx, s, target, integrationPost, settings, install.Get, resolvedBinary)
+		extra.WindowTitle = func(title string) { win.SetTitle(title) }
+		extra.PlainTerminal = func() error {
+			openPlainWindow(plainWindowConfig{settings: settings, install: install, connect: func() error { win.Focus(); return nil }})
+			return nil
+		}
+		screen.SetExtraHooks(extra)
+		screen.SetExtraState(view.ExtraState{AgentView: persisted.AgentView, ShareReminders: persisted.ShareReminders, StartupMode: persisted.StartupMode})
+		if persisted.AgentView != "" && persisted.AgentView != "all" {
+			// Herdr forgets the view when it restarts; share it again.
+			go func() {
+				if err := herdr.SetAgentView(ctx, target, herdr.AgentViewPresetByID(persisted.AgentView)); err != nil {
+					log.Printf("agent view: %v", err)
+				}
+			}()
+		}
 		hooks.EditConfig = func() error { return editHerdrConfig(resolvedBinary, target, screen) }
 		hooks.Font = func(f terminal.Font) {
 			host.SetFont(f)
@@ -362,11 +382,26 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 		accelerators := view.DirectKeys
 		commandItem := func(id string) *mygo.MenuItem {
 			label := screen.MenuLabel(id)
-			click := func(_ *mygo.MenuItem, _ *mygo.Window) { post(func() { screen.Dispatch(id) }) }
+			click := func(_ *mygo.MenuItem, front *mygo.Window) {
+				// A plain terminal window in front takes the tab commands
+				// it has; Herdr's window keeps the rest.
+				if plainScreen := plainFront(front); plainScreen != nil {
+					switch id {
+					case "new_tab", "next_tab", "previous_tab":
+						front.Update(func() { plainScreen.Command(id) })
+						return
+					}
+				}
+				post(func() { screen.Dispatch(id) })
+			}
 			if id == "close_pane" {
 				// ⌘W closes the window in front when that is not the
 				// terminal window, as Settings; it never reaches past it.
 				click = func(_ *mygo.MenuItem, front *mygo.Window) {
+					if plainScreen := plainFront(front); plainScreen != nil {
+						front.Update(func() { plainScreen.Command("close_tab") })
+						return
+					}
 					if front != nil && front != win {
 						front.Close()
 						return
@@ -403,7 +438,8 @@ func runStateWindow(socket, binary string, closeAfter time.Duration, nativeSurfa
 		}
 		sections["Tab"] = append(sections["Tab"], &mygo.MenuItem{Type: mygo.MenuItemSeparator}, &mygo.MenuItem{Label: "Select Tab", Submenu: tabNumbers})
 		helpItems := []*mygo.MenuItem{commandItem("help")}
-		appItems := []*mygo.MenuItem{{Role: mygo.RoleAbout}, updater.MenuItem(), {Type: mygo.MenuItemSeparator}, commandItem("settings"), {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleServices}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleHide}, {Role: mygo.RoleHideOthers}, {Role: mygo.RoleUnhide}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleQuit}}
+		plainItem := &mygo.MenuItem{Label: "New Plain Terminal Window", Click: func(*mygo.MenuItem, *mygo.Window) { post(func() { extra.PlainTerminal() }) }}
+		appItems := []*mygo.MenuItem{{Role: mygo.RoleAbout}, updater.MenuItem(), {Type: mygo.MenuItemSeparator}, commandItem("settings"), plainItem, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleServices}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleHide}, {Role: mygo.RoleHideOthers}, {Role: mygo.RoleUnhide}, {Type: mygo.MenuItemSeparator}, {Role: mygo.RoleQuit}}
 		appearanceItems := []*mygo.MenuItem{}
 		for _, choice := range []struct {
 			label  string

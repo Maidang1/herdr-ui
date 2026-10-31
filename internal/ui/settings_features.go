@@ -89,6 +89,7 @@ func (w *Window) settingsPlugins(c *native.Context, p design.Palette) {
 				}
 			}
 		})
+		w.pluginLinkRows(c, g)
 		for _, plugin := range s.catalog.Plugins {
 			entry := plugin
 			g.row(entry.Name+" · "+entry.Version, entry.Description+"\n"+strings.Join(entry.Warnings, "\n"), func() {
@@ -98,6 +99,9 @@ func (w *Window) settingsPlugins(c *native.Context, p design.Palette) {
 				}
 				if native.Button(c.Key("plugin-toggle:"+entry.ID), label).Disabled(s.busy || !s.fresh || w.hooks.PluginEnabled == nil).Clicked() {
 					w.pluginChange(func(done func(error)) { w.hooks.PluginEnabled(entry.ID, !entry.Enabled, done) })
+				}
+				if native.Button(c.Key("plugin-unlink:"+entry.ID), "Unlink").Disabled(s.busy || !s.fresh || w.extra.PluginUnlink == nil).Clicked() {
+					w.pluginChange(func(done func(error)) { w.extra.PluginUnlink(entry.ID, done) })
 				}
 			})
 			if !entry.Enabled {

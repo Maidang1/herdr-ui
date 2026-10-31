@@ -89,9 +89,9 @@ type settingsUI struct {
 	appliedFont terminal.Font
 }
 
-var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts", "Updates", "Integrations", "Plugins", "Session restore", "Machines"}
+var settingsPages = []string{"Appearance", "Terminal", "Notifications", "Shortcuts", "Updates", "Integrations", "Plugins", "Session restore", "Machines", "Herdr"}
 
-var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.MessageCircle, icons.Keyboard, icons.RotateCw, icons.Agent("agent"), icons.Terminal, icons.RotateCw, icons.Globe}
+var settingsPageIcons = []*native.SVG{icons.Palette, icons.Terminal, icons.MessageCircle, icons.Keyboard, icons.RotateCw, icons.Agent("agent"), icons.Terminal, icons.RotateCw, icons.Globe, icons.Bot}
 
 // install seeds the working copy from the persisted values.
 func (s *settingsUI) install(snapshot SettingsSnapshot) {
@@ -259,7 +259,7 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 		native.Column(c.Key("settings-page")).FillWidth().MaxWidth(settingsColumnWidth+2*settingsPagePadding).Shrink(0).Padding(top, settingsPagePadding, 40, settingsPagePadding).Gap(24).AlignItems(native.Stretch).Children(func() {
 			native.Column(c).Gap(4).Children(func() {
 				native.Text(c, settingsPages[s.page]).FontSize(22).FontWeight(700)
-				descriptions := []string{"Make Hergo feel at home.", "Fine-tune your terminal experience.", "Choose when Hergo gets your attention.", "Keep your workflow close at hand.", "Keep Hergo up to date.", "Connect your coding agents to Herdr.", "Manage installed Herdr plugins.", "Choose what Herdr restores after restart.", "Manage saved machines and open sessions."}
+				descriptions := []string{"Make Hergo feel at home.", "Fine-tune your terminal experience.", "Choose when Hergo gets your attention.", "Keep your workflow close at hand.", "Keep Hergo up to date.", "Connect your coding agents to Herdr.", "Manage installed Herdr plugins.", "Choose what Herdr restores after restart.", "Manage saved machines and open sessions.", "Installation, startup and server tools."}
 				native.Text(c, descriptions[s.page]).FontSize(13).TextColor(p.Secondary)
 			})
 			switch s.page {
@@ -279,6 +279,8 @@ func (w *Window) settingsPage(c *native.Context, p design.Palette, s *settingsUI
 				w.settingsRestore(c, p)
 			case 8:
 				w.settingsMachines(c, p)
+			case 9:
+				w.settingsHerdr(c, p)
 			default:
 				w.settingsShortcuts(c, p)
 			}
