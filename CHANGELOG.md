@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.16
+
+- Fix macOS release tests by using a short temporary directory for Unix sockets.
+
 ## 0.0.15
 
 - Detect whether Herdr is installed (PATH and the usual install directories). Without Herdr, the window explains how to install it and offers a plain terminal.

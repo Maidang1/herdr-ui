@@ -18,6 +18,9 @@ concurrency:
 jobs:
   macos:
     runs-on: macos-latest
+    env:
+      # Keep test Unix socket paths below macOS sockaddr_un limits.
+      TMPDIR: /tmp
     steps:
       - uses: actions/checkout@v7
 
