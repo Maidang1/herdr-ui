@@ -69,7 +69,29 @@ Option 作 Meta 同时修正了 mygo 的缺陷：macOS 输入法在 Meta 键之�
 - 输出提醒：独立可取消连接执行 `pane.wait_for_output`，recent 80 行，substring/Rust regex，默认 30 分钟，最大 24 小时。匹配后通知一次，不自动跳转；终端/epoch 变化和退出取消。
 - Settings → Machines：读取本地 typed 机器和命名会话列表；状态检查显式执行。保存机器管理、SSH setup/auth/open 和本地 session attach 使用独立交互终端，命令退出结果保留至关闭。不承诺原生远程侧栏；远程连接与 Windows 命令终端未实机验证。
 
-明确不提供 agent start、pane move、agent cost/history。
+明确不提供 agent cost/history。agent start 与 pane move 已在第六批按显式用户操作提供。
+
+## 第六批：协议 22 剩余能力与纯净模式（已实现）
+
+| 功能 | Herdr API | 说明 |
+| --- | --- | --- |
+| 工作区拖拽 / 上移下移 | `workspace.move` | 仅顶层行可拖（worktree 随父工作区）；筛选时不拖；insert_index 按移动前顺序计数，与 tab.move 一致 |
+| 标签拖拽重排 | `tab.move` | pills 互相拖放 |
+| Pane 移动 | `pane.move` | 新标签 / 新工作区 / 其他标签（右侧分屏） |
+| Agent 视图 | `agent.view.set/clear` | All / Needs attention / Working / This workspace；本地筛选侧栏并以 source=hergo 共享给 Herdr，启动时重新下发 |
+| 发送 prompt | `agent.prompt` | 仅在选中 pane 有 agent 时可用，不重试 |
+| Agent 停止提醒 | `agent.wait` | 独立长连接，until=done/blocked/idle，1–1440 分钟；终端/epoch 变化即取消 |
+| 启动 agent | `agent.start` | 仅无 agent 的 pane；kind 由用户输入 |
+| 布局模板 | `layout.export` + `layout.apply` | 保存时去掉 pane_id 与 env（可能含密钥），存于 prefs.json 的 layout_templates |
+| 提醒同步到 Herdr | `notification.show` | 设置开关，默认关 |
+| Agent manifests | `server.agent_manifests` / `reload_agent_manifests` | Settings → Herdr |
+| 本地插件 | `plugin.link` / `plugin.unlink` | Settings → Plugins |
+| 热交接 | `server.live_handoff` | 确认后交给检测到的 herdr 可执行文件，完成后重连 |
+| 窗口标题 | — | 原生窗口标题跟随工作区与标签 |
+| Herdr 检测 | — | PATH + 常见安装目录 + `--version`；缺失时主窗口给安装引导 |
+| 纯净终端 | — | `internal/plain`：本地 shell 标签窗口，无侧栏；Automatic 启动模式在未安装 Herdr 时使用 |
+
+未采用：`client.window_title.*` 作用于 Herdr 终端客户端所在的终端模拟器，与原生窗口无关；`pane.input.set` 配置 Herdr TUI 的右键目标，Hergo 右键由本地菜单处理；`pane.link.resolve/activate` 需要视口行列坐标，终端插件已按 pane 目录解析路径；`release_notes.dismiss` / `product_announcement.dismiss` 缺少读取内容的接口。
 
 ## 后续候选（暂缓，含原因）
 
@@ -77,4 +99,3 @@ Option 作 Meta 同时修正了 mygo 的缺陷：macOS 输入法在 Meta 键之�
 2. 快捷键重绑定界面：prefix 层键位本就由 Herdr 自己的 config.toml 管理（`input.LoadBindings`）；直键（⌘B/⌘F 等）固定，与 macOS 惯例一致。
 3. 终端配色主题（Ghostty 主题名）：锁定的 mygo v0.6.3-dev 未导出 `terminal.GhosttyTheme`（kero 用的 v0.6.4 才有）；升级框架属独立决策。
 
-4. 标签拖拽重排（herdr 服务端有 tab.move）：pills 交互重排属打磨项。

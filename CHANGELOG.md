@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Detect whether Herdr is installed (PATH and the usual install directories). Without Herdr, the window explains how to install it and offers a plain terminal.
+- Add a plain terminal mode: local shells in tabs, a quiet one-line strip, and a Herdr status chip that leads back to Herdr once it is installed. Settings → Herdr chooses Automatic, Herdr, or Plain terminal at startup; `-plain` and `-connect` override it once.
+- Reorder workspaces and tabs by dragging them, or with Move Up/Down in the workspace menu (`workspace.move`, `tab.move`).
+- Move a pane to a new tab, a new workspace, or another tab (`pane.move`).
+- Send a prompt to an agent, get notified once when it stops, and start an agent in a pane (`agent.prompt`, `agent.wait`, `agent.start`).
+- Filter the sidebar's agents by view (All, Needs attention, Working, This workspace) and share the view with Herdr's clients (`agent.view.set`).
+- Save a tab's layout and open it again as a new tab (`layout.export`, `layout.apply`); saved layouts keep splits, ratios, names and directories, not environments.
+- Optionally repeat Hergo's reminders in Herdr's terminal clients (`notification.show`).
+- Settings → Herdr shows the installation, agent manifests with reload, saved layouts, and live handoff to a newly installed Herdr. The plugins page links and unlinks local plugins.
+- Name the window after the selected workspace and tab.
+
 ## 0.0.14
 
 - Add agent and process details, detection diagnostics, and independent agent naming.

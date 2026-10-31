@@ -14,7 +14,20 @@ Hergo 取名自 **Her**dr 与 my**go**。使用 Go 和 [mygo](https://github.com
 - **Herdr 管理入口**：设置内管理插件、会话恢复配置与保存的 SSH 机器；通过独立命令终端交互安装插件、连接远程或打开本地命名会话。
 - **键盘与鼠标入口**：保留 Herdr prefix 模式，提供命令面板、快捷键参考、右键菜单和双击重命名。
 - **终端体验**：文字选择与复制粘贴、查找、清屏、字体缩放、文件路径打开和 Zen 模式；具体能力因平台而异。
+- **Agent 交互**：在菜单或命令面板给 agent 发送 prompt、在 agent 停下（完成/等待/空闲）时提醒一次、在 pane 中启动 agent；侧栏按视图（全部 / 需要处理 / 工作中 / 当前工作区）筛选 agent，并与 Herdr 客户端共享。
+- **整理与布局**：拖拽侧栏工作区和标签重新排序；把 pane 移到新标签、新工作区或其他标签；保存标签布局并以新标签重新打开。
+- **纯净终端模式**：未安装 Herdr 时自动以普通终端打开（本地 shell + 标签），右上角状态提示可查看安装说明，安装后一键回到 Herdr。
 - **原生外观与更新**：System / Light / Dark 主题、持久化偏好，以及支持 Ed25519 校验的应用内更新。
+
+### Herdr 检测与纯净模式
+
+启动时 Hergo 在 PATH 与常见安装目录（`~/.local/bin`、`~/.cargo/bin`、Homebrew 等）中查找 `herdr`：
+
+- **已安装**：连接 Herdr，显示工作区、标签与 agent。
+- **未安装**：默认以**纯净终端**打开——只有标签条与本地 shell，没有侧栏。右上角的 “Herdr not installed” 状态点可查看安装说明、重新检测；安装后点 **Open Herdr Workspaces** 即可切回。
+- 若强制以 Herdr 模式启动但未安装，主窗口显示安装说明、**Check Again** 与 **Open Plain Terminal**。
+
+**Settings → Herdr → Startup** 选择 Automatic（默认）、Herdr 或 Plain terminal。命令行 `-plain` 本次以纯净终端打开，`-connect` 本次强制连接 Herdr。纯净终端快捷键：macOS 为 `Cmd+T` / `Cmd+W` / `Cmd+Shift+[ ]` / `Cmd+1…9`，其他平台为 `Ctrl+Shift+` 同名键，`Ctrl+Tab` 切换标签；单独的 Ctrl 组合键始终交给 shell。Herdr 模式下也可从 **Hergo → New Plain Terminal Window** 打开纯净终端窗口。
 
 Hergo 连接已经运行的 Herdr，**不会自动启动守护进程、创建工作区或接管已有终端 owner**。普通浏览保持窗口本地选择；需要改变会话的操作按 Herdr 语义执行。
 

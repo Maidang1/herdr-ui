@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Maidang1/herdr-ui/internal/herdr"
+	"github.com/Maidang1/herdr-ui/internal/prefs"
 	"github.com/Maidang1/herdr-ui/internal/shellenv"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/terminal"
@@ -28,6 +29,8 @@ func main() {
 	terminalID := flag.String("terminal", "", "existing terminal ID (never a pane ID)")
 	local := flag.Bool("local-fixture", false, "run /bin/cat for local IME/copy/paste verification; does not connect to Herdr")
 	closeAfter := flag.Duration("close-after", 0, "close the test window after a duration")
+	plainMode := flag.Bool("plain", false, "open as a plain terminal without connecting to Herdr")
+	connect := flag.Bool("connect", false, "connect to Herdr this time even when the plain terminal is the startup choice")
 	nativeSurface := flag.Bool("native-surface", runtime.GOOS == "windows", "render Herdr endpoint cells directly (always enabled on Windows)")
 	flag.Parse()
 	// Opened from Finder or the Dock, the app has launchd's PATH, without
@@ -37,7 +40,22 @@ func main() {
 	}
 	if !*local && *terminalID == "" {
 		mygo.Use(updatenative.Plugin)
-		runStateWindow(*socket, *binary, *closeAfter, *nativeSurface)
+		settings, err := prefs.Open("")
+		if err != nil || settings == nil {
+			log.Printf("prefs: %v", err)
+			settings = prefs.Memory()
+		}
+		install := newInstallationWatch(*binary, herdr.Detect(context.Background(), *binary))
+		if found := install.Get(); found.Path == "" {
+			log.Printf("Herdr: not installed (%s)", *binary)
+		} else {
+			log.Printf("Herdr: %s %s %s", found.Path, found.Version, found.Error)
+		}
+		if startupPlain(settings.Settings().StartupMode, *plainMode, *connect, install.Get()) {
+			runPlainApp(settings, install)
+			return
+		}
+		runStateWindow(*socket, *binary, *closeAfter, *nativeSurface, settings, install)
 		return
 	}
 	var command, env []string

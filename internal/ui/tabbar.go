@@ -175,6 +175,13 @@ func (w *Window) tabPill(c *native.Context, tab app.TabRow, p design.Palette) {
 		})
 	})
 	pill.ContextMenu(func(m *native.Menu) { w.tabMenu(m, tab) })
+	pill.Drag(tabDrag{tab.ID})
+	if over, ok := native.DragOver[tabDrag](pill); ok && over.ID != tab.ID {
+		pill.Border(2, p.Focus)
+	}
+	if dropped, ok := native.Drop[tabDrag](pill); ok {
+		w.reorderTab(dropped.ID, tab.ID)
+	}
 	if pill.DoubleClicked() {
 		w.app.SelectTab(tab.ID)
 		w.Dispatch("rename_tab")
